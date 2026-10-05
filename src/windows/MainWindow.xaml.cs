@@ -40,6 +40,7 @@ namespace LiveCaptionsTranslator
             SourceInitialized += (s, e) => RegisterHotKeys();
             Closed += (s, e) => UnregisterHotKeys();
             Speaker.MutedChanged += muted => Dispatcher.InvokeAsync(() => ShowSpeakerState(muted));
+            ClassSession.StateChanged += () => Dispatcher.InvokeAsync(ShowSessionState);
 
             Loaded += (s, e) =>
             {
@@ -150,6 +151,26 @@ namespace LiveCaptionsTranslator
         private void EndSectionButton_Click(object sender, RoutedEventArgs e)
         {
             EndSection();
+        }
+
+        private async void StartButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (ClassSession.IsRunning)
+                ClassSession.Stop();
+            else
+            {
+                RootNavigation.Navigate(typeof(CaptionPage));
+                await ClassSession.Start();
+            }
+        }
+
+        private void ShowSessionState()
+        {
+            StartButton.IsEnabled = !ClassSession.IsStarting;
+            StartButton.Content = ClassSession.IsStarting ? "启动中…" : ClassSession.IsRunning ? "停止" : "开始";
+            StartButton.Appearance = ClassSession.IsRunning ? ControlAppearance.Secondary : ControlAppearance.Primary;
+            if (StartButton.Icon is SymbolIcon icon)
+                icon.Symbol = ClassSession.IsRunning ? SymbolRegular.Stop16 : SymbolRegular.Play16;
         }
 
         private void SpeakerButton_Click(object sender, RoutedEventArgs e)

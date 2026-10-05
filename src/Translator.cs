@@ -56,6 +56,11 @@ namespace LiveCaptionsTranslator
                     Thread.Sleep(2000);
                     continue;
                 }
+                if (!ClassSession.IsRunning)
+                {
+                    Thread.Sleep(200);
+                    continue;
+                }
 
                 string fullText = string.Empty;
                 try
@@ -73,6 +78,7 @@ namespace LiveCaptionsTranslator
                 }
                 if (string.IsNullOrEmpty(fullText))
                     continue;
+                ClassSession.LastCaptionTime = DateTime.Now;
 
                 // Preprocess
                 fullText = RegexPatterns.Acronym().Replace(fullText, "$1$2");

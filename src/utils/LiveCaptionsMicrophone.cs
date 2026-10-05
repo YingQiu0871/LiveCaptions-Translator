@@ -30,7 +30,7 @@ namespace LiveCaptionsTranslator.utils
                 if (!LiveCaptionsHandler.ClickSettingsButton(window))
                     return false;
 
-                var deadline = DateTime.Now.AddSeconds(4);
+                var deadline = DateTime.Now.AddSeconds(8);
                 var expanded = new HashSet<string>();
                 while (DateTime.Now < deadline)
                 {
@@ -80,11 +80,36 @@ namespace LiveCaptionsTranslator.utils
 
         private static List<AutomationElement> FindMenuItems(int processId)
         {
-            var condition = new AndCondition(
-                new PropertyCondition(AutomationElement.ProcessIdProperty, processId),
-                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.MenuItem));
+            // Menus are popups owned by LiveCaptions, so only search its own top-level windows:
+            // searching every window on the desktop is too slow to finish before the deadline.
+            var menuItem = new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.MenuItem);
+            var items = new List<AutomationElement>();
             try
             {
+                var windows = AutomationElement.RootElement.FindAll(TreeScope.Children,
+                    new PropertyCondition(AutomationElement.ProcessIdProperty, processId));
+                foreach (AutomationElement topLevel in windows)
+                {
+                    try
+                    {
+                        items.AddRange(topLevel.FindAll(TreeScope.Descendants, menuItem).Cast<AutomationElement>());
+                    }
+                    catch (Exception)
+                    {
+                    }
+                }
+            }
+            catch (Exception)
+            {
+            }
+            if (items.Count > 0)
+                return items;
+
+            // Fall back to the whole desktop in case the menu is hosted elsewhere.
+            try
+            {
+                var condition = new AndCondition(
+                    new PropertyCondition(AutomationElement.ProcessIdProperty, processId), menuItem);
                 return AutomationElement.RootElement
                     .FindAll(TreeScope.Descendants, condition)
                     .Cast<AutomationElement>()
@@ -92,7 +117,7 @@ namespace LiveCaptionsTranslator.utils
             }
             catch (Exception)
             {
-                return new List<AutomationElement>();
+                return items;
             }
         }
 

@@ -18,6 +18,7 @@ namespace LiveCaptionsTranslator.models
         private string overlayOriginalCaption = " ";
         private string overlayCurrentTranslation = " ";
         private string overlayNoticePrefix = " ";
+        private string statusHint = ClassSession.IDLE_HINT;
 
         public string OriginalCaption { get; set; } = string.Empty;
         public string TranslatedCaption { get; set; } = string.Empty;
@@ -37,6 +38,16 @@ namespace LiveCaptionsTranslator.models
             {
                 displayOriginalCaption = value;
                 OnPropertyChanged("DisplayOriginalCaption");
+            }
+        }
+        // Shown on the caption page while there is no caption yet.
+        public string StatusHint
+        {
+            get => statusHint;
+            set
+            {
+                statusHint = value;
+                OnPropertyChanged("StatusHint");
             }
         }
         public string DisplayTranslatedCaption

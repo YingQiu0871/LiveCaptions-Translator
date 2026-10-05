@@ -42,7 +42,7 @@
                 <TextBlock
                     IsHitTestVisible="False"
                     Opacity="0.6"
-                    Text="正在等待实时辅助字幕出字……请先播放课程声音或开始讲话。如果一直空白，到“翻译设置”页点“显示”，看看系统的实时辅助字幕窗口里有没有文字。"
+                    Text="{Binding StatusHint}"
                     TextWrapping="Wrap">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">

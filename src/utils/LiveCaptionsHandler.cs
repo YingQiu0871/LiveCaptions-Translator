@@ -97,6 +97,19 @@ namespace LiveCaptionsTranslator.utils
             }
         }
 
+        // LiveCaptions only creates its text area once it is set up, so allow it a few seconds.
+        public static bool HasCaptionsTextBlock(AutomationElement window)
+        {
+            for (int attempt = 0; attempt < 10; attempt++)
+            {
+                captionsTextBlock ??= FindElementByAId(window, "CaptionsTextBlock");
+                if (captionsTextBlock != null)
+                    return true;
+                Thread.Sleep(500);
+            }
+            return false;
+        }
+
         private static AutomationElement FindWindowByPId(int processId)
         {
             var condition = new PropertyCondition(AutomationElement.ProcessIdProperty, processId);

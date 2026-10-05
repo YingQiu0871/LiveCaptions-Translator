@@ -39,6 +39,16 @@
                 <ui:TitleBar.TrailingContent>
                     <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
                         <ui:Button
+                            x:Name="StartButton"
+                            Margin="0,0,8,0"
+                            Padding="10,2,12,2"
+                            Appearance="Primary"
+                            Click="StartButton_Click"
+                            Content="开始"
+                            Icon="{ui:SymbolIcon Play16,
+                                                 Filled=True}"
+                            ToolTip="开始 / 停止上课" />
+                        <ui:Button
                             x:Name="EndSectionButton"
                             Margin="0,0,5,0"
                             Appearance="Transparent"
