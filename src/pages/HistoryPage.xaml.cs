@@ -73,7 +73,7 @@ namespace LiveCaptionsTranslator
                     FontSize = 18,
                     FontWeight = FontWeights.Regular
                 },
-                Content = "This operation cannot be undone!",
+                Content = "Section summaries on the Timeline will be deleted too. This operation cannot be undone!",
                 PrimaryButtonText = "Yes",
                 CloseButtonText = "No",
                 DefaultButton = ContentDialogButton.Close,
@@ -89,6 +89,9 @@ namespace LiveCaptionsTranslator
             {
                 currentPage = 1;
                 await SQLiteHistoryLogger.ClearHistory();
+                // Sections point at history ids, which restart after clearing.
+                await SectionLogger.ClearSections();
+                Summarizer.ResetCursor();
                 await LoadHistory();
             }
         }

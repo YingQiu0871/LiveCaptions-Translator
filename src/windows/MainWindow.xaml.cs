@@ -1,6 +1,8 @@
 ﻿using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Interop;
 using Wpf.Ui.Appearance;
 using Wpf.Ui.Controls;
 
@@ -15,10 +17,26 @@ namespace LiveCaptionsTranslator
         public OverlayWindow? OverlayWindow { get; set; } = null;
         public bool IsAutoHeight { get; set; } = true;
 
+        private const int WM_HOTKEY = 0x0312;
+        private const uint MOD_ALT = 0x0001;
+        private const uint MOD_CONTROL = 0x0002;
+        private const uint MOD_NOREPEAT = 0x4000;
+        private const int HOTKEY_END_SECTION = 0x5301;
+        private const int HOTKEY_TOGGLE_SPEECH = 0x5302;
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
         public MainWindow()
         {
             InitializeComponent();
             ApplicationThemeManager.ApplySystemTheme();
+
+            SourceInitialized += (s, e) => RegisterHotKeys();
+            Closed += (s, e) => UnregisterHotKeys();
+            Speaker.MutedChanged += muted => Dispatcher.InvokeAsync(() => ShowSpeakerState(muted));
 
             Loaded += (s, e) =>
             {
@@ -26,7 +44,7 @@ namespace LiveCaptionsTranslator
                 RootNavigation.Navigate(typeof(CaptionPage));
                 IsAutoHeight = true;
                 CheckForFirstUse();
-                CheckForUpdates();
+                // This fork adds lecture features; do not prompt to install upstream releases.
             };
 
             double screenWidth = SystemParameters.PrimaryScreenWidth;
@@ -120,6 +138,67 @@ namespace LiveCaptionsTranslator
             }
 
             Translator.ClearContexts();
+        }
+
+        private void EndSectionButton_Click(object sender, RoutedEventArgs e)
+        {
+            EndSection();
+        }
+
+        private void SpeakerButton_Click(object sender, RoutedEventArgs e)
+        {
+            Speaker.Muted = !Speaker.Muted;
+        }
+
+        private static void EndSection()
+        {
+            Summarizer.RequestEndSection();
+            SnackbarHost.Show("正在总结本节……", "", SnackbarType.Info, timeout: 1);
+        }
+
+        private void ShowSpeakerState(bool muted)
+        {
+            if (SpeakerButton.Icon is SymbolIcon icon)
+                icon.Symbol = muted ? SymbolRegular.SpeakerMute16 : SymbolRegular.Speaker216;
+        }
+
+        private void RegisterHotKeys()
+        {
+            var handle = new WindowInteropHelper(this).Handle;
+            HwndSource.FromHwnd(handle)?.AddHook(HotKeyHook);
+            // Ctrl+Alt+S: end the current section; Ctrl+Alt+M: mute / unmute speech.
+            bool ok = RegisterHotKey(handle, HOTKEY_END_SECTION, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, 0x53);
+            ok &= RegisterHotKey(handle, HOTKEY_TOGGLE_SPEECH, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, 0x4D);
+            if (!ok)
+                SnackbarHost.Show("[WARNING] 快捷键注册失败。",
+                    "Ctrl+Alt+S / Ctrl+Alt+M 可能被其他程序占用。", SnackbarType.Warning,
+                    timeout: 3, closeButton: true);
+        }
+
+        private void UnregisterHotKeys()
+        {
+            var handle = new WindowInteropHelper(this).Handle;
+            UnregisterHotKey(handle, HOTKEY_END_SECTION);
+            UnregisterHotKey(handle, HOTKEY_TOGGLE_SPEECH);
+        }
+
+        private IntPtr HotKeyHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            if (msg != WM_HOTKEY)
+                return IntPtr.Zero;
+
+            switch (wParam.ToInt32())
+            {
+                case HOTKEY_END_SECTION:
+                    EndSection();
+                    handled = true;
+                    break;
+                case HOTKEY_TOGGLE_SPEECH:
+                    Speaker.Muted = !Speaker.Muted;
+                    handled = true;
+                    break;
+            }
+            return IntPtr.Zero;
         }
 
         private void CaptionLogButton_Click(object sender, RoutedEventArgs e)

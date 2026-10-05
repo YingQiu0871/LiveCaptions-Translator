@@ -14,6 +14,8 @@ namespace LiveCaptionsTranslator
             Task.Run(() => Translator.SyncLoop());
             Task.Run(() => Translator.TranslateLoop());
             Task.Run(() => Translator.DisplayLoop());
+            Task.Run(() => Summarizer.SummaryLoop());
+            Speaker.Start();
         }
 
         private static void OnProcessExit(object sender, EventArgs e)

@@ -1,0 +1,152 @@
+<Page
+    x:Class="LiveCaptionsTranslator.LecturePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:LiveCaptionsTranslator"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    Title="LecturePage"
+    JournalEntry.KeepAlive="False"
+    mc:Ignorable="d">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="15">
+            <WrapPanel Orientation="Horizontal">
+                <StackPanel Margin="15,0,0,10" Orientation="Vertical">
+                    <TextBlock Margin="2.5,0,0,5" Text="自动分节总结" />
+                    <ui:ToggleSwitch
+                        Width="90"
+                        Height="30"
+                        Padding="10,4,10,7"
+                        IsChecked="{Binding SummaryEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        OffContent="关"
+                        OnContent="开" />
+                </StackPanel>
+
+                <StackPanel Margin="15,0,0,10" Orientation="Vertical">
+                    <TextBlock Margin="2.5,0,0,5" Text="分节方式" />
+                    <ComboBox
+                        Width="200"
+                        Height="30"
+                        Padding="10,4,10,7"
+                        SelectedIndex="{Binding SegmentModeIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                        <ComboBoxItem Content="自动（课件页码 / 语义）" />
+                        <ComboBoxItem Content="固定按时间" />
+                    </ComboBox>
+                </StackPanel>
+
+                <StackPanel Margin="15,0,0,10" Orientation="Vertical">
+                    <TextBlock Margin="2.5,0,0,5" ToolTip="自动模式下，同一话题讲了这么久也会强制分一节">
+                        <Run Text="每节最长：" />
+                        <Run Text="{Binding MaxSectionMinutes, Mode=OneWay}" />
+                        <Run Text="分钟" />
+                    </TextBlock>
+                    <Slider
+                        Width="140"
+                        AutoToolTipPlacement="TopLeft"
+                        AutoToolTipPrecision="0"
+                        IsSnapToTickEnabled="True"
+                        Maximum="20"
+                        Minimum="2"
+                        TickFrequency="1"
+                        Value="{Binding MaxSectionMinutes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </StackPanel>
+
+                <StackPanel Margin="15,0,0,10" Orientation="Vertical">
+                    <TextBlock Margin="2.5,0,0,5" ToolTip="固定按时间模式，或自动识别失败时使用">
+                        <Run Text="按时间分节：每" />
+                        <Run Text="{Binding SummaryIntervalMinutes, Mode=OneWay}" />
+                        <Run Text="分钟" />
+                    </TextBlock>
+                    <Slider
+                        Width="140"
+                        AutoToolTipPlacement="TopLeft"
+                        AutoToolTipPrecision="0"
+                        IsSnapToTickEnabled="True"
+                        Maximum="15"
+                        Minimum="1"
+                        TickFrequency="1"
+                        Value="{Binding SummaryIntervalMinutes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </StackPanel>
+
+                <StackPanel Margin="15,0,0,10" Orientation="Vertical">
+                    <TextBlock Margin="2.5,0,0,5" Text="耳机播报" />
+                    <ComboBox
+                        Width="150"
+                        Height="30"
+                        Padding="10,4,10,7"
+                        SelectedIndex="{Binding SpeakModeIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                        <ComboBoxItem Content="关闭" />
+                        <ComboBoxItem Content="只读小节总结" />
+                        <ComboBoxItem Content="总结 + 译文" />
+                    </ComboBox>
+                </StackPanel>
+
+                <StackPanel Margin="15,0,0,10" Orientation="Vertical">
+                    <TextBlock Margin="2.5,0,0,5">
+                        <Run Text="语速：" />
+                        <Run Text="{Binding SpeechRate, Mode=OneWay}" />
+                    </TextBlock>
+                    <Slider
+                        Width="140"
+                        AutoToolTipPlacement="TopLeft"
+                        AutoToolTipPrecision="0"
+                        IsSnapToTickEnabled="True"
+                        Maximum="10"
+                        Minimum="-5"
+                        TickFrequency="1"
+                        Value="{Binding SpeechRate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </StackPanel>
+
+                <StackPanel Margin="15,0,0,10" Orientation="Vertical">
+                    <TextBlock Margin="2.5,0,0,5" Text="语音" />
+                    <StackPanel Orientation="Horizontal">
+                        <ComboBox
+                            x:Name="VoiceBox"
+                            Width="220"
+                            Height="30"
+                            Padding="10,4,10,7"
+                            SelectionChanged="VoiceBox_SelectionChanged" />
+                        <ui:Button
+                            Height="30"
+                            Margin="5,0,0,0"
+                            Click="TestSpeech_click"
+                            Icon="{ui:SymbolIcon Play16,
+                                                 Filled=False}"
+                            ToolTip="试听" />
+                    </StackPanel>
+                </StackPanel>
+            </WrapPanel>
+
+            <TextBlock
+                Margin="17.5,5,10,5"
+                Opacity="0.75"
+                TextWrapping="Wrap">
+                <Run Text="分节：在 Timeline 页载入课件 PDF 后按页码分节；没有课件时按话题变化分节；识别失败才按时间分节。" />
+                <LineBreak />
+                <Run Text="小节总结使用 Setting 里 &quot;OpenAI&quot; 这一项的接口配置，可以填 DeepSeek：API URL 填 https://api.deepseek.com/chat/completions，模型填 deepseek-chat。" />
+                <LineBreak />
+                <Run Text="快捷键：Ctrl+Alt+S 结束本节并总结，Ctrl+Alt+M 静音 / 恢复播报。播报走系统默认输出设备，连上蓝牙耳机即可。" />
+            </TextBlock>
+
+            <StackPanel Margin="15,5,10,0" Orientation="Vertical">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock
+                        Margin="2.5,0,0,5"
+                        VerticalAlignment="Center"
+                        Text="总结提示词（{0} 会被替换为目标语言）" />
+                    <ui:Button
+                        Margin="10,0,0,5"
+                        Padding="8,2,8,2"
+                        Click="ResetPrompt_click"
+                        Content="恢复默认" />
+                </StackPanel>
+                <ui:TextBox
+                    MinHeight="80"
+                    AcceptsReturn="True"
+                    Text="{Binding SummaryPrompt, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                    TextWrapping="Wrap" />
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

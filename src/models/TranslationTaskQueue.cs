@@ -1,4 +1,6 @@
-﻿namespace LiveCaptionsTranslator.models
+﻿using LiveCaptionsTranslator.utils;
+
+namespace LiveCaptionsTranslator.models
 {
     public class TranslationTaskQueue
     {
@@ -47,6 +49,10 @@
             if (!isOverwrite)
                 await Translator.AddContexts();
             await Translator.Log(translationTask.OriginalText, translatedText, isOverwrite);
+
+            // Read complete sentences aloud (only when the speak mode includes translations).
+            if (output.isChoke)
+                Speaker.EnqueueTranslation(translationTask.OriginalText, translatedText);
         }
     }
 

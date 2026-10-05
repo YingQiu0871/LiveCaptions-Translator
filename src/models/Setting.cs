@@ -28,6 +28,7 @@ namespace LiveCaptionsTranslator.models
 
         private MainWindowState mainWindowState;
         private OverlayWindowState overlayWindowState;
+        private LectureState lectureState;
         private Dictionary<string, string> windowBounds;
 
         private Dictionary<string, List<TranslateAPIConfig>> configs;
@@ -126,6 +127,15 @@ namespace LiveCaptionsTranslator.models
                 OnPropertyChanged("OverlayWindow");
             }
         }
+        public LectureState Lecture
+        {
+            get => lectureState;
+            set
+            {
+                lectureState = value ?? new LectureState();
+                OnPropertyChanged("Lecture");
+            }
+        }
         public Dictionary<string, string> WindowBounds
         {
             get => windowBounds;
@@ -175,6 +185,7 @@ namespace LiveCaptionsTranslator.models
 
             mainWindowState = new MainWindowState();
             overlayWindowState = new OverlayWindowState();
+            lectureState = new LectureState();
 
             double screenWidth = SystemParameters.PrimaryScreenWidth;
             double screenHeight = SystemParameters.PrimaryScreenHeight;

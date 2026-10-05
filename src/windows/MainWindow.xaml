@@ -39,6 +39,22 @@
                 <ui:TitleBar.TrailingContent>
                     <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
                         <ui:Button
+                            x:Name="EndSectionButton"
+                            Margin="0,0,5,0"
+                            Appearance="Transparent"
+                            Click="EndSectionButton_Click"
+                            Icon="{ui:SymbolIcon Flag16,
+                                                 Filled=False}"
+                            ToolTip="结束本节并总结 (Ctrl+Alt+S)" />
+                        <ui:Button
+                            x:Name="SpeakerButton"
+                            Margin="0,0,5,0"
+                            Appearance="Transparent"
+                            Click="SpeakerButton_Click"
+                            Icon="{ui:SymbolIcon Speaker216,
+                                                 Filled=False}"
+                            ToolTip="静音 / 恢复耳机播报 (Ctrl+Alt+M)" />
+                        <ui:Button
                             x:Name="CaptionLogButton"
                             Margin="0,0,5,0"
                             Appearance="Transparent"
@@ -99,6 +115,20 @@
                         Icon="{ui:SymbolIcon Settings24}"
                         NavigationCacheMode="Required"
                         TargetPageType="{x:Type local:SettingPage}" />
+                    <ui:NavigationViewItem
+                        Margin="0,3,0,0"
+                        Content="Timeline"
+                        FontFamily="Bahnschrift"
+                        Icon="{ui:SymbolIcon Timeline24}"
+                        NavigationCacheMode="Disabled"
+                        TargetPageType="{x:Type local:TimelinePage}" />
+                    <ui:NavigationViewItem
+                        Margin="0,3,0,0"
+                        Content="Lecture"
+                        FontFamily="Bahnschrift"
+                        Icon="{ui:SymbolIcon SlideText24}"
+                        NavigationCacheMode="Required"
+                        TargetPageType="{x:Type local:LecturePage}" />
                     <ui:NavigationViewItem
                         Margin="0,3,0,0"
                         Content="History"
