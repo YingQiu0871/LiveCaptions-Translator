@@ -43,13 +43,15 @@
 
 ## 下载
 
-在 [Actions](https://github.com/YingQiu0871/LiveCaptions-Translator/actions/workflows/dotnet-build.yml) 里打开最近一次成功的构建，下载底部的 **LiveCaptionsTranslator** 压缩包（需要登录 GitHub）。解压后：
+到 [Releases](https://github.com/YingQiu0871/LiveCaptions-Translator/releases/latest) 下载最新版本：
 
-- `x64/selfcontained/LiveCaptionsTranslator.exe`：自带运行库，**推荐**。
-- `x64/framework/LiveCaptionsTranslator.exe`：体积小，需要先安装 [.NET 8 桌面运行时](https://dotnet.microsoft.com/download/dotnet/8.0)。
-- ARM 电脑用 `arm64` 文件夹里的版本。
+- `LiveCaptionsTranslator-win-x64-withruntime.exe`：自带运行库，**推荐**，下载后直接运行。
+- `LiveCaptionsTranslator-win-x64.exe`：体积小，需要先安装 [.NET 8 桌面运行时](https://dotnet.microsoft.com/download/dotnet/8.0)。
+- ARM 电脑选文件名带 `arm64` 的版本。
 
 建议把 exe 单独放进一个文件夹，因为设置（`setting.json`）和历史记录（`translation_history.db`）都保存在 exe 所在的目录。
+
+发布新版本：在 Actions 里手动运行 "CI/CD Pipeline"，勾选 "Publish a GitHub Release from this build"。
 
 ## 第一次使用
 
