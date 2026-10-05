@@ -1,213 +1,105 @@
-﻿<div align="center">
-
-<img src="src/LiveCaptions-Translator.ico" width="128" height="128" alt="LiveCaptions-Translator Icon"/>
-
-# LiveCaptions Translator
-
-<a href="https://trendshift.io/repositories/14278" target="_blank"><img src="https://trendshift.io/api/badge/repositories/14278" alt="SakiRinn%2FLiveCaptions-Translator | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
-
-### *Real-time audio/speech translation tool based on Windows LiveCaptions*
-
-[![Master Build](https://github.com/SakiRinn/LiveCaptions-Translator/actions/workflows/dotnet-build.yml/badge.svg?branch=master)](https://github.com/SakiRinn/LiveCaptions-Translator/actions/workflows/dotnet-build.yml)
-[![GitHub Release](https://img.shields.io/github/v/release/SakiRinn/LiveCaptions-Translator?label=Latest&color=yellow)](https://github.com/SakiRinn/LiveCaptions-Translator/releases/latest)
-[![Windows 11](https://img.shields.io/badge/platform-Windows11-blue?logo=windows11&style=&color=1E9BFA)](https://www.microsoft.com/en-us/software-download/windows11)
-[![GitHub License](https://img.shields.io/github/license/SakiRinn/LiveCaptions-Translator)](https://github.com/SakiRinn/LiveCaptions-Translator/blob/master/LICENSE)
-[![GitHub Stars](https://img.shields.io/github/stars/SakiRinn/LiveCaptions-Translator)](https://github.com/SakiRinn/LiveCaptions-Translator/stargazers)
-
-**English** | [中文](README_zh-CN.md)
-
-</div>
-
-## Overview
-
-**✨ LiveCaptions Translator = Windows LiveCaptions + Translate API ✨**
-
-This is a lightweight tool that seamlessly integrates translation APIs with Windows Live Captions, enabling real-time speech translation without requiring a Copilot+ PC.
-
-Windows' built-in LiveCaptions is easy to use, uses few resources, and has extremely high recognition accuracy. If empowering it with the awesome translation capabilities of LLMs, you will get... possibly the best real-time translator available to date!
-
-**🚀 Quick Start:** Download from [Releases](https://github.com/SakiRinn/LiveCaptions-Translator/releases) and start with a single click!
-
-<div align="center">
-  <img src="images/preview.png" alt="Preview of LiveCaptions Translator" width="90%" />
-  <br>
-  <em style="font-size:80%">Preview of LiveCaptions Translator</em>
-  <br>
-</div>
-
-## Features
-
-- **🔄 Seamless Integration**
-
-  Automatically invokes Windows LiveCaptions without opening separate windows. Provides a unified experience for real-time audio/speech translation.
-
-  After your first use, Windows LiveCaptions will be hidden by default. You can show it again in the settings.
-
-  <div align="center">
-    <img src="images/show_livecaptions.png" alt="LiveCaptions Show/Hide button" width="90%" />
-    <br>
-    <em style="font-size:80%">LiveCaptions Show/Hide button</em>
-    <br>
-  </div>
-
-  By enabling the ***Include microphone audio*** option in the setting of Windows LiveCaptions, you can achieve real-time speech translation!
-  > ⚠️ **IMPORTANT:** You must change the source language in Windows LiveCaptions!
-
-- **🎨 Modern Interface**
-
-  Easy-to-use and clean Fluent UI aligned with modern Windows aesthetics.
-
-  It can automatically switches between light and dark themes 🌓 based on the system setting.
-
-- **🌐 Multiple Translation Services**
-
-  Supports various translation engines, including 2 out-of-the-box Google Translate.
-
-  Implemented translation engines are shown in the table below:
-
-  <div align="center">
-
-  | API                                                 | Type        | Hosting     |
-  |-----------------------------------------------------|-------------|-------------|
-  | [Ollama](https://ollama.com)                        | LLM-based   | Self-hosted |
-  | OpenAI Compatible API                               | LLM-based   | Online      |
-  | [OpenRouter](https://openrouter.ai)                 | LLM-based   | Online      |
-  | Google Translate                                    | Traditional | Online      |
-  | DeepL                                               | Traditional | Online      |
-  | Youdao                                              | Traditional | Online      |
-  | Baidu Translate                                     | Traditional | Online      |
-  | [MTranServer](https://github.com/xxnuo/MTranServer) | Traditional | Self-hosted |
-  | [LibreTranslate](https://libretranslate.com/)       | Traditional | Self-hosted |
-
-  </div>
-
-  It's strongly recommended using **LLM-based** translation engines, as LLMs excel at handling incomplete sentences and are adept at understanding context.
-
-- **🪟 Overlay Window**
-
-  Open a borderless, transparent overlay window to display subtitles, providing the most immersive experience. This is very useful for scenarios like gaming, videos, and live streams!
-
-  You can even make it completely embedded into the screen, becoming part of it. This means it won't affect any of your operations at all! This is perfect for gamers.
-
-  <div align="center">
-    <img src="images/overlay_window.png" alt="Overlay Window" width="80%" />
-    <br>
-    <em style="font-size:80%">Overlay window</em>
-    <br>
-  </div>
-
-  You can open the Overlay Window on the taskbar and adjust its parameters such as the window background and subtitle color, font size, and transparency. Extremely high configurability allows it to completely match your preferences!
-
-  You can adjust the number of sentences displayed simultaneously in the *Overlay Sentences* section of the setting page.
-
-- **⚙️ Flexible Controls**
-
-  Supports Always-on-top window and convenient translation pause/resume, and you can copy text with a single click for quick share or saving.
-
-- **📒 History Management**
-
-  Records original and translated text, perfect for meetings, lectures, and important discussions.
-
-  You can export all records as a CSV file.
-
-  <div align="center">
-    <img src="images/history.png" alt="Translation history" width="90%" />
-    <br>
-    <em style="font-size:80%">Translation history</em>
-    <br>
-  </div>
-
-- **🎞️ Log Cards**
-
-  Recent transcription records can be displayed as Log Cards, which helps you better grasp the context.
-
-  You can enable it on the taskbar of the main page and change the number of cards in the *Log Cards* section of the setting page.
-
-  <div align="center">
-    <img src="images/log_cards.png" alt="Log cards" width="90%" />
-    <br>
-    <em style="font-size:80%">Log Cards</em>
-    <br>
-  </div>
-
-
-## Prerequisites
-
 <div align="center">
 
-| Requirement                                                                                                           | Details                                     |
-|-----------------------------------------------------------------------------------------------------------------------|---------------------------------------------|
-| <img src="https://img.shields.io/badge/Windows-11%20(22H2+)-0078D6?style=for-the-badge&logo=windows&logoColor=white"> | With LiveCaptions support.                  |
-| <img src="https://img.shields.io/badge/.NET-8.0+-512BD4?style=for-the-badge&logo=dotnet&logoColor=white">             | Recommended. Not test in previous versions. |
+<img src="src/LiveCaptions-Translator.ico" width="128" height="128" alt="图标"/>
+
+# 课堂同传助手
+
+### *听外语课：实时字幕 + 中文翻译 + 分节小结 + 耳机播报*
+
+[![Build](https://github.com/YingQiu0871/LiveCaptions-Translator/actions/workflows/dotnet-build.yml/badge.svg)](https://github.com/YingQiu0871/LiveCaptions-Translator/actions/workflows/dotnet-build.yml)
+[![Windows 11](https://img.shields.io/badge/platform-Windows11-blue?logo=windows11&color=1E9BFA)](https://www.microsoft.com/windows/windows-11)
+[![License](https://img.shields.io/github/license/SakiRinn/LiveCaptions-Translator)](LICENSE)
+
+基于 [SakiRinn/LiveCaptions-Translator](https://github.com/SakiRinn/LiveCaptions-Translator) 修改 · 原版说明：[English](README.upstream.md) | [中文](README.upstream_zh-CN.md)
 
 </div>
 
-This tool is based on Windows LiveCaptions, which is available since **Windows 11 22H2**.
+## 这是什么
 
-We suggest you have **.NET runtime 8.0** or higher installed. If you are not available to install one, you can download the ***with runtime*** version but its size is bigger.
+市面上的同声传译工具大多很贵，而且不是为上课设计的。这个工具用 Windows 11 自带的"实时辅助字幕"识别老师的话，再接上 DeepSeek 等大模型，帮你：
 
-<div align="center">
-  <p align="center">
-    <a href="https://github.com/SakiRinn/LiveCaptions-Translator/wiki">
-      <img src="https://img.shields.io/badge/📚_Check_our_Wiki_for_detailed_information-2ea44f?style=for-the-badge" alt="Check our Wiki">
-    </a>
-  </p>
-</div>
+- **看懂**：实时显示外语原文和中文译文。
+- **跟上**：每讲完一节（一页课件、一个要点），自动生成几句中文小结，按时间线排好。
+- **不用盯屏幕**：用蓝牙耳机听小结，也可以连同每句译文一起听。
+- **课后复习**：一键导出当天的 Markdown 笔记，包含时间线、每节小结、原文和译文。
 
-## Getting Started
+语音识别在本机完成，不需要另外装模型。翻译和总结按 API 用量计费，用 DeepSeek 的话，一节课大约几毛到一两块钱（估算）。
 
-> ⚠️ **IMPORTANT:** You must complete the following steps before running LiveCaptions Translator for the first time.
->
-> For detailed information, see Microsoft's guide on [Using live captions](https://support.microsoft.com/en-us/windows/use-live-captions-to-better-understand-audio-b52da59c-14b8-4031-aeeb-f6a47e6055df).
+## 功能
 
-### Step 1: Verify Windows LiveCaptions Availability
+| 功能 | 说明 |
+|---|---|
+| 实时字幕与翻译 | 原版功能。翻译可选 DeepSeek、通义千问等 OpenAI 兼容接口，也可以用免费的 Google 翻译 |
+| 分节总结 | 上传了课件就按老师讲到的页码分节；没有课件就按话题变化分节；自动识别失败时才按固定时间分节；同一话题讲太久也会强制分节。随时按 **Ctrl+Alt+S** 手动结束本节 |
+| 课件 | 以 PDF 为主，也支持 .pptx。扫描版或图片页面自动用 Windows 自带的 OCR 识别，小结会参考当前页的文字纠正术语 |
+| 输入源 | 在软件里选"电脑播放的声音"（网课、视频）或"麦克风"（线下教室），并选择用哪个麦克风 |
+| 耳机播报 | 只读小结，或小结加每句译文；可选输出设备、语音、语速、音量。跟不上时自动跳过旧译文。**Ctrl+Alt+M** 静音 |
+| 时间线 | Timeline 页按时间列出每一节的小结，可以查看往日记录、导出笔记 |
 
-Confirm LiveCaptions is available on your system using any of these methods:
+## 系统要求
 
-- Toggle **Live captions** in the quick settings
-- Press **Win + Ctrl + L**
-- Access via **Quick settings** > **Accessibility** > **Live captions**
-- Open **Start** > **All apps** > **Accessibility** > **Live captions**
-- Navigate to **Settings** > **Accessibility** > **Captions** and enable **Live captions**
+- **Windows 11 22H2 或更高版本**（需要"实时辅助字幕"）。
+- 一个大模型 API Key，推荐 [DeepSeek](https://platform.deepseek.com/)。只用 Google 翻译的话，也可以先不填，但就没有小节总结了。
 
-### Step 2: Configure LiveCaptions
+## 下载
 
-When you first start, Windows LiveCaptions will ask for your consent to process voice data on your device and prompt you to download language files to be used by on-device speech recognition.
+在 [Actions](https://github.com/YingQiu0871/LiveCaptions-Translator/actions/workflows/dotnet-build.yml) 里打开最近一次成功的构建，下载底部的 **LiveCaptionsTranslator** 压缩包（需要登录 GitHub）。解压后：
 
-After launching Windows LiveCaptions, click the **⚙️ gear** icon to open the setting menu, then select **Position** > **Overlaid on screen**.
+- `x64/selfcontained/LiveCaptionsTranslator.exe`：自带运行库，**推荐**。
+- `x64/framework/LiveCaptionsTranslator.exe`：体积小，需要先安装 [.NET 8 桌面运行时](https://dotnet.microsoft.com/download/dotnet/8.0)。
+- ARM 电脑用 `arm64` 文件夹里的版本。
 
-> ⚠️ **VERY IMPORTANT!** Otherwise, a display bug will occur on the screen after hiding Windows LiveCaptions.
+建议把 exe 单独放进一个文件夹，因为设置（`setting.json`）和历史记录（`translation_history.db`）都保存在 exe 所在的目录。
 
-<div align="center">
-  <img src="images/speech_recognition.png" alt="Items under speech recognition" width="80%" />
-  <br>
-  <em style="font-size:80%">Required speech recognition downloads</em>
-  <br>
-</div>
+## 第一次使用
 
-After configuration, close Windows LiveCaptions and launch LiveCaptions Translator to start using it! 🎉
+### 1. 准备 Windows 实时辅助字幕
 
-## Project Stats
+1. 按 **Win + Ctrl + L** 打开实时辅助字幕。第一次打开时，按提示同意并下载语音识别文件。
+2. 在 **设置 → 时间和语言 → 语言和区域** 里添加课程语言（例如英语），并安装它的"语音识别"组件。扫描版课件需要 OCR 的话，还要有"光学字符识别"组件（一般随语言包一起装好）。
+3. 想听中文播报，需要安装中文语言包里的"文本到语音"组件。
+4. 在实时辅助字幕里点 ⚙️，选择 **位置（Position）→ 在屏幕上叠加（Overlaid on screen）**，否则隐藏它之后屏幕上会出现显示错误（原版的要求）。然后把它关掉。
 
-### Activity
+### 2. 打开软件，进入"课堂设置"页
 
-<div align="center">
-  <img src="https://img.shields.io/github/issues/SakiRinn/LiveCaptions-Translator?style=for-the-badge&label=Issues&color=yellow" alt="GitHub Issues">
-  <img src="https://img.shields.io/github/issues-pr/SakiRinn/LiveCaptions-Translator?style=for-the-badge&label=Pull%20Requests&color=blue" alt="GitHub Pull Requests">
-  <img src="https://img.shields.io/github/discussions/SakiRinn/LiveCaptions-Translator?style=for-the-badge&label=Discussions&color=orange" alt="GitHub Discussions">
-  <img src="https://img.shields.io/github/last-commit/SakiRinn/LiveCaptions-Translator?style=for-the-badge&label=Last%20Commit&color=purple" alt="GitHub Last Commit">
-</div>
+左侧导航的第二个图标就是"课堂设置"，所有设置都在这一页：
 
-### Contributors
+1. **⓪ 输入源**：网课、视频选"电脑播放的声音"；线下课选"麦克风"，再选用哪个麦克风。**不要选蓝牙耳机上的麦克风**，否则耳机会切换到通话模式，音质变差。
+2. **① 模型与 API**：选服务商（例如 DeepSeek），粘贴 API Key，然后点"测试连接"。
+3. **② 课件**（可选）：上传本节课的 PDF。
+4. **③ 分节总结**：一般保持默认。
+5. **④ 耳机播报**：选输出设备和读出内容，点"试听"确认耳机里有声音。
 
-<div align="center">
-  <img src="https://img.shields.io/github/contributors/SakiRinn/LiveCaptions-Translator?style=for-the-badge&label=Contributors&color=success" alt="GitHub Contributors">
-  <br>
-  <a href="https://github.com/SakiRinn/LiveCaptions-Translator/graphs/contributors">
-    <img src="https://contrib.rocks/image?repo=SakiRinn/LiveCaptions-Translator" />
-  </a>
-</div>
+### 3. 上课
 
-### Star History
+- 主窗口显示实时原文和译文；**Timeline** 页显示每一节的小结。
+- **Ctrl+Alt+S**：立即结束本节并生成小结（老师换话题而工具没跟上时用）。
+- **Ctrl+Alt+M**：耳机播报静音 / 恢复。
+- 下课后在 Timeline 页右上角导出 Markdown 笔记。
 
-[![Stargazers over time](https://starchart.cc/SakiRinn/LiveCaptions-Translator.svg?variant=adaptive)](https://starchart.cc/SakiRinn/LiveCaptions-Translator)
+## 建议的设置
+
+| 场景 | 输入源 | 播报输出设备 | Windows 默认输出 |
+|---|---|---|---|
+| 线下教室 | 麦克风（电脑自带或外接麦克风，坐近一点） | 蓝牙耳机 | 电脑扬声器 |
+| 网课 / 视频 | 电脑播放的声音 | 蓝牙耳机 | 你听课用的设备 |
+
+实时辅助字幕会听 Windows 默认输出设备里的所有声音。如果播报也从这个设备放出来，就会被当成老师的话识别进字幕。所以播报走默认设备时，软件会在播报期间暂停接收字幕。线下课按上表设置，播报就不会打断字幕。
+
+## 常见问题
+
+- **没有小结？** 先在"课堂设置"里点"测试连接"。小结始终使用"① 模型与 API"里的模型，就算翻译选了 Google 也一样。
+- **自动切换麦克风没生效？** 实时辅助字幕没有提供公开接口，软件是模拟点它的菜单实现的。如果失败，会弹出它的设置菜单，请在"首选项"里手动勾选或取消"包含麦克风音频"。
+- **课件读不出字？** 在 OCR 语言里选课件的语言，或者打开"所有页面都用 OCR"。旧版 .ppt 请先另存为 PDF。
+- **删除历史记录** 会把 Timeline 上的小节一起删掉。
+- 本版本关闭了原版的"有新版本"提示，以免误装原版、丢掉这些功能。
+
+更详细的说明见 [docs/lecture-assistant.zh-CN.md](docs/lecture-assistant.zh-CN.md)。
+
+## 致谢与许可
+
+本项目基于 [SakiRinn/LiveCaptions-Translator](https://github.com/SakiRinn/LiveCaptions-Translator) 修改，感谢原作者和所有贡献者。许可证与原项目相同，为 [Apache-2.0](LICENSE)。
+
+使用的第三方库：[WPF-UI](https://github.com/lepoco/wpfui)、[PdfPig](https://github.com/UglyToad/PdfPig)、[NAudio](https://github.com/naudio/NAudio)、System.Speech、Microsoft.Data.Sqlite、CsvHelper。
+
+请遵守学校和老师关于课堂录音、转写的规定。
