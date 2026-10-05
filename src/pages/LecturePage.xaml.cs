@@ -39,6 +39,7 @@ namespace LiveCaptionsTranslator
             ApplicationThemeManager.ApplySystemTheme();
             DataContext = Translator.Setting.Lecture;
             ApiCard.DataContext = ApiConfig;
+            ScrollHelper.UseOwnScrollViewer(this, PageScroll);
 
             Loaded += (s, e) =>
             {

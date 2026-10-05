@@ -35,7 +35,7 @@
         </Style>
     </Page.Resources>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <ScrollViewer x:Name="PageScroll" VerticalScrollBarVisibility="Auto">
         <Grid Margin="15,12,5,12">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />

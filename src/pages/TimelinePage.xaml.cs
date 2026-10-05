@@ -22,6 +22,7 @@ namespace LiveCaptionsTranslator
             ApplicationThemeManager.ApplySystemTheme();
 
             DayPicker.SelectedDate = DateTime.Today;
+            ScrollHelper.UseOwnScrollViewer(this, SectionScroll);
 
             Loaded += async (s, e) =>
             {
