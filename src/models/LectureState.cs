@@ -18,6 +18,14 @@ namespace LiveCaptionsTranslator.models
         FixedTime = 1,
     }
 
+    public enum InputSource
+    {
+        // Sound played by the computer (online class, video).
+        ComputerAudio = 0,
+        // Sound in the classroom, through a microphone.
+        Microphone = 1,
+    }
+
     public class LectureState : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -43,6 +51,10 @@ namespace LiveCaptionsTranslator.models
         private int speechRate = 2;
         private int speechVolume = 100;
         private string voiceName = string.Empty;
+        private string speechDeviceId = string.Empty;
+        private InputSource inputSource = InputSource.ComputerAudio;
+        private string ocrLanguage = string.Empty;
+        private bool forceOcr = false;
 
         public bool SummaryEnabled
         {
@@ -139,6 +151,45 @@ namespace LiveCaptionsTranslator.models
             {
                 voiceName = value ?? string.Empty;
                 OnPropertyChanged("VoiceName");
+            }
+        }
+
+        // Empty: the Windows default output device.
+        public string SpeechDeviceId
+        {
+            get => speechDeviceId;
+            set
+            {
+                speechDeviceId = value ?? string.Empty;
+                OnPropertyChanged("SpeechDeviceId");
+            }
+        }
+        public InputSource InputSource
+        {
+            get => inputSource;
+            set
+            {
+                inputSource = value;
+                OnPropertyChanged("InputSource");
+            }
+        }
+        // Language tag of the Windows OCR engine for scanned slides; empty: chosen automatically.
+        public string OcrLanguage
+        {
+            get => ocrLanguage;
+            set
+            {
+                ocrLanguage = value ?? string.Empty;
+                OnPropertyChanged("OcrLanguage");
+            }
+        }
+        public bool ForceOcr
+        {
+            get => forceOcr;
+            set
+            {
+                forceOcr = value;
+                OnPropertyChanged("ForceOcr");
             }
         }
 

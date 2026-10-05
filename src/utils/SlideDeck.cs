@@ -25,31 +25,89 @@ namespace LiveCaptionsTranslator.utils
         public static IReadOnlyList<SlidePage> Pages => pages;
         public static string FileName { get; private set; } = string.Empty;
         public static bool IsLoaded => pages.Count > 0;
+        // How many pages of the loaded PDF were read with OCR.
+        public static int OcrPageCount { get; private set; } = 0;
+        private static int lastOcrPageCount = 0;
 
         public static event Action? Changed;
 
         [GeneratedRegex(@"\s+")]
         private static partial Regex Whitespace();
 
-        public static string FileFilter => "课件 (*.pdf;*.pptx)|*.pdf;*.pptx";
+        public static string FileFilter => "课件 PDF (*.pdf)|*.pdf|PowerPoint (*.pptx)|*.pptx|全部课件 (*.pdf;*.pptx)|*.pdf;*.pptx";
 
-        public static async Task Load(string path)
+        // A page with less text than this is treated as scanned and read with OCR.
+        private const int MIN_TEXT_CHARS = 30;
+
+        public static async Task Load(string path, IProgress<string>? progress = null)
         {
             string extension = Path.GetExtension(path).ToLowerInvariant();
+            lastOcrPageCount = 0;
             var loaded = extension switch
             {
-                ".pdf" => await Task.Run(() => ReadPdf(path)),
+                ".pdf" => await ReadPdfWithOcr(path, progress),
                 ".pptx" => await Task.Run(() => ReadPptx(path)),
-                ".ppt" => throw new NotSupportedException("不支持旧版 .ppt，请在 PowerPoint 里另存为 .pptx 或 PDF。"),
+                ".ppt" => throw new NotSupportedException("不支持旧版 .ppt，请在 PowerPoint 里另存为 .pdf 或 .pptx。"),
                 _ => throw new NotSupportedException("只支持 PDF 和 PPTX 课件。"),
             };
 
             if (loaded.Count == 0 || loaded.All(page => string.IsNullOrEmpty(page.Text)))
-                throw new InvalidDataException("课件里没有读到文字（扫描图片版的课件无法使用）。");
+                throw new InvalidDataException("课件里没有读到文字。");
 
             pages = loaded;
             FileName = Path.GetFileName(path);
+            OcrPageCount = lastOcrPageCount;
             Changed?.Invoke();
+        }
+
+        // Text layer first; pages without one (scans, slides exported as pictures) go through OCR.
+        private static async Task<List<SlidePage>> ReadPdfWithOcr(string path, IProgress<string>? progress)
+        {
+            var lecture = Translator.Setting?.Lecture;
+            bool forceOcr = lecture?.ForceOcr ?? false;
+
+            progress?.Report("读取课件文字……");
+            List<SlidePage> result;
+            try
+            {
+                result = await Task.Run(() => ReadPdf(path));
+            }
+            catch (Exception)
+            {
+                // Unreadable text layer: OCR every page.
+                int count = await SlideOcr.PageCount(path);
+                result = Enumerable.Range(1, count).Select(n => MakePage(n, null, new List<string>())).ToList();
+                forceOcr = true;
+            }
+
+            var scanned = result
+                .Where(page => forceOcr || page.Text.Length < MIN_TEXT_CHARS)
+                .Select(page => page.Number)
+                .ToList();
+            if (scanned.Count == 0)
+                return result;
+
+            Dictionary<int, List<string>> recognized;
+            try
+            {
+                recognized = await SlideOcr.RecognizePdf(path, scanned, lecture?.OcrLanguage ?? string.Empty, progress);
+            }
+            catch (Exception ex)
+            {
+                if (result.All(page => string.IsNullOrEmpty(page.Text)))
+                    throw new InvalidDataException($"这是扫描版课件，OCR 失败：{ex.Message}");
+                SnackbarHost.Show("[WARNING] 部分页面 OCR 失败。", ex.Message, SnackbarType.Warning,
+                    timeout: 3, closeButton: true);
+                return result;
+            }
+
+            for (int i = 0; i < result.Count; i++)
+            {
+                if (recognized.TryGetValue(result[i].Number, out var lines) && lines.Count > 0)
+                    result[i] = MakePage(result[i].Number, lines[0], lines);
+            }
+            lastOcrPageCount = recognized.Count(pair => pair.Value.Count > 0);
+            return result;
         }
 
         private static List<SlidePage> ReadPdf(string path)
@@ -143,6 +201,7 @@ namespace LiveCaptionsTranslator.utils
         {
             pages = new List<SlidePage>();
             FileName = string.Empty;
+            OcrPageCount = 0;
             Changed?.Invoke();
         }
 

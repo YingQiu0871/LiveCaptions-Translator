@@ -14,6 +14,7 @@ namespace LiveCaptionsTranslator.utils
         public static AutomationElement LaunchLiveCaptions()
         {
             // Init
+            captionsTextBlock = null;
             KillAllProcessesByPName(PROCESS_NAME);
             var process = Process.Start(PROCESS_NAME);
 

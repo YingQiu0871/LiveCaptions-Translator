@@ -166,6 +166,8 @@ namespace LiveCaptionsTranslator
                 {
                     Caption.DisplayTranslatedCaption = "[WARNING] LiveCaptions was unexpectedly closed, restarting...";
                     Window = LiveCaptionsHandler.LaunchLiveCaptions();
+                    LiveCaptionsHandler.FixLiveCaptions(Window);
+                    LiveCaptionsHandler.HideLiveCaptions(Window);
                     Caption.DisplayTranslatedCaption = "";
                 }
 
@@ -173,6 +175,10 @@ namespace LiveCaptionsTranslator
                 if (pendingTextQueue.Count > 0)
                 {
                     var originalSnapshot = pendingTextQueue.Dequeue();
+
+                    // LiveCaptions also hears our own speech when it plays on the default output device.
+                    if (Speaker.SuppressCaptions)
+                        continue;
 
                     if (LogOnlyFlag)
                     {
@@ -332,6 +338,21 @@ namespace LiveCaptionsTranslator
 
             Caption?.OnPropertyChanged("DisplayLogCards");
             Caption?.OnPropertyChanged("OverlayPreviousTranslation");
+        }
+
+        // Restarts LiveCaptions, e.g. after the default microphone changed. `TranslateLoop` relaunches it.
+        public static void RestartLiveCaptions()
+        {
+            var window = Window;
+            if (window == null)
+                return;
+            try
+            {
+                LiveCaptionsHandler.KillLiveCaptions(window);
+            }
+            catch (Exception)
+            {
+            }
         }
 
         public static void ClearContexts()

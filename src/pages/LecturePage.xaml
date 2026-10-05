@@ -48,6 +48,34 @@
 
             <!--  Left column: model / API, slides  -->
             <StackPanel Grid.Row="0" Grid.Column="0">
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource CardTitle}" Text="⓪ 输入源" />
+
+                        <TextBlock Style="{StaticResource Label}" Text="听哪里的声音" />
+                        <ComboBox x:Name="SourceBox" SelectionChanged="SourceBox_SelectionChanged">
+                            <ComboBoxItem Content="电脑播放的声音（网课、视频）" />
+                            <ComboBoxItem Content="麦克风（线下教室）" />
+                        </ComboBox>
+
+                        <TextBlock Style="{StaticResource Label}" Text="麦克风" />
+                        <StackPanel Orientation="Horizontal">
+                            <ComboBox
+                                x:Name="MicBox"
+                                MinWidth="230"
+                                SelectionChanged="MicBox_SelectionChanged" />
+                            <ui:Button
+                                Margin="6,0,0,0"
+                                Click="RefreshDevices_click"
+                                Icon="{ui:SymbolIcon ArrowClockwise12,
+                                                     Filled=False}"
+                                ToolTip="刷新设备列表" />
+                        </StackPanel>
+                        <TextBlock x:Name="SourceStatus" Style="{StaticResource Hint}" />
+                        <TextBlock Style="{StaticResource Hint}" Text="选择麦克风会把它设为 Windows 默认录音设备，并重启实时字幕。不要选蓝牙耳机自带的麦克风，否则耳机会切换到通话模式，音质变差。" />
+                    </StackPanel>
+                </Border>
+
                 <Border x:Name="ApiCard" Style="{StaticResource Card}">
                     <StackPanel>
                         <TextBlock Style="{StaticResource CardTitle}" Text="① 模型与 API" />
@@ -104,9 +132,10 @@
                         <TextBlock Style="{StaticResource CardTitle}" Text="② 课件（可选）" />
                         <StackPanel Orientation="Horizontal">
                             <ui:Button
+                                x:Name="LoadSlidesButton"
                                 Click="LoadSlides_click"
-                                Content="上传 PPT / PDF"
-                                Icon="{ui:SymbolIcon DocumentAdd16,
+                                Content="上传课件 PDF"
+                                Icon="{ui:SymbolIcon DocumentPdf16,
                                                      Filled=False}" />
                             <ui:Button
                                 x:Name="ClearSlidesButton"
@@ -119,7 +148,13 @@
                             x:Name="SlidesInfo"
                             Margin="2,8,0,0"
                             TextWrapping="Wrap" />
-                        <TextBlock Style="{StaticResource Hint}" Text="上传后按老师讲到的页码分节，小结也会参考这一页的文字纠正术语。支持 .pptx 和 .pdf，旧版 .ppt 请先另存为 .pptx。" />
+                        <TextBlock Style="{StaticResource Label}" Text="扫描版课件的 OCR 语言" />
+                        <ComboBox x:Name="OcrLanguageBox" SelectionChanged="OcrLanguageBox_SelectionChanged" />
+                        <ui:ToggleSwitch
+                            Margin="0,8,0,0"
+                            Content="所有页面都用 OCR（文字乱码时打开）"
+                            IsChecked="{Binding ForceOcr, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock Style="{StaticResource Hint}" Text="上传后按老师讲到的页码分节，小结也会参考这一页的文字纠正术语。没有文字的页面（扫描件、图片）会自动用 Windows 自带的 OCR 识别；OCR 语言来自 Windows 已安装的语言包。也支持 .pptx。" />
                     </StackPanel>
                 </Border>
             </StackPanel>
@@ -181,6 +216,10 @@
                             <ComboBoxItem Content="小节总结 + 每句译文" />
                         </ComboBox>
 
+                        <TextBlock Style="{StaticResource Label}" Text="输出设备" />
+                        <ComboBox x:Name="SpeechDeviceBox" SelectionChanged="SpeechDeviceBox_SelectionChanged" />
+                        <TextBlock x:Name="SpeechDeviceHint" Style="{StaticResource Hint}" />
+
                         <TextBlock Style="{StaticResource Label}" Text="语音" />
                         <ComboBox x:Name="VoiceBox" SelectionChanged="VoiceBox_SelectionChanged" />
 
@@ -223,7 +262,7 @@
                                 Icon="{ui:SymbolIcon Speaker216,
                                                      Filled=False}" />
                         </StackPanel>
-                        <TextBlock Style="{StaticResource Hint}" Text="声音走 Windows 默认输出设备：连上蓝牙耳机后，在声音设置里把它设为输出。输入请保持电脑自带麦克风。Ctrl+Alt+M 静音 / 恢复。" />
+                        <TextBlock Style="{StaticResource Hint}" Text="Ctrl+Alt+M 静音 / 恢复。" />
                     </StackPanel>
                 </Border>
             </StackPanel>
