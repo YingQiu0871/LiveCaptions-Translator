@@ -193,7 +193,7 @@ namespace LiveCaptionsTranslator.models
             {
                 {
                     "MainWindow", string.Format(System.Globalization.CultureInfo.InvariantCulture,
-                        "{0}, {1}, {2}, {3}", (screenWidth - 775) / 2, screenHeight * 3 / 4 - 167, 775, 167)
+                        "{0}, {1}, {2}, {3}", (screenWidth - 900) / 2, (screenHeight - 560) / 2, 900, 560)
                 },
                 {
                     "OverlayWindow", string.Format(System.Globalization.CultureInfo.InvariantCulture,

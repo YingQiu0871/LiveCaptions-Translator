@@ -15,6 +15,9 @@ namespace LiveCaptionsTranslator
     public partial class MainWindow : FluentWindow
     {
         public OverlayWindow? OverlayWindow { get; set; } = null;
+        private const double DEFAULT_WIDTH = 900;
+        private const double DEFAULT_HEIGHT = 560;
+
         public bool IsAutoHeight { get; set; } = true;
 
         private const int WM_HOTKEY = 0x0312;
@@ -55,10 +58,14 @@ namespace LiveCaptionsTranslator
                 windowState.Top <= 0 || windowState.Top >= screenHeight)
             {
                 WindowHandler.RestoreState(this, new Rect(
-                    (screenWidth - 775) / 2, screenHeight * 3 / 4 - 167, 775, 167));
+                    (screenWidth - DEFAULT_WIDTH) / 2, (screenHeight - DEFAULT_HEIGHT) / 2, DEFAULT_WIDTH, DEFAULT_HEIGHT));
             }
             else
                 WindowHandler.RestoreState(this, windowState);
+            // Older versions saved a thin caption strip.
+            if (Height < MinHeight)
+                Height = DEFAULT_HEIGHT;
+            KeepOnScreen();
 
             ToggleTopmost(Translator.Setting.MainWindow.Topmost);
             ShowLogCard(Translator.Setting.MainWindow.CaptionLogEnabled);
@@ -316,16 +323,26 @@ namespace LiveCaptionsTranslator
             }
         }
 
+        // Only grows the window when a page needs more room. Shrinking it to a thin caption strip
+        // (upstream behaviour) hides most of the navigation; the overlay window serves that purpose.
         public void AutoHeightAdjust(int minHeight = -1, int maxHeight = -1)
         {
             if (minHeight > 0 && Height < minHeight)
             {
                 Height = minHeight;
                 IsAutoHeight = true;
+                KeepOnScreen();
             }
+        }
 
-            if (IsAutoHeight && maxHeight > 0 && Height > maxHeight)
-                Height = maxHeight;
+        private void KeepOnScreen()
+        {
+            var workArea = SystemParameters.WorkArea;
+            double height = Math.Max(Height, MinHeight);
+            if (height > workArea.Height)
+                Height = height = workArea.Height;
+            if (Top + height > workArea.Bottom)
+                Top = Math.Max(workArea.Top, workArea.Bottom - height);
         }
     }
 }
