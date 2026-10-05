@@ -71,7 +71,7 @@ namespace LiveCaptionsTranslator
         {
             var dialog = new OpenFileDialog
             {
-                Filter = "PDF (*.pdf)|*.pdf",
+                Filter = SlideDeck.FileFilter,
             };
             if (dialog.ShowDialog() != true)
                 return;

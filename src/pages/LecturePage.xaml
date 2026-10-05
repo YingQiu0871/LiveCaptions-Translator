@@ -9,144 +9,247 @@
     Title="LecturePage"
     JournalEntry.KeepAlive="False"
     mc:Ignorable="d">
+    <Page.Resources>
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Margin" Value="0,0,10,10" />
+            <Setter Property="Padding" Value="14,10,14,12" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+        </Style>
+        <Style x:Key="CardTitle" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,0,0,8" />
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style x:Key="Label" TargetType="TextBlock">
+            <Setter Property="Margin" Value="2,8,0,4" />
+            <Setter Property="Opacity" Value="0.85" />
+        </Style>
+        <Style x:Key="Hint" TargetType="TextBlock">
+            <Setter Property="Margin" Value="2,6,0,0" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Opacity" Value="0.65" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+    </Page.Resources>
+
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="15">
-            <WrapPanel Orientation="Horizontal">
-                <StackPanel Margin="15,0,0,10" Orientation="Vertical">
-                    <TextBlock Margin="2.5,0,0,5" Text="自动分节总结" />
-                    <ui:ToggleSwitch
-                        Width="90"
-                        Height="30"
-                        Padding="10,4,10,7"
-                        IsChecked="{Binding SummaryEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                        OffContent="关"
-                        OnContent="开" />
-                </StackPanel>
+        <Grid Margin="15,12,5,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
 
-                <StackPanel Margin="15,0,0,10" Orientation="Vertical">
-                    <TextBlock Margin="2.5,0,0,5" Text="分节方式" />
-                    <ComboBox
-                        Width="200"
-                        Height="30"
-                        Padding="10,4,10,7"
-                        SelectedIndex="{Binding SegmentModeIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                        <ComboBoxItem Content="自动（课件页码 / 语义）" />
-                        <ComboBoxItem Content="固定按时间" />
-                    </ComboBox>
-                </StackPanel>
+            <!--  Left column: model / API, slides  -->
+            <StackPanel Grid.Row="0" Grid.Column="0">
+                <Border x:Name="ApiCard" Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource CardTitle}" Text="① 模型与 API" />
 
-                <StackPanel Margin="15,0,0,10" Orientation="Vertical">
-                    <TextBlock Margin="2.5,0,0,5" ToolTip="自动模式下，同一话题讲了这么久也会强制分一节">
-                        <Run Text="每节最长：" />
-                        <Run Text="{Binding MaxSectionMinutes, Mode=OneWay}" />
-                        <Run Text="分钟" />
-                    </TextBlock>
-                    <Slider
-                        Width="140"
-                        AutoToolTipPlacement="TopLeft"
-                        AutoToolTipPrecision="0"
-                        IsSnapToTickEnabled="True"
-                        Maximum="20"
-                        Minimum="2"
-                        TickFrequency="1"
-                        Value="{Binding MaxSectionMinutes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                </StackPanel>
+                        <TextBlock Style="{StaticResource Label}" Text="服务商" />
+                        <ComboBox x:Name="ProviderBox" SelectionChanged="ProviderBox_SelectionChanged">
+                            <ComboBoxItem Content="DeepSeek" />
+                            <ComboBoxItem Content="通义千问（阿里云百炼）" />
+                            <ComboBoxItem Content="其他 OpenAI 兼容接口" />
+                        </ComboBox>
 
-                <StackPanel Margin="15,0,0,10" Orientation="Vertical">
-                    <TextBlock Margin="2.5,0,0,5" ToolTip="固定按时间模式，或自动识别失败时使用">
-                        <Run Text="按时间分节：每" />
-                        <Run Text="{Binding SummaryIntervalMinutes, Mode=OneWay}" />
-                        <Run Text="分钟" />
-                    </TextBlock>
-                    <Slider
-                        Width="140"
-                        AutoToolTipPlacement="TopLeft"
-                        AutoToolTipPrecision="0"
-                        IsSnapToTickEnabled="True"
-                        Maximum="15"
-                        Minimum="1"
-                        TickFrequency="1"
-                        Value="{Binding SummaryIntervalMinutes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                </StackPanel>
+                        <TextBlock Style="{StaticResource Label}" Text="API 地址" />
+                        <ui:TextBox
+                            x:Name="ApiUrlBox"
+                            PlaceholderText="https://…/chat/completions"
+                            Text="{Binding ApiUrl, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
 
-                <StackPanel Margin="15,0,0,10" Orientation="Vertical">
-                    <TextBlock Margin="2.5,0,0,5" Text="耳机播报" />
-                    <ComboBox
-                        Width="150"
-                        Height="30"
-                        Padding="10,4,10,7"
-                        SelectedIndex="{Binding SpeakModeIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                        <ComboBoxItem Content="关闭" />
-                        <ComboBoxItem Content="只读小节总结" />
-                        <ComboBoxItem Content="总结 + 译文" />
-                    </ComboBox>
-                </StackPanel>
+                        <TextBlock Style="{StaticResource Label}" Text="API Key" />
+                        <PasswordBox x:Name="ApiKeyBox" PasswordChanged="ApiKeyBox_PasswordChanged" />
 
-                <StackPanel Margin="15,0,0,10" Orientation="Vertical">
-                    <TextBlock Margin="2.5,0,0,5">
-                        <Run Text="语速：" />
-                        <Run Text="{Binding SpeechRate, Mode=OneWay}" />
-                    </TextBlock>
-                    <Slider
-                        Width="140"
-                        AutoToolTipPlacement="TopLeft"
-                        AutoToolTipPrecision="0"
-                        IsSnapToTickEnabled="True"
-                        Maximum="10"
-                        Minimum="-5"
-                        TickFrequency="1"
-                        Value="{Binding SpeechRate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                </StackPanel>
-
-                <StackPanel Margin="15,0,0,10" Orientation="Vertical">
-                    <TextBlock Margin="2.5,0,0,5" Text="语音" />
-                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{StaticResource Label}" Text="模型（可从列表选，也可以直接输入）" />
                         <ComboBox
-                            x:Name="VoiceBox"
-                            Width="220"
-                            Height="30"
-                            Padding="10,4,10,7"
-                            SelectionChanged="VoiceBox_SelectionChanged" />
-                        <ui:Button
-                            Height="30"
-                            Margin="5,0,0,0"
-                            Click="TestSpeech_click"
-                            Icon="{ui:SymbolIcon Play16,
-                                                 Filled=False}"
-                            ToolTip="试听" />
+                            x:Name="ModelBox"
+                            IsEditable="True"
+                            Text="{Binding ModelName, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+
+                        <StackPanel Margin="0,10,0,0" Orientation="Horizontal">
+                            <ui:ToggleSwitch
+                                x:Name="UseForTranslation"
+                                Checked="UseForTranslation_Changed"
+                                Content="翻译也用这个模型"
+                                Unchecked="UseForTranslation_Changed" />
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource Hint}" Text="关闭时，翻译改用免费的 Google 翻译；小节总结始终用上面的模型。" />
+
+                        <StackPanel Margin="0,10,0,0" Orientation="Horizontal">
+                            <ui:Button
+                                x:Name="TestApiButton"
+                                Click="TestApi_click"
+                                Content="测试连接"
+                                Icon="{ui:SymbolIcon PlugConnected20,
+                                                     Filled=False}" />
+                            <TextBlock
+                                x:Name="TestApiResult"
+                                Margin="10,0,0,0"
+                                VerticalAlignment="Center"
+                                TextWrapping="Wrap" />
+                        </StackPanel>
                     </StackPanel>
-                </StackPanel>
-            </WrapPanel>
+                </Border>
 
-            <TextBlock
-                Margin="17.5,5,10,5"
-                Opacity="0.75"
-                TextWrapping="Wrap">
-                <Run Text="分节：在 Timeline 页载入课件 PDF 后按页码分节；没有课件时按话题变化分节；识别失败才按时间分节。" />
-                <LineBreak />
-                <Run Text="小节总结使用 Setting 里 &quot;OpenAI&quot; 这一项的接口配置，可以填 DeepSeek：API URL 填 https://api.deepseek.com/chat/completions，模型填 deepseek-chat。" />
-                <LineBreak />
-                <Run Text="快捷键：Ctrl+Alt+S 结束本节并总结，Ctrl+Alt+M 静音 / 恢复播报。播报走系统默认输出设备，连上蓝牙耳机即可。" />
-            </TextBlock>
-
-            <StackPanel Margin="15,5,10,0" Orientation="Vertical">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock
-                        Margin="2.5,0,0,5"
-                        VerticalAlignment="Center"
-                        Text="总结提示词（{0} 会被替换为目标语言）" />
-                    <ui:Button
-                        Margin="10,0,0,5"
-                        Padding="8,2,8,2"
-                        Click="ResetPrompt_click"
-                        Content="恢复默认" />
-                </StackPanel>
-                <ui:TextBox
-                    MinHeight="80"
-                    AcceptsReturn="True"
-                    Text="{Binding SummaryPrompt, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                    TextWrapping="Wrap" />
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource CardTitle}" Text="② 课件（可选）" />
+                        <StackPanel Orientation="Horizontal">
+                            <ui:Button
+                                Click="LoadSlides_click"
+                                Content="上传 PPT / PDF"
+                                Icon="{ui:SymbolIcon DocumentAdd16,
+                                                     Filled=False}" />
+                            <ui:Button
+                                x:Name="ClearSlidesButton"
+                                Margin="6,0,0,0"
+                                Click="ClearSlides_click"
+                                Content="移除"
+                                Visibility="Collapsed" />
+                        </StackPanel>
+                        <TextBlock
+                            x:Name="SlidesInfo"
+                            Margin="2,8,0,0"
+                            TextWrapping="Wrap" />
+                        <TextBlock Style="{StaticResource Hint}" Text="上传后按老师讲到的页码分节，小结也会参考这一页的文字纠正术语。支持 .pptx 和 .pdf，旧版 .ppt 请先另存为 .pptx。" />
+                    </StackPanel>
+                </Border>
             </StackPanel>
-        </StackPanel>
+
+            <!--  Right column: sections, speech  -->
+            <StackPanel Grid.Row="0" Grid.Column="1">
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource CardTitle}" Text="③ 分节总结" />
+                        <ui:ToggleSwitch
+                            Content="自动分节并总结"
+                            IsChecked="{Binding SummaryEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Style="{StaticResource Label}" Text="分节方式" />
+                        <ComboBox SelectedIndex="{Binding SegmentModeIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                            <ComboBoxItem Content="自动：按课件页码 / 话题变化" />
+                            <ComboBoxItem Content="固定按时间" />
+                        </ComboBox>
+
+                        <TextBlock Style="{StaticResource Label}" ToolTip="自动模式下，同一话题讲了这么久也会强制分一节">
+                            <Run Text="每节最长：" />
+                            <Run Text="{Binding MaxSectionMinutes, Mode=OneWay}" />
+                            <Run Text="分钟" />
+                        </TextBlock>
+                        <Slider
+                            AutoToolTipPlacement="TopLeft"
+                            AutoToolTipPrecision="0"
+                            IsSnapToTickEnabled="True"
+                            Maximum="20"
+                            Minimum="2"
+                            TickFrequency="1"
+                            Value="{Binding MaxSectionMinutes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Style="{StaticResource Label}" ToolTip="固定按时间模式，或自动识别失败时使用">
+                            <Run Text="按时间分节：每" />
+                            <Run Text="{Binding SummaryIntervalMinutes, Mode=OneWay}" />
+                            <Run Text="分钟一节" />
+                        </TextBlock>
+                        <Slider
+                            AutoToolTipPlacement="TopLeft"
+                            AutoToolTipPrecision="0"
+                            IsSnapToTickEnabled="True"
+                            Maximum="15"
+                            Minimum="1"
+                            TickFrequency="1"
+                            Value="{Binding SummaryIntervalMinutes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock Style="{StaticResource Hint}" Text="随时按 Ctrl+Alt+S 可手动结束本节。" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource CardTitle}" Text="④ 耳机播报" />
+
+                        <TextBlock Style="{StaticResource Label}" Text="读出内容" />
+                        <ComboBox SelectedIndex="{Binding SpeakModeIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                            <ComboBoxItem Content="关闭" />
+                            <ComboBoxItem Content="只读小节总结" />
+                            <ComboBoxItem Content="小节总结 + 每句译文" />
+                        </ComboBox>
+
+                        <TextBlock Style="{StaticResource Label}" Text="语音" />
+                        <ComboBox x:Name="VoiceBox" SelectionChanged="VoiceBox_SelectionChanged" />
+
+                        <TextBlock Style="{StaticResource Label}">
+                            <Run Text="语速：" />
+                            <Run Text="{Binding SpeechRate, Mode=OneWay}" />
+                        </TextBlock>
+                        <Slider
+                            AutoToolTipPlacement="TopLeft"
+                            AutoToolTipPrecision="0"
+                            IsSnapToTickEnabled="True"
+                            Maximum="10"
+                            Minimum="-5"
+                            TickFrequency="1"
+                            Value="{Binding SpeechRate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Style="{StaticResource Label}">
+                            <Run Text="音量：" />
+                            <Run Text="{Binding SpeechVolume, Mode=OneWay}" />
+                        </TextBlock>
+                        <Slider
+                            AutoToolTipPlacement="TopLeft"
+                            AutoToolTipPrecision="0"
+                            IsSnapToTickEnabled="True"
+                            Maximum="100"
+                            Minimum="10"
+                            TickFrequency="5"
+                            Value="{Binding SpeechVolume, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <StackPanel Margin="0,10,0,0" Orientation="Horizontal">
+                            <ui:Button
+                                Click="TestSpeech_click"
+                                Content="试听"
+                                Icon="{ui:SymbolIcon Play16,
+                                                     Filled=False}" />
+                            <ui:Button
+                                Margin="6,0,0,0"
+                                Click="SoundSettings_click"
+                                Content="选择输出设备…"
+                                Icon="{ui:SymbolIcon Speaker216,
+                                                     Filled=False}" />
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource Hint}" Text="声音走 Windows 默认输出设备：连上蓝牙耳机后，在声音设置里把它设为输出。输入请保持电脑自带麦克风。Ctrl+Alt+M 静音 / 恢复。" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!--  Full width: prompt  -->
+            <Border
+                Grid.Row="1"
+                Grid.Column="0"
+                Grid.ColumnSpan="2"
+                Style="{StaticResource Card}">
+                <Expander Header="高级：总结提示词">
+                    <StackPanel Margin="0,8,0,0">
+                        <TextBlock Style="{StaticResource Hint}" Text="{}{0} 会被替换为目标语言。" />
+                        <ui:TextBox
+                            MinHeight="90"
+                            Margin="0,6,0,0"
+                            AcceptsReturn="True"
+                            Text="{Binding SummaryPrompt, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                            TextWrapping="Wrap" />
+                        <ui:Button
+                            Margin="0,6,0,0"
+                            Click="ResetPrompt_click"
+                            Content="恢复默认" />
+                    </StackPanel>
+                </Expander>
+            </Border>
+        </Grid>
     </ScrollViewer>
 </Page>

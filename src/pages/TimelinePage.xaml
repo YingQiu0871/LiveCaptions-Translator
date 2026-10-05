@@ -42,7 +42,7 @@
                     x:Name="LoadSlides"
                     Margin="8,0,0,0"
                     Click="LoadSlides_click"
-                    Content="载入课件 PDF"
+                    Content="上传课件"
                     Icon="{ui:SymbolIcon DocumentPdf16,
                                          Filled=False}"
                     ToolTip="载入后按课件页码分节" />

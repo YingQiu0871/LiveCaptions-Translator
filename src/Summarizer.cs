@@ -284,6 +284,9 @@ namespace LiveCaptionsTranslator
             return await Chat(system, transcript.ToString(), maxTokens: 600, temperature: 0.3);
         }
 
+        public static Task<string> TestConnection() =>
+            Chat("Reply with the single word OK.", "ping", maxTokens: 16, temperature: 0);
+
         private static async Task<string> Chat(string system, string user, int maxTokens, double temperature,
             bool json = false)
         {
