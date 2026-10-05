@@ -329,7 +329,7 @@ namespace LiveCaptionsTranslator
                 string output = responseObj?.choices?.FirstOrDefault()?.message?.content ?? string.Empty;
                 output = RegexPatterns.ModelThinking().Replace(output, string.Empty).Trim();
                 if (string.IsNullOrEmpty(output))
-                    throw new InvalidOperationException("The model returned an empty reply.");
+                    throw new InvalidOperationException("模型返回了空内容。");
                 return output;
             }
         }

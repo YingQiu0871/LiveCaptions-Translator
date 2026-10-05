@@ -44,12 +44,12 @@ namespace LiveCaptionsTranslator
             if (isHide)
             {
                 LiveCaptionsHandler.RestoreLiveCaptions(Translator.Window);
-                ButtonText.Text = "Hide";
+                ButtonText.Text = "隐藏";
             }
             else
             {
                 LiveCaptionsHandler.HideLiveCaptions(Translator.Window);
-                ButtonText.Text = "Show";
+                ButtonText.Text = "显示";
             }
         }
 
@@ -158,7 +158,7 @@ namespace LiveCaptionsTranslator
         private void CheckForFirstUse()
         {
             if (Translator.FirstUseFlag)
-                ButtonText.Text = "Hide";
+                ButtonText.Text = "隐藏";
         }
 
         public void LoadAPISetting()

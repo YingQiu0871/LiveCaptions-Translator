@@ -6,7 +6,7 @@
     xmlns:local="clr-namespace:LiveCaptionsTranslator"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-    Title="API Setting"
+    Title="接口配置"
     Width="950"
     Height="500"
     ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
@@ -28,7 +28,7 @@
             Height="27"
             ShowMaximize="False">
             <ui:TitleBar.Header>
-                <ui:TextBlock Padding="15,0,0,0" VerticalAlignment="Center">API Setting</ui:TextBlock>
+                <ui:TextBlock Padding="15,0,0,0" VerticalAlignment="Center">接口配置</ui:TextBlock>
             </ui:TitleBar.Header>
         </ui:TitleBar>
 
@@ -51,7 +51,7 @@
                             Tag="Prompt">
                             <StackPanel Orientation="Horizontal">
                                 <ui:SymbolIcon Margin="0,0,10,0" Symbol="DocumentCatchUp16" />
-                                <ui:TextBlock VerticalAlignment="Center" Text="Prompt" />
+                                <ui:TextBlock VerticalAlignment="Center" Text="提示词" />
                             </StackPanel>
                         </ui:Button>
 
@@ -197,7 +197,7 @@
                             Margin="0,0,0,10"
                             FontSize="28"
                             FontWeight="Heavy"
-                            Text="API Setting" />
+                            Text="接口配置" />
 
                         <StackPanel x:Name="AllSettings" Margin="5">
                             <StackPanel x:Name="PromptSection" Margin="20">
@@ -205,14 +205,14 @@
                                     Margin="10"
                                     FontSize="20"
                                     FontWeight="Medium"
-                                    Text="Prompt" />
+                                    Text="提示词" />
                                 <ui:Card Padding="15">
                                     <StackPanel Margin="15,0,15,0" Orientation="Vertical">
                                         <ui:TextBlock Margin="2.5,0,0,5" TextWrapping="Wrap">
-                                            <Run FontWeight="Bold" Text="Note 1:" />
-                                            <Run Text="The {0} in the prompt indicates the target language, so make sure your prompt includes {0}." />
-                                            <Run FontWeight="Bold" Text="&#x0A;Note 2:" />
-                                            <Run Text="The source text is enclosed with 🔤." />
+                                            <Run FontWeight="Bold" Text="注意 1：" />
+                                            <Run Text="提示词里的 {0} 代表目标语言，请确保提示词中包含 {0}。" />
+                                            <Run FontWeight="Bold" Text="&#x0A;注意 2：" />
+                                            <Run Text="原文用 🔤 包裹。" />
                                         </ui:TextBlock>
                                         <ui:TextBox
                                             x:Name="PromptTextBox"
@@ -238,7 +238,7 @@
                                                     Margin="0,0,10,0"
                                                     VerticalAlignment="Center"
                                                     FontWeight="Bold"
-                                                    Text="Current Config: " />
+                                                    Text="当前配置：" />
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Padding="8,4,8,4"
@@ -260,17 +260,17 @@
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Click="NewButton_Click"
-                                                    Content="New"
+                                                    Content="新建"
                                                     Tag="Ollama" />
                                                 <ui:Button
                                                     Margin="0,0,-10,0"
                                                     Click="DeleteButton_Click"
-                                                    Content="Delete"
+                                                    Content="删除"
                                                     Tag="Ollama" />
                                                 <ui:Flyout x:Name="OllamaDeleteFlyout">
                                                     <TextBlock
                                                         Width="120"
-                                                        Text="You must keep at least one config."
+                                                        Text="至少要保留一个配置。"
                                                         TextWrapping="Wrap" />
                                                 </ui:Flyout>
                                             </StackPanel>
@@ -291,7 +291,7 @@
                                                 Grid.Column="0"
                                                 Margin="15,0,0,0"
                                                 Orientation="Vertical">
-                                                <ui:TextBlock Margin="2.5,0,0,5" Text="Model Name" />
+                                                <ui:TextBlock Margin="2.5,0,0,5" Text="模型名称" />
                                                 <ui:TextBox
                                                     Width="130"
                                                     Height="30"
@@ -304,7 +304,7 @@
                                                 Grid.Column="0"
                                                 Margin="15,10,0,0"
                                                 Orientation="Vertical">
-                                                <ui:TextBlock Margin="2.5,0,0,5" Text="Temperature" />
+                                                <ui:TextBlock Margin="2.5,0,0,5" Text="温度" />
                                                 <ui:NumberBox
                                                     Width="130"
                                                     Height="30"
@@ -323,12 +323,12 @@
                                                 Margin="15,0,0,0"
                                                 Orientation="Vertical">
                                                 <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
-                                                    <ui:TextBlock Margin="2.5,0,0,5" Text="API Url" />
+                                                    <ui:TextBlock Margin="2.5,0,0,5" Text="接口地址" />
                                                     <ui:Flyout x:Name="OllamaAPIUrlInfoFlyout">
                                                         <ui:TextBlock Width="170" TextWrapping="Wrap">
-                                                            <Run Text="No need to explicitly add" />
+                                                            <Run Text="不需要手动加上" />
                                                             <Run FontWeight="Bold" Text="`api/chat`" />
-                                                            <Run Text="suffix." />
+                                                            <Run Text="后缀。" />
                                                         </ui:TextBlock>
                                                     </ui:Flyout>
                                                     <Button
@@ -370,7 +370,7 @@
                                                     Margin="0,0,10,0"
                                                     VerticalAlignment="Center"
                                                     FontWeight="Bold"
-                                                    Text="Current Config: " />
+                                                    Text="当前配置：" />
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Padding="8,4,8,4"
@@ -392,17 +392,17 @@
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Click="NewButton_Click"
-                                                    Content="New"
+                                                    Content="新建"
                                                     Tag="LMStudio" />
                                                 <ui:Button
                                                     Margin="0,0,-10,0"
                                                     Click="DeleteButton_Click"
-                                                    Content="Delete"
+                                                    Content="删除"
                                                     Tag="LMStudio" />
                                                 <ui:Flyout x:Name="LMStudioDeleteFlyout">
                                                     <TextBlock
                                                         Width="120"
-                                                        Text="You must keep at least one config."
+                                                        Text="至少要保留一个配置。"
                                                         TextWrapping="Wrap" />
                                                 </ui:Flyout>
                                             </StackPanel>
@@ -425,7 +425,7 @@
                                                 Grid.ColumnSpan="2"
                                                 Margin="15,0,0,0"
                                                 Orientation="Vertical">
-                                                <ui:TextBlock Margin="2.5,0,0,5" Text="Model Name" />
+                                                <ui:TextBlock Margin="2.5,0,0,5" Text="模型名称" />
                                                 <StackPanel Orientation="Horizontal">
                                                     <ComboBox
                                                         x:Name="LMStudioModelComboBox"
@@ -442,7 +442,7 @@
                                                         x:Name="LMStudioLoadModelsButton"
                                                         Margin="10,0,0,0"
                                                         Padding="8,4,8,4"
-                                                        Content="Load Models"
+                                                        Content="加载模型"
                                                         Click="LoadModelsButton_Click"
                                                         Tag="LMStudio" />
                                                 </StackPanel>
@@ -454,7 +454,7 @@
                                                 Grid.Column="0"
                                                 Margin="15,10,0,0"
                                                 Orientation="Vertical">
-                                                <ui:TextBlock Margin="2.5,0,0,5" Text="Temperature" />
+                                                <ui:TextBlock Margin="2.5,0,0,5" Text="温度" />
                                                 <ui:NumberBox
                                                     Width="130"
                                                     Height="30"
@@ -475,12 +475,12 @@
                                                 Margin="15,10,0,0"
                                                 Orientation="Vertical">
                                                 <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
-                                                    <ui:TextBlock Margin="2.5,0,0,5" Text="API Url (Base)" />
+                                                    <ui:TextBlock Margin="2.5,0,0,5" Text="接口地址（基础）" />
                                                     <ui:Flyout x:Name="LMStudioAPIUrlInfoFlyout">
                                                         <ui:TextBlock Width="250" TextWrapping="Wrap">
-                                                            <Run Text="Base URL ending with" />
+                                                            <Run Text="填写以" />
                                                             <Run FontWeight="Bold" Text="`api/v1`" />
-                                                            <Run Text=". Chat endpoint and models are appended automatically." />
+                                                            <Run Text="结尾的基础地址，对话和模型列表路径会自动补全。" />
                                                         </ui:TextBlock>
                                                     </ui:Flyout>
                                                     <Button
@@ -523,7 +523,7 @@
                                                     Margin="0,0,10,0"
                                                     VerticalAlignment="Center"
                                                     FontWeight="Bold"
-                                                    Text="Current Config: " />
+                                                    Text="当前配置：" />
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Padding="8,4,8,4"
@@ -545,17 +545,17 @@
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Click="NewButton_Click"
-                                                    Content="New"
+                                                    Content="新建"
                                                     Tag="OpenAI" />
                                                 <ui:Button
                                                     Margin="0,0,-10,0"
                                                     Click="DeleteButton_Click"
-                                                    Content="Delete"
+                                                    Content="删除"
                                                     Tag="OpenAI" />
                                                 <ui:Flyout x:Name="OpenAIDeleteFlyout">
                                                     <TextBlock
                                                         Width="120"
-                                                        Text="You must keep at least one config."
+                                                        Text="至少要保留一个配置。"
                                                         TextWrapping="Wrap" />
                                                 </ui:Flyout>
                                             </StackPanel>
@@ -576,7 +576,7 @@
                                                 Grid.Column="0"
                                                 Margin="15,0,0,0"
                                                 Orientation="Vertical">
-                                                <ui:TextBlock Margin="2.5,0,0,5" Text="Model Name" />
+                                                <ui:TextBlock Margin="2.5,0,0,5" Text="模型名称" />
                                                 <ui:TextBox
                                                     Width="130"
                                                     Height="30"
@@ -589,7 +589,7 @@
                                                 Grid.Column="0"
                                                 Margin="15,10,0,0"
                                                 Orientation="Vertical">
-                                                <ui:TextBlock Margin="2.5,0,0,5" Text="Temperature" />
+                                                <ui:TextBlock Margin="2.5,0,0,5" Text="温度" />
                                                 <ui:NumberBox
                                                     Width="130"
                                                     Height="30"
@@ -608,14 +608,14 @@
                                                 Margin="15,0,0,0"
                                                 Orientation="Vertical">
                                                 <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
-                                                    <ui:TextBlock Margin="2.5,0,0,5" Text="API Url" />
+                                                    <ui:TextBlock Margin="2.5,0,0,5" Text="接口地址" />
                                                     <ui:Flyout x:Name="OpenAIAPIUrlInfoFlyout">
                                                         <ui:TextBlock Width="300" TextWrapping="Wrap">
-                                                            <Run Text="Use Full Url (typically ending with" />
+                                                            <Run Text="请填完整地址（通常以" />
                                                             <Run FontWeight="Bold" Text="`v1/chat/completions`" />
-                                                            <Run Text=") instead of Base Url (typically ending with just" />
+                                                            <Run Text="结尾），不要只填基础地址（通常只以" />
                                                             <Run FontWeight="Bold" Text="`v1`" />
-                                                            <Run Text=")." />
+                                                            <Run Text="结尾）。" />
                                                         </ui:TextBlock>
                                                     </ui:Flyout>
                                                     <Button
@@ -670,7 +670,7 @@
                                                     Margin="0,0,10,0"
                                                     VerticalAlignment="Center"
                                                     FontWeight="Bold"
-                                                    Text="Current Config: " />
+                                                    Text="当前配置：" />
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Padding="8,4,8,4"
@@ -692,17 +692,17 @@
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Click="NewButton_Click"
-                                                    Content="New"
+                                                    Content="新建"
                                                     Tag="OpenRouter" />
                                                 <ui:Button
                                                     Margin="0,0,-10,0"
                                                     Click="DeleteButton_Click"
-                                                    Content="Delete"
+                                                    Content="删除"
                                                     Tag="OpenRouter" />
                                                 <ui:Flyout x:Name="OpenRouterDeleteFlyout">
                                                     <TextBlock
                                                         Width="120"
-                                                        Text="You must keep at least one config."
+                                                        Text="至少要保留一个配置。"
                                                         TextWrapping="Wrap" />
                                                 </ui:Flyout>
                                             </StackPanel>
@@ -723,7 +723,7 @@
                                                 Grid.Column="0"
                                                 Margin="15,0,0,0"
                                                 Orientation="Vertical">
-                                                <ui:TextBlock Margin="2.5,0,0,5" Text="Model Name" />
+                                                <ui:TextBlock Margin="2.5,0,0,5" Text="模型名称" />
                                                 <ui:TextBox
                                                     Width="130"
                                                     Height="30"
@@ -736,7 +736,7 @@
                                                 Grid.Column="0"
                                                 Margin="15,10,0,0"
                                                 Orientation="Vertical">
-                                                <ui:TextBlock Margin="2.5,0,0,5" Text="Temperature" />
+                                                <ui:TextBlock Margin="2.5,0,0,5" Text="温度" />
                                                 <ui:NumberBox
                                                     Width="130"
                                                     Height="30"
@@ -781,7 +781,7 @@
                                                     Margin="0,0,10,0"
                                                     VerticalAlignment="Center"
                                                     FontWeight="Bold"
-                                                    Text="Current Config: " />
+                                                    Text="当前配置：" />
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Padding="8,4,8,4"
@@ -803,17 +803,17 @@
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Click="NewButton_Click"
-                                                    Content="New"
+                                                    Content="新建"
                                                     Tag="DeepL" />
                                                 <ui:Button
                                                     Margin="0,0,-10,0"
                                                     Click="DeleteButton_Click"
-                                                    Content="Delete"
+                                                    Content="删除"
                                                     Tag="DeepL" />
                                                 <ui:Flyout x:Name="DeepLDeleteFlyout">
                                                     <TextBlock
                                                         Width="120"
-                                                        Text="You must keep at least one config."
+                                                        Text="至少要保留一个配置。"
                                                         TextWrapping="Wrap" />
                                                 </ui:Flyout>
                                             </StackPanel>
@@ -832,7 +832,7 @@
                                                 Grid.Row="0"
                                                 Margin="15,0,0,0"
                                                 Orientation="Vertical">
-                                                <ui:TextBlock Margin="2.5,0,0,5" Text="API Url" />
+                                                <ui:TextBlock Margin="2.5,0,0,5" Text="接口地址" />
                                                 <ui:TextBox
                                                     Width="200"
                                                     Height="30"
@@ -871,7 +871,7 @@
                                                     Margin="0,0,10,0"
                                                     VerticalAlignment="Center"
                                                     FontWeight="Bold"
-                                                    Text="Current Config: " />
+                                                    Text="当前配置：" />
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Padding="8,4,8,4"
@@ -893,17 +893,17 @@
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Click="NewButton_Click"
-                                                    Content="New"
+                                                    Content="新建"
                                                     Tag="Youdao" />
                                                 <ui:Button
                                                     Margin="0,0,-10,0"
                                                     Click="DeleteButton_Click"
-                                                    Content="Delete"
+                                                    Content="删除"
                                                     Tag="Youdao" />
                                                 <ui:Flyout x:Name="YoudaoDeleteFlyout">
                                                     <TextBlock
                                                         Width="120"
-                                                        Text="You must keep at least one config."
+                                                        Text="至少要保留一个配置。"
                                                         TextWrapping="Wrap" />
                                                 </ui:Flyout>
                                             </StackPanel>
@@ -924,7 +924,7 @@
                                                 Grid.Column="0"
                                                 Margin="15,0,0,0"
                                                 Orientation="Vertical">
-                                                <ui:TextBlock Margin="2.5,0,0,5" Text="API Url" />
+                                                <ui:TextBlock Margin="2.5,0,0,5" Text="接口地址" />
                                                 <ui:TextBox
                                                     Width="200"
                                                     Height="30"
@@ -978,7 +978,7 @@
                                                     Margin="0,0,10,0"
                                                     VerticalAlignment="Center"
                                                     FontWeight="Bold"
-                                                    Text="Current Config: " />
+                                                    Text="当前配置：" />
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Padding="8,4,8,4"
@@ -1000,17 +1000,17 @@
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Click="NewButton_Click"
-                                                    Content="New"
+                                                    Content="新建"
                                                     Tag="MTranServer" />
                                                 <ui:Button
                                                     Margin="0,0,-10,0"
                                                     Click="DeleteButton_Click"
-                                                    Content="Delete"
+                                                    Content="删除"
                                                     Tag="MTranServer" />
                                                 <ui:Flyout x:Name="MTranServerDeleteFlyout">
                                                     <TextBlock
                                                         Width="120"
-                                                        Text="You must keep at least one config."
+                                                        Text="至少要保留一个配置。"
                                                         TextWrapping="Wrap" />
                                                 </ui:Flyout>
                                             </StackPanel>
@@ -1031,7 +1031,7 @@
                                                 Grid.Column="0"
                                                 Margin="15,10,0,0"
                                                 Orientation="Vertical">
-                                                <ui:TextBlock Margin="2.5,0,0,5" Text="Source Language" />
+                                                <ui:TextBlock Margin="2.5,0,0,5" Text="源语言" />
                                                 <ComboBox
                                                     Width="130"
                                                     Height="30"
@@ -1051,7 +1051,7 @@
                                                 Grid.Column="1"
                                                 Margin="15,10,0,0"
                                                 Orientation="Vertical">
-                                                <ui:TextBlock Margin="2.5,0,0,5" Text="API Url" />
+                                                <ui:TextBlock Margin="2.5,0,0,5" Text="接口地址" />
                                                 <ui:TextBox
                                                     Width="200"
                                                     Height="30"
@@ -1091,7 +1091,7 @@
                                                     Margin="0,0,10,0"
                                                     VerticalAlignment="Center"
                                                     FontWeight="Bold"
-                                                    Text="Current Config: " />
+                                                    Text="当前配置：" />
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Padding="8,4,8,4"
@@ -1113,17 +1113,17 @@
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Click="NewButton_Click"
-                                                    Content="New"
+                                                    Content="新建"
                                                     Tag="Baidu" />
                                                 <ui:Button
                                                     Margin="0,0,-10,0"
                                                     Click="DeleteButton_Click"
-                                                    Content="Delete"
+                                                    Content="删除"
                                                     Tag="Baidu" />
                                                 <ui:Flyout x:Name="BaiduDeleteFlyout">
                                                     <TextBlock
                                                         Width="120"
-                                                        Text="You must keep at least one config."
+                                                        Text="至少要保留一个配置。"
                                                         TextWrapping="Wrap" />
                                                 </ui:Flyout>
                                             </StackPanel>
@@ -1144,7 +1144,7 @@
                                                 Grid.Column="0"
                                                 Margin="15,0,0,0"
                                                 Orientation="Vertical">
-                                                <ui:TextBlock Margin="2.5,0,0,5" Text="API Url" />
+                                                <ui:TextBlock Margin="2.5,0,0,5" Text="接口地址" />
                                                 <ui:TextBox
                                                     Width="200"
                                                     Height="30"
@@ -1197,7 +1197,7 @@
                                                     Margin="0,0,10,0"
                                                     VerticalAlignment="Center"
                                                     FontWeight="Bold"
-                                                    Text="Current Config: " />
+                                                    Text="当前配置：" />
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Padding="8,4,8,4"
@@ -1219,17 +1219,17 @@
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Click="NewButton_Click"
-                                                    Content="New"
+                                                    Content="新建"
                                                     Tag="LibreTranslate" />
                                                 <ui:Button
                                                     Margin="0,0,-10,0"
                                                     Click="DeleteButton_Click"
-                                                    Content="Delete"
+                                                    Content="删除"
                                                     Tag="LibreTranslate" />
                                                 <ui:Flyout x:Name="LibreTranslateDeleteFlyout">
                                                     <TextBlock
                                                         Width="120"
-                                                        Text="You must keep at least one config."
+                                                        Text="至少要保留一个配置。"
                                                         TextWrapping="Wrap" />
                                                 </ui:Flyout>
                                             </StackPanel>
@@ -1250,7 +1250,7 @@
                                                 Grid.Column="1"
                                                 Margin="15,10,0,0"
                                                 Orientation="Vertical">
-                                                <ui:TextBlock Margin="2.5,0,0,5" Text="API Url" />
+                                                <ui:TextBlock Margin="2.5,0,0,5" Text="接口地址" />
                                                 <ui:TextBox
                                                     Width="200"
                                                     Height="30"
