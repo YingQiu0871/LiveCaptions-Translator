@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Windows.Automation;
@@ -15,7 +16,7 @@ namespace LiveCaptionsTranslator
         private static Caption? caption = null;
         private static Setting? setting = null;
 
-        private static readonly Queue<string> pendingTextQueue = new();
+        private static readonly ConcurrentQueue<string> pendingTextQueue = new();
         private static readonly TranslationTaskQueue translationTaskQueue = new();
 
         public static AutomationElement? Window
@@ -31,13 +32,139 @@ namespace LiveCaptionsTranslator
 
         public static event Action? TranslationLogged;
 
+        // Complete sentences already sent for translation, newest last. Used so that every sentence
+        // is translated exactly once, even when LiveCaptions finishes several sentences between two reads.
+        private static readonly LinkedList<string> committedSentences = new();
+        private const int MAX_COMMITTED = 40;
+        private const int MAX_NEW_PER_READ = 8;
+        private static bool sentencesSeeded = false;
+
+        // Called when a class starts: whatever LiveCaptions already shows belongs to before the class.
+        public static void ResetSentences()
+        {
+            lock (committedSentences)
+            {
+                committedSentences.Clear();
+                sentencesSeeded = false;
+                recentChinese.Clear();
+                if (Caption != null)
+                    Caption.SourceWarning = string.Empty;
+            }
+        }
+
+        private static bool IsCommitted(string sentence)
+        {
+            foreach (var committed in committedSentences)
+            {
+                if (string.CompareOrdinal(committed, sentence) == 0 || committed.EndsWith(sentence, StringComparison.Ordinal))
+                    return true;
+            }
+            // LiveCaptions keeps revising recent sentences; a revised one is not a new sentence.
+            int checkedCount = 0;
+            for (var node = committedSentences.Last; node != null && checkedCount < 10; node = node.Previous, checkedCount++)
+            {
+                if (TextUtil.Similarity(node.Value, sentence) > 0.75)
+                    return true;
+            }
+            return false;
+        }
+
+        public const string ALREADY_CHINESE_WARNING =
+            "系统字幕送过来的已经是中文，多半是打开了系统实时辅助字幕自带的“翻译”。它会漏句、延迟，" +
+            "中外对照也看不到外语原文。请到“设置”页点“显示系统实时辅助字幕”，在它的 ⚙️ 菜单里关掉“翻译”" +
+            "（或把翻译语言设为“无”），再点“隐藏”。如果老师本来就讲中文，可以不管这条提示。";
+        private static readonly Queue<bool> recentChinese = new();
+
+        // LiveCaptions can translate by itself (Windows 11 24H2+). Then it hands over Chinese text, which hides the
+        // original and loses sentences, so tell the user when the target is Chinese and so is everything we read.
+        private static void CheckAlreadyTranslated(string sentence)
+        {
+            if (!(Setting?.TargetLanguage ?? string.Empty).StartsWith("zh", StringComparison.OrdinalIgnoreCase))
+            {
+                recentChinese.Clear();
+                Caption.SourceWarning = string.Empty;
+                return;
+            }
+            int letters = sentence.Count(char.IsLetter);
+            int han = sentence.Count(ch => ch >= '\u4E00' && ch <= '\u9FFF');
+            recentChinese.Enqueue(letters > 0 && han * 2 > letters);
+            while (recentChinese.Count > 6)
+                recentChinese.Dequeue();
+            int chinese = recentChinese.Count(isChinese => isChinese);
+            if (recentChinese.Count >= 4 && chinese >= recentChinese.Count - 1)
+                Caption.SourceWarning = ALREADY_CHINESE_WARNING;
+            else if (chinese <= 1)
+                Caption.SourceWarning = string.Empty;
+        }
+
+        private static void Commit(string sentence)
+        {
+            committedSentences.AddLast(sentence);
+            while (committedSentences.Count > MAX_COMMITTED)
+                committedSentences.RemoveFirst();
+        }
+
+        // The complete sentences (ending with EOS punctuation) in the text, in order.
+        private static List<string> CompleteSentences(string text)
+        {
+            var sentences = new List<string>();
+            int start = 0;
+            for (int i = 0; i < text.Length; i++)
+            {
+                if (Array.IndexOf(TextUtil.PUNC_EOS, text[i]) == -1)
+                    continue;
+                // Keep runs like "?!" or "..." together.
+                while (i + 1 < text.Length && Array.IndexOf(TextUtil.PUNC_EOS, text[i + 1]) != -1)
+                    i++;
+                // "3.5" or "e.g." is not the end of a sentence: Western punctuation must be followed by a space.
+                if (text[i] < 0x80 && i + 1 < text.Length && !char.IsWhiteSpace(text[i + 1]))
+                    continue;
+                string sentence = text[start..(i + 1)].Trim();
+                if (sentence.Length > 1)
+                    sentences.Add(sentence);
+                start = i + 1;
+            }
+            return sentences;
+        }
+
+        // Queues every sentence LiveCaptions finished since the last read, oldest first.
+        private static bool QueueNewSentences(string fullText)
+        {
+            var sentences = CompleteSentences(fullText);
+            bool queued = false;
+            lock (committedSentences)
+            {
+                if (!sentencesSeeded)
+                {
+                    foreach (var sentence in sentences)
+                        Commit(sentence);
+                    sentencesSeeded = true;
+                    return false;
+                }
+                // The first sentence may be cut off at the top of LiveCaptions' buffer.
+                int first = Math.Max(1, sentences.Count - MAX_NEW_PER_READ);
+                if (sentences.Count == 1)
+                    first = 0;
+                for (int i = first; i < sentences.Count; i++)
+                {
+                    if (IsCommitted(sentences[i]))
+                        continue;
+                    Commit(sentences[i]);
+                    CheckAlreadyTranslated(sentences[i]);
+                    pendingTextQueue.Enqueue(sentences[i]);
+                    queued = true;
+                }
+            }
+            return queued;
+        }
+
         static Translator()
         {
             window = LiveCaptionsHandler.LaunchLiveCaptions();
             LiveCaptionsHandler.FixLiveCaptions(Window);
             LiveCaptionsHandler.HideLiveCaptions(Window);
 
-            if (!File.Exists(Path.Combine(Directory.GetCurrentDirectory(), models.Setting.FILENAME)))
+            if (!File.Exists(AppPaths.SettingFile))
                 FirstUseFlag = true;
 
             caption = Caption.GetInstance();
@@ -139,21 +266,22 @@ namespace LiveCaptionsTranslator
                     Caption.OriginalCaption = latestCaption;
 
                     idleCount = 0;
-                    if (Array.IndexOf(TextUtil.PUNC_EOS, Caption.OriginalCaption[^1]) != -1)
-                    {
-                        syncCount = 0;
-                        pendingTextQueue.Enqueue(Caption.OriginalCaption);
-                    }
-                    else if (Encoding.UTF8.GetByteCount(Caption.OriginalCaption) >= TextUtil.SHORT_THRESHOLD)
+                    if (Array.IndexOf(TextUtil.PUNC_EOS, Caption.OriginalCaption[^1]) == -1 &&
+                        Encoding.UTF8.GetByteCount(Caption.OriginalCaption) >= TextUtil.SHORT_THRESHOLD)
                         syncCount++;
                 }
                 else
                     idleCount++;
 
-                // `TranslateFlag` determines whether this sentence should be translated.
-                // When `OriginalCaption` remains unchanged, `idleCount` +1; when `OriginalCaption` changes, `MaxSyncInterval` +1.
-                if (syncCount > Setting.MaxSyncInterval ||
-                    idleCount == Setting.MaxIdleInterval)
+                // Every finished sentence is translated once, including ones that scrolled by between reads.
+                if (QueueNewSentences(fullText))
+                    syncCount = 0;
+
+                // The sentence still being spoken: translate a preview now and then, so the user is not waiting
+                // for the full stop. When `OriginalCaption` remains unchanged, `idleCount` +1;
+                // when it changes, `syncCount` +1.
+                bool unfinished = Array.IndexOf(TextUtil.PUNC_EOS, Caption.OriginalCaption[^1]) == -1;
+                if (unfinished && (syncCount > Setting.MaxSyncInterval || idleCount == Setting.MaxIdleInterval))
                 {
                     syncCount = 0;
                     pendingTextQueue.Enqueue(Caption.OriginalCaption);
@@ -178,9 +306,8 @@ namespace LiveCaptionsTranslator
                 }
 
                 // Translate
-                if (pendingTextQueue.Count > 0)
+                if (pendingTextQueue.TryDequeue(out var originalSnapshot))
                 {
-                    var originalSnapshot = pendingTextQueue.Dequeue();
 
                     // LiveCaptions also hears our own speech when it plays on the default output device.
                     if (Speaker.SuppressCaptions)
@@ -374,6 +501,10 @@ namespace LiveCaptionsTranslator
         {
             string lastOriginalText = await SQLiteHistoryLogger.LoadLastSourceText(token);
             if (lastOriginalText == null)
+                return false;
+            // A finished sentence is final; only a preview of an unfinished one gets replaced.
+            string lastTrimmed = lastOriginalText.TrimEnd();
+            if (lastTrimmed.Length > 0 && Array.IndexOf(TextUtil.PUNC_EOS, lastTrimmed[^1]) != -1)
                 return false;
 
             int minLen = Math.Min(originalText.Length, lastOriginalText.Length);

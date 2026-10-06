@@ -103,18 +103,27 @@ namespace LiveCaptionsTranslator
 
         private async void TextBlock_MouseLeftButtonDown(object sender, RoutedEventArgs e)
         {
-            if (sender is TextBlock textBlock)
+            if (sender is TextBlock textBlock && !string.IsNullOrWhiteSpace(textBlock.Text))
             {
-                try
+                // Another program (clipboard manager, remote desktop, IME) may hold the clipboard for a moment.
+                for (int attempt = 0; ; attempt++)
                 {
-                    Clipboard.SetText(textBlock.Text);
-                    SnackbarHost.Show("已复制。", textBlock.Text, SnackbarType.Info, 100);
+                    try
+                    {
+                        Clipboard.SetDataObject(textBlock.Text, true);
+                        SnackbarHost.Show("已复制。", textBlock.Text, SnackbarType.Info, 100);
+                        break;
+                    }
+                    catch (Exception) when (attempt < 4)
+                    {
+                        await Task.Delay(150);
+                    }
+                    catch (Exception)
+                    {
+                        SnackbarHost.Show("没能复制：剪贴板被其他程序占用，请再点一次。", string.Empty, SnackbarType.Warning, timeout: 2);
+                        break;
+                    }
                 }
-                catch
-                {
-                    SnackbarHost.Show("复制失败。", string.Empty, SnackbarType.Error, 100);
-                }
-                await Task.Delay(500);
             }
         }
 

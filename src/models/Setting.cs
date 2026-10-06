@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using System.Windows;
 
 using LiveCaptionsTranslator.apis;
+using LiveCaptionsTranslator.utils;
 
 namespace LiveCaptionsTranslator.models
 {
@@ -233,7 +234,7 @@ namespace LiveCaptionsTranslator.models
 
         public static Setting Load()
         {
-            string jsonPath = Path.Combine(Directory.GetCurrentDirectory(), FILENAME);
+            string jsonPath = AppPaths.SettingFile;
             try
             {
                 return Load(jsonPath);
@@ -290,7 +291,7 @@ namespace LiveCaptionsTranslator.models
 
         public void Save()
         {
-            Save(FILENAME);
+            Save(AppPaths.SettingFile);
         }
 
         private static readonly object saveLock = new();
@@ -335,7 +336,7 @@ namespace LiveCaptionsTranslator.models
 
         public static bool IsConfigExist()
         {
-            string jsonPath = Path.Combine(Directory.GetCurrentDirectory(), FILENAME);
+            string jsonPath = AppPaths.SettingFile;
             return File.Exists(jsonPath);
         }
     }

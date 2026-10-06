@@ -163,6 +163,12 @@ namespace LiveCaptionsTranslator
                 return;
             // Pasted keys sometimes carry spaces, line breaks or invisible characters.
             string key = new string(ApiKeyBox.Password.Where(c => c > ' ' && c < 0x7F).ToArray());
+            // Only the user clearing the box may erase a saved key, never a control reloading itself.
+            if (key.Length == 0 && ApiConfig.ApiKey.Length > 0 && !ApiKeyBox.IsKeyboardFocusWithin)
+            {
+                FillKeyBox();
+                return;
+            }
             if (key != ApiConfig.ApiKey)
             {
                 ApiConfig.ApiKey = key;
@@ -177,7 +183,8 @@ namespace LiveCaptionsTranslator
             string key = ApiConfig?.ApiKey ?? string.Empty;
             ApiKeyStatus.Text = key.Length == 0
                 ? "还没有保存 API Key。"
-                : $"✓ 已保存：{key[..Math.Min(3, key.Length)]}…{key[Math.Max(0, key.Length - 4)..]}（{key.Length} 位）";
+                : $"✓ 已保存：{key[..Math.Min(3, key.Length)]}…{key[Math.Max(0, key.Length - 4)..]}（{key.Length} 位），" +
+                  $"保存在 {AppPaths.SettingFile}";
         }
 
         private void LoadTranslateSetting()
@@ -455,7 +462,7 @@ namespace LiveCaptionsTranslator
 
         private async void LoadSlides_click(object sender, RoutedEventArgs e)
         {
-            var dialog = new OpenFileDialog { Filter = SlideDeck.FileFilter };
+            var dialog = new OpenFileDialog { Filter = SlideDeck.FileFilter, RestoreDirectory = true };
             if (dialog.ShowDialog() != true)
                 return;
 

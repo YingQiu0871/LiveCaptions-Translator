@@ -21,6 +21,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
             <Grid.Resources>
                 <Style x:Key="CaptionBlockStyle" TargetType="TextBlock">
@@ -76,9 +77,22 @@
                 </ItemsControl>
             </ScrollViewer>
 
+            <!--  E.g. LiveCaptions' own translation is on, so the "original" is already Chinese.  -->
+            <Border
+                Grid.Row="1"
+                Margin="0,4,6,0"
+                Padding="10,6"
+                Background="#33FFB900"
+                BorderBrush="#99FFB900"
+                BorderThickness="1"
+                CornerRadius="6"
+                Visibility="{Binding SourceWarningVisibility}">
+                <TextBlock Text="{Binding SourceWarning}" TextWrapping="Wrap" />
+            </Border>
+
             <!--  The sentence being spoken right now.  -->
             <ui:Card
-                Grid.Row="1"
+                Grid.Row="2"
                 Margin="0,4,6,0"
                 Padding="10,8,10,10"
                 VerticalAlignment="Bottom">

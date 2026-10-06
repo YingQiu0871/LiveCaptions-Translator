@@ -40,6 +40,24 @@ namespace LiveCaptionsTranslator.models
                 OnPropertyChanged("DisplayOriginalCaption");
             }
         }
+        private string sourceWarning = string.Empty;
+
+        // A problem with what LiveCaptions delivers, shown above the current sentence.
+        public string SourceWarning
+        {
+            get => sourceWarning;
+            set
+            {
+                if (sourceWarning == value)
+                    return;
+                sourceWarning = value;
+                OnPropertyChanged("SourceWarning");
+                OnPropertyChanged("SourceWarningVisibility");
+            }
+        }
+        public System.Windows.Visibility SourceWarningVisibility =>
+            string.IsNullOrEmpty(sourceWarning) ? System.Windows.Visibility.Collapsed : System.Windows.Visibility.Visible;
+
         // Shown on the caption page while there is no caption yet.
         public string StatusHint
         {

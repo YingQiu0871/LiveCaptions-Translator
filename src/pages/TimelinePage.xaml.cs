@@ -73,6 +73,7 @@ namespace LiveCaptionsTranslator
             var dialog = new OpenFileDialog
             {
                 Filter = SlideDeck.FileFilter,
+                RestoreDirectory = true,
             };
             if (dialog.ShowDialog() != true)
                 return;
@@ -144,7 +145,8 @@ namespace LiveCaptionsTranslator
             {
                 Filter = "Markdown (*.md)|*.md",
                 DefaultExt = ".md",
-                FileName = $"课堂笔记_{SelectedDay:yyyy-MM-dd}.md"
+                FileName = $"课堂笔记_{SelectedDay:yyyy-MM-dd}.md",
+                RestoreDirectory = true,
             };
             if (dialog.ShowDialog() != true)
                 return;
