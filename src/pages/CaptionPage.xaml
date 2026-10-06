@@ -10,136 +10,210 @@
     JournalEntry.KeepAlive="True"
     mc:Ignorable="d">
 
-    <Grid Margin="5,5,15,5">
-        <Grid.RowDefinitions>
-            <RowDefinition x:Name="OriginalCaption_Row" Height="Auto" />
-            <RowDefinition x:Name="TranslatedCaption_Row" Height="Auto" />
-            <RowDefinition x:Name="CaptionLogCard_Row" Height="Auto" />
-        </Grid.RowDefinitions>
-        <Grid.Resources>
-            <Style x:Key="CaptionBlockStyle" TargetType="TextBlock">
-                <Setter Property="TextWrapping" Value="Wrap" />
-                <Setter Property="VerticalAlignment" Value="Stretch" />
-            </Style>
-        </Grid.Resources>
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" MinWidth="260" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition x:Name="SectionColumn" Width="320" MinWidth="180" />
+        </Grid.ColumnDefinitions>
 
-        <ui:Card
-            Grid.Row="0"
-            Padding="8"
-            VerticalAlignment="Stretch"
-            PreviewMouseWheel="OriginalCard_PreviewMouseWheel">
-            <Grid>
+        <Grid Grid.Column="0" Margin="5,5,0,5">
+            <Grid.RowDefinitions>
+                <RowDefinition x:Name="OriginalCaption_Row" Height="Auto" />
+                <RowDefinition x:Name="TranslatedCaption_Row" Height="Auto" />
+                <RowDefinition x:Name="CaptionLogCard_Row" Height="Auto" />
+            </Grid.RowDefinitions>
+            <Grid.Resources>
+                <Style x:Key="CaptionBlockStyle" TargetType="TextBlock">
+                    <Setter Property="TextWrapping" Value="Wrap" />
+                    <Setter Property="VerticalAlignment" Value="Stretch" />
+                </Style>
+            </Grid.Resources>
+
+            <ui:Card
+                Grid.Row="0"
+                Padding="8"
+                VerticalAlignment="Stretch"
+                PreviewMouseWheel="OriginalCard_PreviewMouseWheel">
+                <Grid>
+                    <TextBlock
+                        x:Name="OriginalCaption"
+                        Background="Transparent"
+                        Cursor="Hand"
+                        FontSize="15"
+                        MouseLeftButtonDown="TextBlock_MouseLeftButtonDown"
+                        Style="{StaticResource CaptionBlockStyle}"
+                        Text="{Binding DisplayOriginalCaption, UpdateSourceTrigger=PropertyChanged}"
+                        ToolTip="单击复制，Ctrl+滚轮调整字号" />
+                    <!-- Shown until LiveCaptions produces its first words, so an empty page doesn't look broken. -->
+                    <TextBlock
+                        IsHitTestVisible="False"
+                        Opacity="0.6"
+                        Text="{Binding StatusHint}"
+                        TextWrapping="Wrap">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding DisplayOriginalCaption}" Value="">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding DisplayOriginalCaption}" Value="{x:Null}">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
+            </ui:Card>
+
+            <ui:Card
+                Grid.Row="1"
+                MinHeight="43"
+                Margin="0,3,0,0"
+                Padding="8"
+                VerticalAlignment="Stretch"
+                PreviewMouseWheel="TranslatedCard_PreviewMouseWheel">
                 <TextBlock
-                    x:Name="OriginalCaption"
+                    x:Name="TranslatedCaption"
                     Background="Transparent"
                     Cursor="Hand"
-                    FontSize="15"
+                    FontSize="18"
                     MouseLeftButtonDown="TextBlock_MouseLeftButtonDown"
                     Style="{StaticResource CaptionBlockStyle}"
-                    Text="{Binding DisplayOriginalCaption, UpdateSourceTrigger=PropertyChanged}"
+                    Text="{Binding DisplayTranslatedCaption, UpdateSourceTrigger=PropertyChanged}"
                     ToolTip="单击复制，Ctrl+滚轮调整字号" />
-                <!-- Shown until LiveCaptions produces its first words, so an empty page doesn't look broken. -->
-                <TextBlock
-                    IsHitTestVisible="False"
-                    Opacity="0.6"
-                    Text="{Binding StatusHint}"
-                    TextWrapping="Wrap">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Visibility" Value="Collapsed" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding DisplayOriginalCaption}" Value="">
-                                    <Setter Property="Visibility" Value="Visible" />
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding DisplayOriginalCaption}" Value="{x:Null}">
-                                    <Setter Property="Visibility" Value="Visible" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
-            </Grid>
-        </ui:Card>
+            </ui:Card>
 
-        <ui:Card
-            Grid.Row="1"
-            MinHeight="43"
-            Margin="0,3,0,0"
-            Padding="8"
-            VerticalAlignment="Stretch"
-            PreviewMouseWheel="TranslatedCard_PreviewMouseWheel">
-            <TextBlock
-                x:Name="TranslatedCaption"
+            <ui:Card
+                x:Name="LogCards"
+                Grid.Row="2"
+                Margin="0,0,0,5"
+                Padding="8"
+                VerticalAlignment="Top"
                 Background="Transparent"
-                Cursor="Hand"
-                FontSize="18"
-                MouseLeftButtonDown="TextBlock_MouseLeftButtonDown"
-                Style="{StaticResource CaptionBlockStyle}"
-                Text="{Binding DisplayTranslatedCaption, UpdateSourceTrigger=PropertyChanged}"
-                ToolTip="单击复制，Ctrl+滚轮调整字号" />
-        </ui:Card>
+                BorderBrush="#00000000">
+                <ItemsControl
+                    x:Name="LogCardItems"
+                    MinHeight="50"
+                    ItemsSource="{Binding DisplayLogCards, UpdateSourceTrigger=PropertyChanged}"
+                    VirtualizingPanel.IsVirtualizing="True">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border
+                                Margin="0,0,0,5"
+                                Padding="10,5,10,5"
+                                BorderBrush="#20000000"
+                                BorderThickness="0,1,0,0">
+                                <Grid Grid.Row="0">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
 
-        <ui:Card
-            x:Name="LogCards"
-            Grid.Row="2"
-            Margin="0,0,0,5"
-            Padding="8"
-            VerticalAlignment="Top"
+                                    <ui:Card
+                                        Grid.Row="0"
+                                        Padding="8"
+                                        VerticalAlignment="Stretch">
+                                        <TextBlock
+                                            x:Name="OriginalCaptionLog"
+                                            Background="Transparent"
+                                            Cursor="Hand"
+                                            FontSize="12"
+                                            MouseLeftButtonDown="TextBlock_MouseLeftButtonDown"
+                                            Style="{StaticResource CaptionBlockStyle}"
+                                            Text="{Binding SourceText}"
+                                            ToolTip="单击复制" />
+                                    </ui:Card>
+                                    <ui:Card
+                                        Grid.Row="1"
+                                        Margin="0,3,0,0"
+                                        Padding="8"
+                                        VerticalAlignment="Stretch">
+                                        <TextBlock
+                                            x:Name="TranslatedCaptionLog"
+                                            Background="Transparent"
+                                            Cursor="Hand"
+                                            FontSize="16"
+                                            MouseLeftButtonDown="TextBlock_MouseLeftButtonDown"
+                                            Style="{StaticResource CaptionBlockStyle}"
+                                            Text="{Binding TranslatedText}"
+                                            ToolTip="单击复制" />
+                                    </ui:Card>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ui:Card>
+
+        </Grid>
+
+        <!--  Drag to change the width of the two columns.  -->
+        <GridSplitter
+            Grid.Column="1"
+            Width="8"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Stretch"
             Background="Transparent"
-            BorderBrush="#00000000">
-            <ItemsControl
-                x:Name="LogCardItems"
-                MinHeight="50"
-                ItemsSource="{Binding DisplayLogCards, UpdateSourceTrigger=PropertyChanged}"
-                VirtualizingPanel.IsVirtualizing="True">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Border
-                            Margin="0,0,0,5"
-                            Padding="10,5,10,5"
-                            BorderBrush="#20000000"
-                            BorderThickness="0,1,0,0">
-                            <Grid Grid.Row="0">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="*" />
-                                    <RowDefinition Height="*" />
-                                </Grid.RowDefinitions>
+            Cursor="SizeWE"
+            DragCompleted="SectionSplitter_DragCompleted"
+            ResizeBehavior="PreviousAndNext"
+            ResizeDirection="Columns"
+            ToolTip="拖动调整宽度" />
 
-                                <ui:Card
-                                    Grid.Row="0"
-                                    Padding="8"
-                                    VerticalAlignment="Stretch">
+        <Grid Grid.Column="2" Margin="0,5,15,5">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <TextBlock
+                Grid.Row="0"
+                Margin="4,2,0,6"
+                FontWeight="SemiBold"
+                Text="小节总结" />
+            <TextBlock
+                x:Name="SectionEmptyHint"
+                Grid.Row="1"
+                Margin="4,0,0,0"
+                Opacity="0.6"
+                Text="今天还没有小节。开始上课后会自动分节总结，也可以按 Ctrl+Alt+S 手动结束本节。"
+                TextWrapping="Wrap" />
+            <ScrollViewer
+                x:Name="SectionScroll"
+                Grid.Row="1"
+                VerticalScrollBarVisibility="Auto">
+                <ItemsControl x:Name="SectionList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border
+                                Margin="0,0,6,6"
+                                Padding="10,6,10,8"
+                                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                CornerRadius="6">
+                                <StackPanel>
                                     <TextBlock
-                                        x:Name="OriginalCaptionLog"
-                                        Background="Transparent"
-                                        Cursor="Hand"
                                         FontSize="12"
-                                        MouseLeftButtonDown="TextBlock_MouseLeftButtonDown"
-                                        Style="{StaticResource CaptionBlockStyle}"
-                                        Text="{Binding SourceText}"
-                                        ToolTip="单击复制" />
-                                </ui:Card>
-                                <ui:Card
-                                    Grid.Row="1"
-                                    Margin="0,3,0,0"
-                                    Padding="8"
-                                    VerticalAlignment="Stretch">
+                                        Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                                        Text="{Binding TimeRange}" />
                                     <TextBlock
-                                        x:Name="TranslatedCaptionLog"
-                                        Background="Transparent"
-                                        Cursor="Hand"
-                                        FontSize="16"
-                                        MouseLeftButtonDown="TextBlock_MouseLeftButtonDown"
-                                        Style="{StaticResource CaptionBlockStyle}"
-                                        Text="{Binding TranslatedText}"
-                                        ToolTip="单击复制" />
-                                </ui:Card>
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ui:Card>
-
+                                        Margin="0,2,0,0"
+                                        FontWeight="SemiBold"
+                                        Text="{Binding Title}"
+                                        TextWrapping="Wrap" />
+                                    <TextBlock
+                                        Margin="0,3,0,0"
+                                        Text="{Binding Body}"
+                                        TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
     </Grid>
 </Page>

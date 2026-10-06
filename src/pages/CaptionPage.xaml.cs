@@ -1,7 +1,10 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 
+using LiveCaptionsTranslator.models;
+using LiveCaptionsTranslator.utils;
 using LiveCaptionsTranslator.Utils;
 
 namespace LiveCaptionsTranslator
@@ -19,18 +22,51 @@ namespace LiveCaptionsTranslator
             DataContext = Translator.Caption;
             instance = this;
 
-            Loaded += (s, e) =>
+            SectionColumn.Width = new GridLength(Math.Max(Translator.Setting.MainWindow.SectionPanelWidth, 180));
+            ScrollHelper.UseOwnScrollViewer(this, SectionScroll);
+
+            Loaded += async (s, e) =>
             {
                 AutoHeight();
                 (App.Current.MainWindow as MainWindow).CaptionLogButton.Visibility = Visibility.Visible;
+                Summarizer.SectionSummarized += OnSectionSummarized;
+                await LoadSections(scrollToEnd: true);
             };
             Unloaded += (s, e) =>
             {
                 (App.Current.MainWindow as MainWindow).CaptionLogButton.Visibility = Visibility.Collapsed;
+                Summarizer.SectionSummarized -= OnSectionSummarized;
             };
 
             CollapseTranslatedCaption(Translator.Setting.MainWindow.CaptionLogEnabled);
             ApplyFontSizes();
+        }
+
+        private void OnSectionSummarized(SectionEntry section)
+        {
+            Dispatcher.InvokeAsync(async () => await LoadSections(scrollToEnd: true));
+        }
+
+        private async Task LoadSections(bool scrollToEnd = false)
+        {
+            List<SectionEntry> sections;
+            try
+            {
+                sections = await SectionLogger.LoadSections(DateTime.Today);
+            }
+            catch (Exception)
+            {
+                return;
+            }
+            SectionList.ItemsSource = sections;
+            SectionEmptyHint.Visibility = sections.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+            if (scrollToEnd)
+                SectionScroll.ScrollToEnd();
+        }
+
+        private void SectionSplitter_DragCompleted(object sender, DragCompletedEventArgs e)
+        {
+            Translator.Setting.MainWindow.SectionPanelWidth = Math.Round(SectionColumn.ActualWidth);
         }
 
         private async void TextBlock_MouseLeftButtonDown(object sender, RoutedEventArgs e)

@@ -69,6 +69,7 @@ namespace LiveCaptionsTranslator
             KeepOnScreen();
 
             ToggleTopmost(Translator.Setting.MainWindow.Topmost);
+            ShowSpeakerState(Speaker.Muted);
             ShowLogCard(Translator.Setting.MainWindow.CaptionLogEnabled);
         }
 
@@ -173,9 +174,9 @@ namespace LiveCaptionsTranslator
                 icon.Symbol = ClassSession.IsRunning ? SymbolRegular.Stop16 : SymbolRegular.Play16;
         }
 
-        private void SpeakerButton_Click(object sender, RoutedEventArgs e)
+        private void SpeechSwitch_Click(object sender, RoutedEventArgs e)
         {
-            Speaker.Muted = !Speaker.Muted;
+            Speaker.Muted = SpeechSwitch.IsChecked != true;
         }
 
         private static void EndSection()
@@ -186,8 +187,7 @@ namespace LiveCaptionsTranslator
 
         private void ShowSpeakerState(bool muted)
         {
-            if (SpeakerButton.Icon is SymbolIcon icon)
-                icon.Symbol = muted ? SymbolRegular.SpeakerMute16 : SymbolRegular.Speaker216;
+            SpeechSwitch.IsChecked = !muted;
         }
 
         private void RegisterHotKeys()

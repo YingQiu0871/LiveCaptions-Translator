@@ -27,19 +27,18 @@ namespace LiveCaptionsTranslator.utils
         private static volatile bool speakingOnDefaultOutput = false;
         private static DateTime suppressUntil = DateTime.MinValue;
         private static string lastSpokenSource = string.Empty;
-        private static bool muted = false;
-
         public static event Action<bool>? MutedChanged;
 
         public static bool Muted
         {
-            get => muted;
+            get => Lecture?.SpeechMuted ?? false;
             set
             {
-                muted = value;
-                if (muted)
+                if (Lecture != null)
+                    Lecture.SpeechMuted = value;
+                if (value)
                     StopAll();
-                MutedChanged?.Invoke(muted);
+                MutedChanged?.Invoke(value);
             }
         }
 

@@ -262,7 +262,7 @@
                                 Icon="{ui:SymbolIcon Speaker216,
                                                      Filled=False}" />
                         </StackPanel>
-                        <TextBlock Style="{StaticResource Hint}" Text="Ctrl+Alt+M 静音 / 恢复。" />
+                        <TextBlock Style="{StaticResource Hint}" Text="标题栏的“耳机播报”开关或 Ctrl+Alt+M 可以随时打开 / 关闭。" />
                     </StackPanel>
                 </Border>
             </StackPanel>

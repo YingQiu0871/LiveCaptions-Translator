@@ -55,6 +55,7 @@ namespace LiveCaptionsTranslator.models
         private InputSource inputSource = InputSource.ComputerAudio;
         private string ocrLanguage = string.Empty;
         private bool forceOcr = false;
+        private bool speechMuted = false;
 
         public bool SummaryEnabled
         {
@@ -190,6 +191,17 @@ namespace LiveCaptionsTranslator.models
             {
                 forceOcr = value;
                 OnPropertyChanged("ForceOcr");
+            }
+        }
+
+        // The earphone speech switch; kept across restarts.
+        public bool SpeechMuted
+        {
+            get => speechMuted;
+            set
+            {
+                speechMuted = value;
+                OnPropertyChanged("SpeechMuted");
             }
         }
 

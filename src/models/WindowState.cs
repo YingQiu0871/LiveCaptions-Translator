@@ -13,6 +13,7 @@ namespace LiveCaptionsTranslator.models
         private bool latencyShow = false;
         private int originalFontSize = 15;
         private int translatedFontSize = 18;
+        private double sectionPanelWidth = 320;
 
         public bool Topmost
         {
@@ -21,6 +22,16 @@ namespace LiveCaptionsTranslator.models
             {
                 topmost = value;
                 OnPropertyChanged("Topmost");
+            }
+        }
+        // Width of the section summary column on the caption page.
+        public double SectionPanelWidth
+        {
+            get => sectionPanelWidth;
+            set
+            {
+                sectionPanelWidth = value;
+                OnPropertyChanged("SectionPanelWidth");
             }
         }
         public bool CaptionLogEnabled

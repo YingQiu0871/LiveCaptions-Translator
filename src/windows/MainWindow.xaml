@@ -56,14 +56,13 @@
                             Icon="{ui:SymbolIcon Flag16,
                                                  Filled=False}"
                             ToolTip="结束本节并总结 (Ctrl+Alt+S)" />
-                        <ui:Button
-                            x:Name="SpeakerButton"
-                            Margin="0,0,5,0"
-                            Appearance="Transparent"
-                            Click="SpeakerButton_Click"
-                            Icon="{ui:SymbolIcon Speaker216,
-                                                 Filled=False}"
-                            ToolTip="静音 / 恢复耳机播报 (Ctrl+Alt+M)" />
+                        <ui:ToggleSwitch
+                            x:Name="SpeechSwitch"
+                            Margin="4,0,10,0"
+                            VerticalAlignment="Center"
+                            Click="SpeechSwitch_Click"
+                            Content="耳机播报"
+                            ToolTip="打开 / 关闭耳机播报 (Ctrl+Alt+M)" />
                         <ui:Button
                             x:Name="CaptionLogButton"
                             Margin="0,0,5,0"
