@@ -33,5 +33,16 @@ namespace LiveCaptionsTranslator.models
         public DateTime Time { get; set; }
         public string SourceText { get; set; } = string.Empty;
         public string TranslatedText { get; set; } = string.Empty;
+        // On the caption page: sentences still waiting for paragraph refinement are drawn fainter.
+        public double Opacity { get; set; } = 1.0;
+    }
+
+    public class ParagraphEntry
+    {
+        public DateTime Time { get; set; }
+        public long FirstHistoryId { get; set; }
+        public long LastHistoryId { get; set; }
+        public string Source { get; set; } = string.Empty;
+        public string Translation { get; set; } = string.Empty;
     }
 }

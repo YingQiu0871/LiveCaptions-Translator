@@ -20,6 +20,7 @@ namespace LiveCaptionsTranslator
             Task.Run(() => Translator.TranslateLoop());
             Task.Run(() => Translator.DisplayLoop());
             Task.Run(() => Summarizer.SummaryLoop());
+            Task.Run(() => Refiner.RefineLoop());
             Speaker.Start();
         }
 

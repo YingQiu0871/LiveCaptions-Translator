@@ -75,9 +75,26 @@ namespace LiveCaptionsTranslator.utils
             signal.Set();
         }
 
+        // A refined paragraph, read as one piece.
+        public static void EnqueueParagraph(string translatedText)
+        {
+            if (Muted || Lecture == null || Lecture.SpeakMode != SpeakMode.SummaryAndTranslation)
+                return;
+            string text = CleanForSpeech(translatedText);
+            if (string.IsNullOrWhiteSpace(text))
+                return;
+            lock (queueLock)
+            {
+                queue.AddLast((text, false));
+            }
+        }
+
         public static void EnqueueTranslation(string sourceText, string translatedText)
         {
             if (Muted || Lecture == null || Lecture.SpeakMode != SpeakMode.SummaryAndTranslation)
+                return;
+            // With paragraph refinement on, the refined paragraph is read instead of each raw sentence.
+            if (Refiner.Enabled)
                 return;
             if (string.IsNullOrWhiteSpace(translatedText) ||
                 translatedText.Contains("[ERROR]") || translatedText.Contains("[WARNING]"))

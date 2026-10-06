@@ -325,6 +325,12 @@
 
                         <ui:ToggleSwitch
                             Margin="0,12,0,0"
+                            Content="段落精修（推荐）"
+                            IsChecked="{Binding RefineParagraphs, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock Style="{StaticResource Hint}" Text="每说完几句，用 DeepSeek 结合上下文、课程主题和课件把这几句整理成一段：纠正听错的词，再整段翻译。比逐句翻译准确得多，大约晚 5～10 秒出现，逐句的即时翻译会被替换。只在翻译接口选 DeepSeek / 通义千问时生效。" />
+
+                        <ui:ToggleSwitch
+                            Margin="0,12,0,0"
                             Content="中外对照（译文上方保留原文）"
                             IsChecked="{Binding ShowOriginal, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 

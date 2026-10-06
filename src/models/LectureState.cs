@@ -68,6 +68,7 @@ namespace LiveCaptionsTranslator.models
         private bool speechMuted = false;
         private bool showOriginal = true;
         private bool captionsOnly = false;
+        private bool refineParagraphs = true;
         private string subject = "";
 
         public bool SummaryEnabled
@@ -215,6 +216,17 @@ namespace LiveCaptionsTranslator.models
             {
                 speechMuted = value;
                 OnPropertyChanged("SpeechMuted");
+            }
+        }
+
+        // Every few sentences, let the LLM fix recognition errors and translate them as a paragraph.
+        public bool RefineParagraphs
+        {
+            get => refineParagraphs;
+            set
+            {
+                refineParagraphs = value;
+                OnPropertyChanged("RefineParagraphs");
             }
         }
 

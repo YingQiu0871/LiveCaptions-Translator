@@ -20,6 +20,14 @@ namespace LiveCaptionsTranslator.utils
                     LastHistoryId INTEGER,
                     Summary TEXT,
                     PageNumber INTEGER
+                );
+                CREATE TABLE IF NOT EXISTS Paragraph (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    Time INTEGER,
+                    FirstHistoryId INTEGER,
+                    LastHistoryId INTEGER,
+                    Source TEXT,
+                    Translation TEXT
                 );", connection);
             command.ExecuteNonQuery();
         }
@@ -139,11 +147,55 @@ namespace LiveCaptionsTranslator.utils
             return sections;
         }
 
+        // A few raw sentences rewritten by the LLM with context: recognition errors fixed, translated as a whole.
+        public static async Task AddParagraph(DateTime time, long firstHistoryId, long lastHistoryId,
+            string source, string translation, CancellationToken token = default)
+        {
+            await using var connection = Open();
+            await using var command = new SqliteCommand(@"
+                INSERT INTO Paragraph (Time, FirstHistoryId, LastHistoryId, Source, Translation)
+                VALUES (@time, @first, @last, @source, @translation);", connection);
+            command.Parameters.AddWithValue("@time", new DateTimeOffset(time).ToUnixTimeSeconds());
+            command.Parameters.AddWithValue("@first", firstHistoryId);
+            command.Parameters.AddWithValue("@last", lastHistoryId);
+            command.Parameters.AddWithValue("@source", source);
+            command.Parameters.AddWithValue("@translation", translation);
+            await command.ExecuteNonQueryAsync(token);
+        }
+
+        public static async Task<List<ParagraphEntry>> LoadParagraphs(long afterHistoryId,
+            CancellationToken token = default)
+        {
+            var paragraphs = new List<ParagraphEntry>();
+            await using var connection = Open();
+            await using var command = new SqliteCommand(@"
+                SELECT Time, FirstHistoryId, LastHistoryId, Source, Translation
+                FROM Paragraph
+                WHERE LastHistoryId > @after
+                ORDER BY FirstHistoryId ASC", connection);
+            command.Parameters.AddWithValue("@after", afterHistoryId);
+
+            await using var reader = await command.ExecuteReaderAsync(token);
+            while (await reader.ReadAsync(token))
+            {
+                paragraphs.Add(new ParagraphEntry
+                {
+                    Time = ToLocal(reader.GetValue(0)),
+                    FirstHistoryId = reader.GetInt64(1),
+                    LastHistoryId = reader.GetInt64(2),
+                    Source = reader.IsDBNull(3) ? string.Empty : reader.GetString(3),
+                    Translation = reader.IsDBNull(4) ? string.Empty : reader.GetString(4),
+                });
+            }
+            return paragraphs;
+        }
+
         public static async Task ClearSections(CancellationToken token = default)
         {
             await using var connection = Open();
             await using var command = new SqliteCommand(
-                "DELETE FROM SectionSummary; DELETE FROM sqlite_sequence WHERE NAME='SectionSummary'", connection);
+                "DELETE FROM SectionSummary; DELETE FROM sqlite_sequence WHERE NAME='SectionSummary'; " +
+                "DELETE FROM Paragraph; DELETE FROM sqlite_sequence WHERE NAME='Paragraph'", connection);
             await command.ExecuteNonQueryAsync(token);
         }
     }

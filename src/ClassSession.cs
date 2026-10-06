@@ -42,6 +42,7 @@ namespace LiveCaptionsTranslator
 
                 LastCaptionTime = DateTime.MinValue;
                 Translator.ResetSentences();
+                Refiner.Reset(FirstHistoryId);
                 IsRunning = true;
                 SetHint(problem ?? "已开始，正在听……说话或播放课程声音后，原文会出现在这里。");
                 _ = WatchForSilence(++generation, problem);

@@ -28,6 +28,7 @@ namespace LiveCaptionsTranslator
                 AutoHeight();
                 Summarizer.SectionSummarized += OnSectionSummarized;
                 Translator.TranslationLogged += OnTranslationLogged;
+                Refiner.ParagraphRefined += OnTranslationLogged;
                 ClassSession.StateChanged += OnTranslationLogged;
                 await LoadTranscript();
                 await LoadSections(scrollToEnd: true);
@@ -36,6 +37,7 @@ namespace LiveCaptionsTranslator
             {
                 Summarizer.SectionSummarized -= OnSectionSummarized;
                 Translator.TranslationLogged -= OnTranslationLogged;
+                Refiner.ParagraphRefined -= OnTranslationLogged;
                 ClassSession.StateChanged -= OnTranslationLogged;
             };
 
@@ -56,6 +58,8 @@ namespace LiveCaptionsTranslator
                 try
                 {
                     lines = await SectionLogger.LoadHistoryRange(ClassSession.FirstHistoryId);
+                    var paragraphs = await SectionLogger.LoadParagraphs(ClassSession.FirstHistoryId);
+                    lines = MergeParagraphs(lines, paragraphs);
                 }
                 catch (Exception)
                 {
@@ -72,6 +76,47 @@ namespace LiveCaptionsTranslator
                 TranscriptScroll.UpdateLayout();
                 TranscriptScroll.ScrollToEnd();
             }
+        }
+
+        // Refined paragraphs replace the sentences they cover; the sentences after them are still shown as they
+        // came in (fainter while refinement is on, since they will be replaced shortly).
+        private static List<HistoryLine> MergeParagraphs(List<HistoryLine> lines, List<ParagraphEntry> paragraphs)
+        {
+            if (paragraphs.Count == 0 && !Refiner.Enabled)
+                return lines;
+
+            var merged = new List<HistoryLine>();
+            int p = 0;
+            foreach (var line in lines)
+            {
+                while (p < paragraphs.Count && paragraphs[p].LastHistoryId < line.Id)
+                    p++;
+                if (p < paragraphs.Count && line.Id >= paragraphs[p].FirstHistoryId)
+                {
+                    // The first sentence of a paragraph stands for the whole paragraph.
+                    if (line.Id == paragraphs[p].FirstHistoryId || merged.Count == 0 ||
+                        merged[^1].Id < paragraphs[p].FirstHistoryId)
+                    {
+                        merged.Add(new HistoryLine
+                        {
+                            Id = line.Id,
+                            Time = paragraphs[p].Time,
+                            SourceText = paragraphs[p].Source,
+                            TranslatedText = paragraphs[p].Translation,
+                        });
+                    }
+                    continue;
+                }
+                merged.Add(new HistoryLine
+                {
+                    Id = line.Id,
+                    Time = line.Time,
+                    SourceText = line.SourceText,
+                    TranslatedText = line.TranslatedText,
+                    Opacity = Refiner.Enabled ? 0.6 : 1.0,
+                });
+            }
+            return merged;
         }
 
         private void OnSectionSummarized(SectionEntry section)
