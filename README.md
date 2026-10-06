@@ -17,8 +17,8 @@
 > [!NOTE]
 > **这是原项目的课堂同传特化分支，不是官方版本。**
 > 本仓库从 [SakiRinn/LiveCaptions-Translator](https://github.com/SakiRinn/LiveCaptions-Translator) 分出，专门针对“听外语课”改造：界面只有中文、只支持 Windows 11，加入了云端语音识别、分节总结、按课程保存和课后笔记，也去掉了原版的一些通用设置。
-> 如果你只是想给视频、会议、直播加实时翻译字幕，或者需要英文界面、更多翻译接口，请使用[原项目](https://github.com/SakiRinn/LiveCaptions-Translator)。
-> 本分支里与课堂无关的通用修复会单独提交给原项目。这里的问题请在本仓库反馈，不要打扰原作者。
+> 如果想给视频、会议、直播加实时翻译字幕，或者需要英文界面、更多翻译接口，推荐使用[原项目](https://github.com/SakiRinn/LiveCaptions-Translator)。
+> 本分支中与课堂无关的通用修复，会整理成独立的小改动，供原作者参考。本分支的问题请在本仓库反馈，以免给原作者添麻烦。
 >
 > *A classroom-interpretation fork of [SakiRinn/LiveCaptions-Translator](https://github.com/SakiRinn/LiveCaptions-Translator) (Chinese UI only). For the general-purpose app, please use the original project.*
 
