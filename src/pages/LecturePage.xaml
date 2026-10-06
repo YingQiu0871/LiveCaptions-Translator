@@ -48,7 +48,7 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <!--  Left column: model / API, slides  -->
+            <!--  Left column: input, model / API  -->
             <StackPanel Grid.Row="0" Grid.Column="0">
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
@@ -183,7 +183,10 @@
                         </StackPanel>
                     </StackPanel>
                 </Border>
+            </StackPanel>
 
+            <!--  Right column: slides, sections, speech  -->
+            <StackPanel Grid.Row="0" Grid.Column="1">
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
                         <TextBlock Style="{StaticResource CardTitle}" Text="② 课件（可选）" />
@@ -214,10 +217,7 @@
                         <TextBlock Style="{StaticResource Hint}" Text="上传后按老师讲到的页码分节，小结也会参考这一页的文字纠正术语。没有文字的页面（扫描件、图片）会自动用 Windows 自带的 OCR 识别；OCR 语言来自 Windows 已安装的语言包。也支持 .pptx。" />
                     </StackPanel>
                 </Border>
-            </StackPanel>
 
-            <!--  Right column: sections, speech  -->
-            <StackPanel Grid.Row="0" Grid.Column="1">
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
                         <TextBlock Style="{StaticResource CardTitle}" Text="③ 分节总结" />
