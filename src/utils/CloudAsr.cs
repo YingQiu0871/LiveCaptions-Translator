@@ -1,6 +1,8 @@
+using System.IO;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
+using NAudio.CoreAudioApi;
 using NAudio.Wave;
 
 using LiveCaptionsTranslator.models;
