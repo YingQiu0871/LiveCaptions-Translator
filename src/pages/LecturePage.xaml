@@ -44,6 +44,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <!--  Left column: model / API, slides  -->
@@ -73,6 +74,16 @@
                         </StackPanel>
                         <TextBlock x:Name="SourceStatus" Style="{StaticResource Hint}" />
                         <TextBlock Style="{StaticResource Hint}" Text="选择麦克风会把它设为 Windows 默认录音设备，并重启实时字幕。不要选蓝牙耳机自带的麦克风，否则耳机会切换到通话模式，音质变差。" />
+
+                        <StackPanel Margin="0,10,0,0" Orientation="Horizontal">
+                            <ui:Button
+                                x:Name="LiveCaptionsButton"
+                                Click="LiveCaptionsButton_click"
+                                Content="显示系统实时辅助字幕"
+                                Icon="{ui:SymbolIcon ClosedCaption16,
+                                                     Filled=False}" />
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource Hint}" Text="用来检查系统字幕有没有出字、修改源语言或首次下载语音识别文件。用完点“隐藏”，不要直接关掉它。" />
                     </StackPanel>
                 </Border>
 
@@ -94,10 +105,7 @@
                             Text="{Binding ApiUrl, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
 
                         <TextBlock Style="{StaticResource Label}" Text="API Key" />
-                        <PasswordBox
-                            x:Name="ApiKeyBox"
-                            LostFocus="ApiKeyBox_LostFocus"
-                            PasswordChanged="ApiKeyBox_PasswordChanged" />
+                        <PasswordBox x:Name="ApiKeyBox" PasswordChanged="ApiKeyBox_PasswordChanged" />
                         <TextBlock x:Name="ApiKeyStatus" Style="{StaticResource Hint}" />
 
                         <TextBlock Style="{StaticResource Label}" Text="模型（可从列表选，也可以直接输入）" />
@@ -106,14 +114,7 @@
                             IsEditable="True"
                             Text="{Binding ModelName, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
 
-                        <StackPanel Margin="0,10,0,0" Orientation="Horizontal">
-                            <ui:ToggleSwitch
-                                x:Name="UseForTranslation"
-                                Checked="UseForTranslation_Changed"
-                                Content="翻译也用这个模型"
-                                Unchecked="UseForTranslation_Changed" />
-                        </StackPanel>
-                        <TextBlock Style="{StaticResource Hint}" Text="关闭时，翻译改用免费的 Google 翻译；小节总结始终用上面的模型。" />
+                        <TextBlock Style="{StaticResource Hint}" Text="小节总结始终用这里的模型；翻译用哪个接口在“⑤ 翻译”里选。" />
 
                         <StackPanel Margin="0,10,0,0" Orientation="Horizontal">
                             <ui:Button
@@ -271,9 +272,81 @@
                 </Border>
             </StackPanel>
 
-            <!--  Full width: prompt  -->
+            <!--  Full width: translation  -->
             <Border
                 Grid.Row="1"
+                Grid.Column="0"
+                Grid.ColumnSpan="2"
+                Style="{StaticResource Card}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="20" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Style="{StaticResource CardTitle}" Text="⑤ 翻译" />
+
+                        <TextBlock Style="{StaticResource Label}" Text="翻译接口" />
+                        <ComboBox
+                            x:Name="TranslateApiBox"
+                            DisplayMemberPath="Name"
+                            SelectionChanged="TranslateApiBox_SelectionChanged" />
+                        <TextBlock Style="{StaticResource Hint}" Text="选 DeepSeek / 通义千问时使用“① 模型与 API”的设置；Google 免费，不用 Key。" />
+
+                        <TextBlock Style="{StaticResource Label}" Text="翻译成" />
+                        <ComboBox
+                            x:Name="TargetLangBox"
+                            IsEditable="True"
+                            LostFocus="TargetLangBox_LostFocus"
+                            SelectionChanged="TargetLangBox_SelectionChanged" />
+                        <TextBlock Style="{StaticResource Hint}" Text="可以直接输入语言代码，例如 zh-CN、en-US。" />
+
+                        <ui:Button
+                            Margin="0,10,0,0"
+                            Click="APISettingButton_click"
+                            Content="其他接口的配置…"
+                            Icon="{ui:SymbolIcon Settings16,
+                                                 Filled=False}" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2">
+                        <ui:ToggleSwitch
+                            Margin="0,34,0,0"
+                            Content="中外对照（译文上方保留原文）"
+                            IsChecked="{Binding ShowOriginal, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <ui:ToggleSwitch
+                            Margin="0,12,0,0"
+                            Content="结合上下文翻译（更准确，多用一些 token）"
+                            IsChecked="{Binding ContextAware, Source={x:Static local:Translator.Setting}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <ui:ToggleSwitch
+                            Margin="0,12,0,0"
+                            Content="显示翻译用时"
+                            IsChecked="{Binding MainWindow.LatencyShow, Source={x:Static local:Translator.Setting}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Style="{StaticResource Label}">
+                            <Run Text="翻译频率：字幕每变化" />
+                            <Run Text="{Binding MaxSyncInterval, Source={x:Static local:Translator.Setting}, Mode=OneWay}" />
+                            <Run Text="次翻译一次" />
+                        </TextBlock>
+                        <Slider
+                            AutoToolTipPlacement="TopLeft"
+                            AutoToolTipPrecision="0"
+                            IsSnapToTickEnabled="True"
+                            Maximum="10"
+                            Minimum="1"
+                            TickFrequency="1"
+                            Value="{Binding MaxSyncInterval, Source={x:Static local:Translator.Setting}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock Style="{StaticResource Hint}" Text="数值越小翻得越及时，调用接口也越频繁。" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!--  Full width: prompt  -->
+            <Border
+                Grid.Row="2"
                 Grid.Column="0"
                 Grid.ColumnSpan="2"
                 Style="{StaticResource Card}">

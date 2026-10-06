@@ -119,18 +119,11 @@
                         TargetPageType="{x:Type local:CaptionPage}" />
                     <ui:NavigationViewItem
                         Margin="0,3,0,0"
-                        Content="课堂设置"
-                        FontFamily="Bahnschrift"
-                        Icon="{ui:SymbolIcon SlideText24}"
-                        NavigationCacheMode="Disabled"
-                        TargetPageType="{x:Type local:LecturePage}" />
-                    <ui:NavigationViewItem
-                        Margin="0,3,0,0"
-                        Content="翻译设置"
+                        Content="设置"
                         FontFamily="Bahnschrift"
                         Icon="{ui:SymbolIcon Settings24}"
-                        NavigationCacheMode="Required"
-                        TargetPageType="{x:Type local:SettingPage}" />
+                        NavigationCacheMode="Disabled"
+                        TargetPageType="{x:Type local:LecturePage}" />
                     <ui:NavigationViewItem
                         Margin="0,3,0,0"
                         Content="时间线"

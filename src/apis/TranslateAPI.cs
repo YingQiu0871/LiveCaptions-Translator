@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -14,7 +14,7 @@ namespace LiveCaptionsTranslator.apis
     public static class TranslateAPI
     {
         /*
-         * The key of this field is used as the content for `translateAPIBox` in the `SettingPage`.
+         * The key of this field is used as the content for `translateAPIBox` in the `LecturePage`.
          * If you'd like to add a new API, please insert the key-value pair here.
          */
         public static readonly Dictionary<string, Func<string, CancellationToken, Task<string>>>
@@ -81,7 +81,7 @@ namespace LiveCaptionsTranslator.apis
             }
 
             if (string.IsNullOrWhiteSpace(config.ApiKey))
-                return "[ERROR] 翻译失败：还没有填 API Key，请到“课堂设置”的“模型与 API”里填写。";
+                return "[ERROR] 翻译失败：还没有填 API Key，请到“设置”页的“模型与 API”里填写。";
 
             HttpResponseMessage response;
             try
@@ -133,7 +133,7 @@ namespace LiveCaptionsTranslator.apis
                 return RegexPatterns.ModelThinking().Replace(output, "");
             }
             else if (response.StatusCode == HttpStatusCode.Unauthorized)
-                return "[ERROR] 翻译失败：API Key 无效（HTTP 401），请在“课堂设置”里重新粘贴 API Key 并点“测试连接”。";
+                return "[ERROR] 翻译失败：API Key 无效（HTTP 401），请在“设置”页里重新粘贴 API Key 并点“测试连接”。";
             else
                 return $"[ERROR] 翻译失败：HTTP 错误 - {response.StatusCode}";
         }

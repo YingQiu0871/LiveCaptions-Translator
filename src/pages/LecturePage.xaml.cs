@@ -1,4 +1,6 @@
+using System.ComponentModel;
 using System.Diagnostics;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
@@ -29,7 +31,20 @@ namespace LiveCaptionsTranslator
             new("Custom", string.Empty, Array.Empty<string>()),
         };
 
+        public record ApiChoice(string Key, string Name);
+
+        // Display names for the translation APIs. DeepSeek / Qwen go through the OpenAI-compatible config of card ①.
+        private static readonly Dictionary<string, string> API_NAMES = new()
+        {
+            [Summarizer.SUMMARY_API] = "DeepSeek / 通义千问（用 ① 的设置）",
+            ["Google"] = "Google 翻译（免费）",
+            ["Google2"] = "Google 翻译 2（免费）",
+        };
+
+        private static SettingWindow? settingWindow;
+
         private bool initializing = true;
+        private bool fillingKeyBox = false;
 
         private static OpenAIConfig? ApiConfig => Translator.Setting[Summarizer.SUMMARY_API] as OpenAIConfig;
 
@@ -45,16 +60,31 @@ namespace LiveCaptionsTranslator
             {
                 (App.Current.MainWindow as MainWindow)?.AutoHeightAdjust(minHeight: MIN_HEIGHT, maxHeight: MIN_HEIGHT);
                 Summarizer.CurrentPageChanged += OnCurrentPageChanged;
-                LoadApiSetting();
-                LoadDevices();
-                LoadOcrLanguages();
-                LoadVoices();
-                ShowSlidesInfo();
+                if (ApiConfig != null)
+                    ApiConfig.PropertyChanged += OnApiConfigChanged;
+                initializing = true;
+                // One failing loader (e.g. an audio device that can't be read) must not leave the page read-only.
+                foreach (Action load in new Action[]
+                         {
+                             LoadApiSetting, LoadTranslateSetting, LoadDevices, LoadOcrLanguages, LoadVoices,
+                             ShowSlidesInfo, ShowLiveCaptionsState
+                         })
+                {
+                    try
+                    {
+                        load();
+                    }
+                    catch (Exception)
+                    {
+                    }
+                }
                 initializing = false;
             };
             Unloaded += (s, e) =>
             {
                 Summarizer.CurrentPageChanged -= OnCurrentPageChanged;
+                if (ApiConfig != null)
+                    ApiConfig.PropertyChanged -= OnApiConfigChanged;
                 initializing = true;
             };
         }
@@ -81,9 +111,30 @@ namespace LiveCaptionsTranslator
             if (string.IsNullOrEmpty(config.ApiUrl))
                 ApplyProvider(PROVIDERS[index], config);
 
-            ApiKeyBox.Password = config.ApiKey;
+            FillKeyBox();
+        }
+
+        private void FillKeyBox()
+        {
+            fillingKeyBox = true;
+            ApiKeyBox.Password = ApiConfig?.ApiKey ?? string.Empty;
+            fillingKeyBox = false;
             ShowApiKeyStatus();
-            UseForTranslation.IsChecked = Translator.Setting.ApiName == Summarizer.SUMMARY_API;
+        }
+
+        private void OnApiConfigChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName != nameof(OpenAIConfig.ApiKey))
+                return;
+            Dispatcher.InvokeAsync(() =>
+            {
+                // Changed elsewhere (e.g. the API settings window): show it here too.
+                string key = ApiConfig?.ApiKey ?? string.Empty;
+                if (ApiKeyBox.Password != key && !ApiKeyBox.IsKeyboardFocusWithin)
+                    FillKeyBox();
+                else
+                    ShowApiKeyStatus();
+            });
         }
 
         private static void ApplyProvider(Provider provider, OpenAIConfig config)
@@ -104,27 +155,19 @@ namespace LiveCaptionsTranslator
             TestApiResult.Text = string.Empty;
         }
 
+        // Saved on every keystroke / paste, independent of the page state, so the key can't be lost
+        // by switching pages.
         private void ApiKeyBox_PasswordChanged(object sender, RoutedEventArgs e)
         {
-            if (initializing)
-                return;
-            SaveApiKey();
-        }
-
-        private void ApiKeyBox_LostFocus(object sender, RoutedEventArgs e)
-        {
-            if (!initializing)
-                SaveApiKey();
-        }
-
-        private void SaveApiKey()
-        {
-            if (ApiConfig == null)
+            if (fillingKeyBox || ApiConfig == null)
                 return;
             // Pasted keys sometimes carry spaces, line breaks or invisible characters.
             string key = new string(ApiKeyBox.Password.Where(c => c > ' ' && c < 0x7F).ToArray());
             if (key != ApiConfig.ApiKey)
+            {
                 ApiConfig.ApiKey = key;
+                Translator.Setting?.Save();
+            }
             ShowApiKeyStatus();
         }
 
@@ -137,11 +180,103 @@ namespace LiveCaptionsTranslator
                 : $"✓ 已保存：{key[..Math.Min(3, key.Length)]}…{key[Math.Max(0, key.Length - 4)..]}（{key.Length} 位）";
         }
 
-        private void UseForTranslation_Changed(object sender, RoutedEventArgs e)
+        private void LoadTranslateSetting()
         {
-            if (initializing)
+            var keys = Translator.Setting.Configs.Keys.ToList();
+            var choices = keys
+                .OrderBy(key => key == Summarizer.SUMMARY_API ? 0 : API_NAMES.ContainsKey(key) ? 1 : 2)
+                .Select(key => new ApiChoice(key, API_NAMES.TryGetValue(key, out var name) ? name : key))
+                .ToList();
+            TranslateApiBox.ItemsSource = choices;
+            TranslateApiBox.SelectedItem = choices.FirstOrDefault(c => c.Key == Translator.Setting.ApiName);
+            LoadTargetLanguages();
+        }
+
+        private void TranslateApiBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (initializing || TranslateApiBox.SelectedItem is not ApiChoice choice)
                 return;
-            Translator.Setting.ApiName = UseForTranslation.IsChecked == true ? Summarizer.SUMMARY_API : "Google";
+            Translator.Setting.ApiName = choice.Key;
+            initializing = true;
+            try
+            {
+                LoadTargetLanguages();
+            }
+            finally
+            {
+                initializing = false;
+            }
+        }
+
+        private void LoadTargetLanguages()
+        {
+            var configType = Translator.Setting[Translator.Setting.ApiName].GetType();
+            PropertyInfo? languagesProp = null;
+            // Traverse base classes to find `SupportedLanguages`
+            for (var type = configType; type != null && languagesProp == null; type = type.BaseType)
+                languagesProp = type.GetProperty("SupportedLanguages", BindingFlags.Public | BindingFlags.Static);
+            languagesProp ??= typeof(TranslateAPIConfig).GetProperty(
+                "SupportedLanguages", BindingFlags.Public | BindingFlags.Static);
+
+            var supportedLanguages = (Dictionary<string, string>)languagesProp!.GetValue(null)!;
+            string targetLang = Translator.Setting.TargetLanguage;
+            if (!supportedLanguages.ContainsKey(targetLang))
+                supportedLanguages[targetLang] = targetLang;    // add custom language to supported languages
+            TargetLangBox.ItemsSource = supportedLanguages.Keys.ToList();
+            TargetLangBox.SelectedItem = targetLang;
+        }
+
+        private void TargetLangBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!initializing && TargetLangBox.SelectedItem != null)
+                Translator.Setting.TargetLanguage = TargetLangBox.SelectedItem.ToString();
+        }
+
+        private void TargetLangBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (!initializing && !string.IsNullOrWhiteSpace(TargetLangBox.Text))
+                Translator.Setting.TargetLanguage = TargetLangBox.Text.Trim();
+        }
+
+        private void APISettingButton_click(object sender, RoutedEventArgs e)
+        {
+            if (settingWindow != null && settingWindow.IsLoaded)
+                settingWindow.Activate();
+            else
+            {
+                settingWindow = new SettingWindow();
+                settingWindow.Closed += (sender, args) => settingWindow = null;
+                settingWindow.Show();
+            }
+        }
+
+        private void ShowLiveCaptionsState()
+        {
+            LiveCaptionsButton.Content = LiveCaptionsHandler.IsHidden || Translator.Window == null
+                ? "显示系统实时辅助字幕"
+                : "隐藏系统实时辅助字幕";
+        }
+
+        private void LiveCaptionsButton_click(object sender, RoutedEventArgs e)
+        {
+            var window = Translator.Window;
+            if (window == null)
+            {
+                SnackbarHost.Show("实时辅助字幕还没启动。", "点“开始”后再试。", SnackbarType.Warning, timeout: 2);
+                return;
+            }
+            try
+            {
+                if (LiveCaptionsHandler.IsHidden)
+                    LiveCaptionsHandler.RestoreLiveCaptions(window);
+                else
+                    LiveCaptionsHandler.HideLiveCaptions(window);
+            }
+            catch (Exception ex)
+            {
+                SnackbarHost.Show("[ERROR] 操作失败。", ex.Message, SnackbarType.Error, timeout: 2);
+            }
+            ShowLiveCaptionsState();
         }
 
         private async void TestApi_click(object sender, RoutedEventArgs e)

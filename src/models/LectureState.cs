@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
 namespace LiveCaptionsTranslator.models
@@ -56,6 +56,7 @@ namespace LiveCaptionsTranslator.models
         private string ocrLanguage = string.Empty;
         private bool forceOcr = false;
         private bool speechMuted = false;
+        private bool showOriginal = true;
 
         public bool SummaryEnabled
         {
@@ -202,6 +203,18 @@ namespace LiveCaptionsTranslator.models
             {
                 speechMuted = value;
                 OnPropertyChanged("SpeechMuted");
+            }
+        }
+
+        // 中外对照: keep the original sentence above its translation on the caption page.
+        public bool ShowOriginal
+        {
+            get => showOriginal;
+            set
+            {
+                showOriginal = value;
+                OnPropertyChanged("ShowOriginal");
+                Translator.Caption?.OnPropertyChanged("OriginalVisibility");
             }
         }
 

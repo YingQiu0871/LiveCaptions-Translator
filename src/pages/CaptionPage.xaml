@@ -59,6 +59,7 @@
                                         Opacity="0.75"
                                         Text="{Binding SourceText}"
                                         TextWrapping="Wrap"
+                                        Visibility="{Binding DataContext.OriginalVisibility, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                         ToolTip="单击复制" />
                                     <TextBlock
                                         Margin="0,3,0,0"
@@ -92,7 +93,8 @@
                             PreviewMouseWheel="OriginalCard_PreviewMouseWheel"
                             Style="{StaticResource CaptionBlockStyle}"
                             Text="{Binding DisplayOriginalCaption, UpdateSourceTrigger=PropertyChanged}"
-                            ToolTip="单击复制，Ctrl+滚轮调整字号" />
+                            ToolTip="单击复制，Ctrl+滚轮调整字号"
+                            Visibility="{Binding OriginalVisibility}" />
                         <TextBlock
                             x:Name="TranslatedCaption"
                             Margin="0,6,0,0"

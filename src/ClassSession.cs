@@ -1,4 +1,4 @@
-using System.Windows.Automation;
+﻿using System.Windows.Automation;
 
 using LiveCaptionsTranslator.models;
 using LiveCaptionsTranslator.utils;
@@ -47,7 +47,7 @@ namespace LiveCaptionsTranslator
             }
             catch (Exception ex)
             {
-                SetHint($"启动失败：{ex.Message}\n请到“翻译设置”页点“显示”，确认系统的实时辅助字幕能正常打开。");
+                SetHint($"启动失败：{ex.Message}\n请到“设置”页点“显示系统实时辅助字幕”，确认系统的实时辅助字幕能正常打开。");
             }
             finally
             {
@@ -94,14 +94,14 @@ namespace LiveCaptionsTranslator
             if (!LiveCaptionsHandler.HasCaptionsTextBlock(window))
             {
                 return "找不到实时辅助字幕的文字区域，可能是系统字幕还没完成首次设置。" +
-                       "请到“翻译设置”页点“显示”，按系统提示下载语音识别文件后再点“开始”。";
+                       "请到“设置”页点“显示系统实时辅助字幕”，按系统提示下载语音识别文件后再点“开始”。";
             }
 
             if (!microphoneSet && useMicrophone)
             {
                 LiveCaptionsMicrophone.ShowSettings(window);
                 return "已开始，但没能自动打开麦克风。已弹出实时辅助字幕的设置菜单：" +
-                       "请在“首选项”里勾选“包含麦克风音频”，再点本工具“翻译设置”页的“隐藏”。";
+                       "请在“首选项”里勾选“包含麦克风音频”，再点本工具“设置”页的“隐藏系统实时辅助字幕”。";
             }
             return null;
         }
@@ -115,10 +115,10 @@ namespace LiveCaptionsTranslator
             bool useMicrophone = Translator.Setting.Lecture.InputSource == InputSource.Microphone;
             string advice = useMicrophone
                 ? "现在听的是麦克风。请确认实时辅助字幕“首选项”里已勾选“包含麦克风音频”，" +
-                  "并在“课堂设置 ⓪”里选对了麦克风（不要选蓝牙耳机的麦克风）。"
-                : "现在只听电脑播放的声音，线下上课请在“课堂设置 ⓪”里改成“麦克风”。";
+                  "并在“设置 ⓪”里选对了麦克风（不要选蓝牙耳机的麦克风）。"
+                : "现在只听电脑播放的声音，线下上课请在“设置 ⓪”里改成“麦克风”。";
             SetHint($"已经 {NO_CAPTION_WARNING_SECONDS} 秒没有识别到文字。{advice}" +
-                    "\n也可以到“翻译设置”页点“显示”，看系统的实时辅助字幕窗口里有没有出字。" +
+                    "\n也可以到“设置”页点“显示系统实时辅助字幕”，看系统的实时辅助字幕窗口里有没有出字。" +
                     (problem == null ? string.Empty : $"\n{problem}"));
         }
 

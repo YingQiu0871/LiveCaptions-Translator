@@ -261,7 +261,7 @@ namespace LiveCaptionsTranslator
             if (!Translator.FirstUseFlag)
                 return;
 
-            RootNavigation.Navigate(typeof(SettingPage));
+            RootNavigation.Navigate(typeof(LecturePage));
             LiveCaptionsHandler.RestoreLiveCaptions(Translator.Window);
 
             Dispatcher.InvokeAsync(() =>

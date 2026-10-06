@@ -15,6 +15,8 @@ namespace LiveCaptionsTranslator.utils
         {
             // Init
             captionsTextBlock = null;
+            IsHidden = false;
+            shownRect = null;
             KillAllProcessesByPName(PROCESS_NAME);
             var process = Process.Start(PROCESS_NAME);
 
@@ -44,13 +46,31 @@ namespace LiveCaptionsTranslator.utils
             process.WaitForExit();
         }
 
+        public static bool IsHidden { get; private set; } = false;
+        private static RECT? shownRect = null;
+
+        // Moves LiveCaptions off screen instead of minimizing it: a minimized LiveCaptions may stop
+        // updating its text, so captions would only arrive while its window is visible.
         public static void HideLiveCaptions(AutomationElement window)
         {
             nint hWnd = new nint((long)window.Current.NativeWindowHandle);
             int exStyle = WindowsAPI.GetWindowLong(hWnd, WindowsAPI.GWL_EXSTYLE);
 
-            WindowsAPI.ShowWindow(hWnd, WindowsAPI.SW_MINIMIZE);
+            WindowsAPI.ShowWindow(hWnd, WindowsAPI.SW_RESTORE);
+            if (WindowsAPI.GetWindowRect(hWnd, out RECT rect))
+            {
+                if (!IsHidden)
+                    shownRect = rect;
+                int width = Math.Max(rect.Right - rect.Left, 100);
+                int height = Math.Max(rect.Bottom - rect.Top, 100);
+                int left = (int)System.Windows.SystemParameters.VirtualScreenLeft - width - 200;
+                int top = (int)System.Windows.SystemParameters.VirtualScreenTop - height - 200;
+                WindowsAPI.MoveWindow(hWnd, left, top, width, height, true);
+            }
+            else
+                WindowsAPI.ShowWindow(hWnd, WindowsAPI.SW_MINIMIZE);
             WindowsAPI.SetWindowLong(hWnd, WindowsAPI.GWL_EXSTYLE, exStyle | WindowsAPI.WS_EX_TOOLWINDOW);
+            IsHidden = true;
         }
 
         public static void RestoreLiveCaptions(AutomationElement window)
@@ -60,11 +80,22 @@ namespace LiveCaptionsTranslator.utils
 
             WindowsAPI.SetWindowLong(hWnd, WindowsAPI.GWL_EXSTYLE, exStyle & ~WindowsAPI.WS_EX_TOOLWINDOW);
             WindowsAPI.ShowWindow(hWnd, WindowsAPI.SW_RESTORE);
+            if (IsHidden)
+            {
+                if (shownRect is RECT rect && rect.Left > -10000 && rect.Top > -10000)
+                    WindowsAPI.MoveWindow(hWnd, rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top, true);
+                else
+                    WindowsAPI.MoveWindow(hWnd, 800, 600, 600, 200, true);
+            }
             WindowsAPI.SetForegroundWindow(hWnd);
+            IsHidden = false;
         }
 
         public static void FixLiveCaptions(AutomationElement window)
         {
+            // Off screen on purpose, see `HideLiveCaptions`.
+            if (IsHidden)
+                return;
             nint hWnd = new nint((long)window.Current.NativeWindowHandle);
 
             RECT rect;

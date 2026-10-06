@@ -93,7 +93,7 @@
                             Click="NavigationButton_Click"
                             Tag="OpenAI">
                             <StackPanel Orientation="Horizontal">
-                                <ui:TextBlock VerticalAlignment="Center" Text="OpenAI" />
+                                <ui:TextBlock VerticalAlignment="Center" Text="DeepSeek / OpenAI 兼容" />
                             </StackPanel>
                         </ui:Button>
 
@@ -513,7 +513,7 @@
                                     Margin="10"
                                     FontSize="20"
                                     FontWeight="Medium"
-                                    Text="OpenAI" />
+                                    Text="DeepSeek / 通义千问 / OpenAI 兼容接口" />
 
                                 <ui:Card Padding="15">
                                     <StackPanel>

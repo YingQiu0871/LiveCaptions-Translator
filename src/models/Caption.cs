@@ -147,6 +147,11 @@ namespace LiveCaptionsTranslator.models
                                 !entry.TranslatedText.Contains("[WARNING]"));
         }
 
+        public System.Windows.Visibility OriginalVisibility =>
+            Translator.Setting?.Lecture.ShowOriginal == false
+                ? System.Windows.Visibility.Collapsed
+                : System.Windows.Visibility.Visible;
+
         public void OnPropertyChanged([CallerMemberName] string propName = "")
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propName));
