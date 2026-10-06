@@ -48,6 +48,14 @@ namespace LiveCaptionsTranslator.apis
             bool bRepaint
         );
 
+        public const uint SPI_GETWORKAREA = 0x0030;
+
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern bool SystemParametersInfo(uint uiAction, uint uiParam, out RECT pvParam, uint fWinIni);
+
+        [DllImport("user32.dll")]
+        public static extern uint GetDpiForWindow(nint hWnd);
+
         [DllImport("user32.dll", SetLastError = true)]
         public static extern bool SetLayeredWindowAttributes(nint hWnd, uint crKey, byte bAlpha, uint dwFlags);
 

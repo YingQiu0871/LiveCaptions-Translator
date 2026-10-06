@@ -162,7 +162,11 @@ namespace LiveCaptionsTranslator
         private async void StartButton_Click(object sender, RoutedEventArgs e)
         {
             if (ClassSession.IsRunning)
+            {
+                long lectureId = ClassSession.CurrentLectureId;
                 ClassSession.Stop();
+                await LectureDialogs.SaveAfterStop(lectureId);
+            }
             else
             {
                 RootNavigation.Navigate(typeof(CaptionPage));

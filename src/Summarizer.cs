@@ -35,6 +35,8 @@ namespace LiveCaptionsTranslator
         };
 
         private static long lastHistoryId = -1;
+        // Tick and FinishLecture never run at the same time.
+        private static readonly SemaphoreSlim gate = new(1, 1);
         private static volatile bool endSectionRequested = false;
 
         private static DateTime lastBoundaryCheck = DateTime.MinValue;
@@ -71,6 +73,36 @@ namespace LiveCaptionsTranslator
             lastCheckedHistoryId = 0;
         }
 
+        // A new class starts: sections never reach back into the previous class.
+        public static void StartAt(long firstHistoryId)
+        {
+            lastHistoryId = Math.Max(lastHistoryId, firstHistoryId);
+            lastCheckedHistoryId = lastHistoryId;
+            lastBoundaryCheck = DateTime.Now;
+        }
+
+        // The class was stopped: summarize what is left of it as its last section, however short.
+        public static async Task FinishLecture(long lastIdOfLecture)
+        {
+            var lecture = Translator.Setting?.Lecture;
+            if (lecture == null)
+                return;
+            await gate.WaitAsync();
+            try
+            {
+                var lines = (await SectionLogger.LoadHistoryRange(lastHistoryId, lastIdOfLecture))
+                    .Where(line => !string.IsNullOrWhiteSpace(line.SourceText))
+                    .ToList();
+                if (lines.Count > 0 && lecture.SummaryEnabled)
+                    await CloseSection(lines, CurrentPage, lecture);
+                lastHistoryId = Math.Max(lastHistoryId, lastIdOfLecture);
+            }
+            finally
+            {
+                gate.Release();
+            }
+        }
+
         public static async Task SummaryLoop()
         {
             // Do not summarize what was logged before this run.
@@ -88,6 +120,7 @@ namespace LiveCaptionsTranslator
 
             while (true)
             {
+                await gate.WaitAsync();
                 try
                 {
                     await Tick();
@@ -96,6 +129,10 @@ namespace LiveCaptionsTranslator
                 {
                     SnackbarHost.Show("[ERROR] 小节总结失败。", ex.Message, SnackbarType.Error,
                         timeout: 3, closeButton: true);
+                }
+                finally
+                {
+                    gate.Release();
                 }
                 await Task.Delay(LOOP_INTERVAL_MS);
             }

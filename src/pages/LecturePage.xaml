@@ -45,6 +45,7 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <!--  Left column: model / API, slides  -->
@@ -413,9 +414,51 @@
                 </Grid>
             </Border>
 
-            <!--  Full width: prompt  -->
+            <!--  Full width: where transcripts are saved  -->
             <Border
                 Grid.Row="2"
+                Grid.Column="0"
+                Grid.ColumnSpan="2"
+                Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource CardTitle}" Text="⑥ 转录保存" />
+                    <TextBlock Style="{StaticResource Label}" Text="保存位置" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBox
+                            x:Name="SaveFolderBox"
+                            Grid.Column="0"
+                            IsReadOnly="True" />
+                        <ui:Button
+                            Grid.Column="1"
+                            Margin="6,0,0,0"
+                            Click="ChooseSaveFolder_click"
+                            Content="选择…"
+                            Icon="{ui:SymbolIcon FolderOpen16,
+                                                 Filled=False}" />
+                        <ui:Button
+                            Grid.Column="2"
+                            Margin="6,0,0,0"
+                            Click="OpenSaveFolder_click"
+                            Content="打开" />
+                        <ui:Button
+                            Grid.Column="3"
+                            Margin="6,0,0,0"
+                            Click="ResetSaveFolder_click"
+                            Content="恢复默认" />
+                    </Grid>
+                    <TextBlock Style="{StaticResource Hint}" Text="每节课点“停止”后，会让你给这节课命名并选择课程，然后保存为“保存位置\课程名\本节课名称.md”，里面有小节总结、原文和译文。历史页里也能按课程查看。改位置只影响之后保存的文件。" />
+                </StackPanel>
+            </Border>
+
+            <!--  Full width: prompt  -->
+            <Border
+                Grid.Row="3"
                 Grid.Column="0"
                 Grid.ColumnSpan="2"
                 Style="{StaticResource Card}">

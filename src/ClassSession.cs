@@ -18,6 +18,8 @@ namespace LiveCaptionsTranslator
         public static DateTime LastCaptionTime { get; set; } = DateTime.MinValue;
         // History rows after this id belong to the current class; -1 before the first start.
         public static long FirstHistoryId { get; private set; } = -1;
+        // The recording in the history that the running class is saved as; -1 if none.
+        public static long CurrentLectureId { get; private set; } = -1;
 
         public static event Action? StateChanged;
 
@@ -49,6 +51,8 @@ namespace LiveCaptionsTranslator
                 LastCaptionTime = DateTime.MinValue;
                 Translator.ResetSentences();
                 Refiner.Reset(FirstHistoryId);
+                Summarizer.StartAt(FirstHistoryId);
+                await StartLecture();
                 IsRunning = true;
                 if (cloud)
                     CloudAsr.Start(Translator.Setting.Lecture.InputSource == InputSource.Microphone);
@@ -64,6 +68,52 @@ namespace LiveCaptionsTranslator
                 IsStarting = false;
                 StateChanged?.Invoke();
             }
+        }
+
+        // Every class gets its own entry in the history, in the course chosen last time.
+        private static async Task StartLecture()
+        {
+            var now = DateTime.Now;
+            string course = LectureStore.CleanCourseName(Translator.Setting.Lecture.CurrentCourse);
+            try
+            {
+                CurrentLectureId = await LectureStore.StartLecture(course, $"{now:yyyy-MM-dd HH:mm} 课堂", now, FirstHistoryId);
+            }
+            catch (Exception)
+            {
+                CurrentLectureId = -1;
+            }
+        }
+
+        // After `Stop`: waits for the last sentences to be translated, closes the recording and summarizes its
+        // last section. Returns the recording, or null if there is none.
+        public static async Task<LectureRecord?> FinishLecture(long lectureId)
+        {
+            if (lectureId < 0)
+                return null;
+            // Translations still on their way are logged a moment after stopping.
+            long last = await SectionLogger.GetMaxHistoryId();
+            for (int i = 0; i < 8; i++)
+            {
+                await Task.Delay(1000);
+                long now = await SectionLogger.GetMaxHistoryId();
+                if (now == last && i >= 1)
+                    break;
+                last = now;
+            }
+            // A new class was started meanwhile: its sentences are not part of this one.
+            if (IsRunning && CurrentLectureId != lectureId)
+                last = Math.Min(last, FirstHistoryId);
+            await LectureStore.FinishLecture(lectureId, DateTime.Now, last);
+            try
+            {
+                await Summarizer.FinishLecture(last);
+            }
+            catch (Exception)
+            {
+                // The transcript is saved anyway; only the summary of the last section is missing.
+            }
+            return await LectureStore.GetLecture(lectureId);
         }
 
         public static void Stop()

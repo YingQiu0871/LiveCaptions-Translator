@@ -7,11 +7,34 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     Title="HistoryPage"
-    HorizontalAlignment="Left"
-    VerticalAlignment="Top"
     JournalEntry.KeepAlive="False"
     mc:Ignorable="d">
-    <Grid Margin="15" VerticalAlignment="Top">
+    <Page.Resources>
+        <Style x:Key="ItemCard" TargetType="Border">
+            <Setter Property="Padding" Value="12,8,12,10" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style
+            x:Key="Crumb"
+            BasedOn="{StaticResource {x:Type ui:Button}}"
+            TargetType="ui:Button">
+            <Setter Property="Appearance" Value="Transparent" />
+            <Setter Property="Padding" Value="6,4,6,4" />
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="MouseOverBackground" Value="#07000000" />
+        </Style>
+    </Page.Resources>
+
+    <Grid Margin="15">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -19,64 +42,49 @@
 
         <Grid Grid.Row="0">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
-                <ColumnDefinition />
             </Grid.ColumnDefinitions>
 
+            <!--  Breadcrumb: 课程 › course › lecture  -->
             <StackPanel
+                x:Name="Breadcrumb"
                 MaxHeight="34.94"
-                Margin="0,0,3,0"
                 HorizontalAlignment="Left"
                 Orientation="Horizontal">
                 <ui:Button
-                    x:Name="PageDown"
-                    Appearance="Transparent"
-                    Click="PageDown_click"
-                    Icon="{ui:SymbolIcon chevronLeft12,
+                    x:Name="CrumbHome"
+                    Click="CrumbHome_click"
+                    Content="课程"
+                    Icon="{ui:SymbolIcon Folder16,
                                          Filled=False}"
-                    MouseOverBackground="#07000000"
-                    ToolTip="上一页" />
-
-                <ui:TextBlock
-                    x:Name="PageNumber"
-                    Margin="10,0,10,0"
+                    Style="{StaticResource Crumb}" />
+                <TextBlock
+                    x:Name="CrumbSep1"
+                    Margin="2,0,2,0"
+                    VerticalAlignment="Center"
+                    Opacity="0.6"
+                    Text="›" />
+                <ui:Button
+                    x:Name="CrumbCourse"
+                    MaxWidth="220"
+                    Click="CrumbCourse_click"
+                    Style="{StaticResource Crumb}" />
+                <TextBlock
+                    x:Name="CrumbSep2"
+                    Margin="2,0,2,0"
+                    VerticalAlignment="Center"
+                    Opacity="0.6"
+                    Text="›" />
+                <TextBlock
+                    x:Name="CrumbLecture"
+                    MaxWidth="280"
+                    Margin="6,0,0,0"
                     VerticalAlignment="Center"
                     FontSize="15"
-                    Text="1/1" />
-
-                <ui:Button
-                    x:Name="PageUp"
-                    Appearance="Transparent"
-                    Click="PageUp_click"
-                    Icon="{ui:SymbolIcon chevronRight12,
-                                         Filled=False}"
-                    MouseOverBackground="#07000000"
-                    ToolTip="下一页" />
-
-                <ComboBox
-                    x:Name="HistoryMaxRow"
-                    MinHeight="0"
-                    Margin="5,0,0,0"
-                    Padding="10,4,10,7"
-                    VerticalAlignment="Stretch"
-                    SelectedIndex="1">
-                    <ComboBoxItem Content="20 条/页" Tag="20" />
-                    <ComboBoxItem Content="30 条/页" Tag="30" />
-                    <ComboBoxItem Content="50 条/页" Tag="50" />
-                    <ComboBoxItem Content="100 条/页" Tag="100" />
-                </ComboBox>
-
-                <ui:AutoSuggestBox
-                    x:Name="HistorySearchBox"
-                    MinWidth="200"
-                    MaxWidth="200"
-                    Margin="5,0,0,0"
-                    PlaceholderText="搜索"
-                    QuerySubmitted="HistorySearchBox_QuerySubmitted"
-                    TextChanged="HistorySearchBox_TextChanged" />
-
+                    FontWeight="SemiBold"
+                    TextTrimming="CharacterEllipsis" />
             </StackPanel>
-
             <StackPanel
                 Grid.Column="1"
                 MaxHeight="34.94"
@@ -84,30 +92,62 @@
                 HorizontalAlignment="Right"
                 Orientation="Horizontal">
                 <ui:Button
+                    x:Name="NewCourse"
+                    Appearance="Transparent"
+                    Click="NewCourse_click"
+                    Content="新建课程"
+                    Icon="{ui:SymbolIcon FolderAdd16,
+                                         Filled=False}"
+                    MouseOverBackground="#07000000" />
+                <ui:Button
+                    x:Name="AllSentences"
+                    Margin="5,0,0,0"
+                    Appearance="Transparent"
+                    Click="AllSentences_click"
+                    Content="全部句子"
+                    Icon="{ui:SymbolIcon TextBulletListLtr16,
+                                         Filled=False}"
+                    MouseOverBackground="#07000000"
+                    ToolTip="不分课程，按时间列出所有句子" />
+                <ui:Button
+                    x:Name="RenameLecture"
+                    Appearance="Transparent"
+                    Click="RenameLecture_click"
+                    Content="重命名"
+                    Icon="{ui:SymbolIcon Rename16,
+                                         Filled=False}"
+                    MouseOverBackground="#07000000" />
+                <ui:Button
+                    x:Name="OpenFile"
+                    Margin="5,0,0,0"
+                    Appearance="Transparent"
+                    Click="OpenFile_click"
+                    Content="打开文件位置"
+                    Icon="{ui:SymbolIcon FolderOpen16,
+                                         Filled=False}"
+                    MouseOverBackground="#07000000"
+                    ToolTip="重新生成本节课的 Markdown 文件，并在资源管理器中显示" />
+                <ui:Button
                     x:Name="Export"
-                    Margin="0,0,0,0"
-                    HorizontalAlignment="Right"
+                    Margin="5,0,0,0"
                     Appearance="Transparent"
                     Click="Export_click"
                     Icon="{ui:SymbolIcon ArrowDown12,
                                          Filled=False}"
                     MouseOverBackground="#07000000"
-                    ToolTip="导出" />
+                    ToolTip="导出全部句子 (CSV)" />
                 <ui:Button
                     x:Name="Delete"
                     Margin="5,0,0,0"
-                    HorizontalAlignment="Right"
                     Appearance="Transparent"
                     Click="Delete_click"
                     Icon="{ui:SymbolIcon Delete12,
                                          Filled=False}"
                     MouseOverBackground="#07000000"
                     ToolTip="全部删除" />
-
                 <ui:Button
                     x:Name="Refresh"
                     Margin="5,0,0,0"
-                    HorizontalAlignment="Right"
                     Appearance="Transparent"
                     Click="Refresh_click"
                     Icon="{ui:SymbolIcon ArrowClockwise12,
@@ -117,6 +157,249 @@
             </StackPanel>
         </Grid>
 
+        <!--  Level 1: course folders  -->
+        <ScrollViewer
+            x:Name="CourseScroll"
+            Grid.Row="1"
+            Margin="0,10,0,0"
+            VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <TextBlock
+                    x:Name="CourseEmptyHint"
+                    Margin="5,5,5,0"
+                    Opacity="0.7"
+                    Text="还没有课程。上完一节课点“停止”后，会让你给这节课命名并选择课程，它就会出现在这里。"
+                    TextWrapping="Wrap"
+                    Visibility="Collapsed" />
+                <ItemsControl x:Name="CourseList">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border
+                                Width="200"
+                                Margin="0,0,10,10"
+                                MouseLeftButtonUp="Course_click"
+                                Style="{StaticResource ItemCard}">
+                                <Border.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Click="RenameCourse_click" Header="重命名" />
+                                        <MenuItem Click="DeleteCourse_click" Header="删除（仅空文件夹）" />
+                                    </ContextMenu>
+                                </Border.ContextMenu>
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:SymbolIcon
+                                        VerticalAlignment="Center"
+                                        FontSize="28"
+                                        Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                                        Symbol="Folder24" />
+                                    <StackPanel Width="140" Margin="10,0,0,0">
+                                        <TextBlock
+                                            FontWeight="SemiBold"
+                                            Text="{Binding Name}"
+                                            TextTrimming="CharacterEllipsis"
+                                            ToolTip="{Binding Name}" />
+                                        <TextBlock
+                                            Margin="0,2,0,0"
+                                            FontSize="12"
+                                            Opacity="0.7"
+                                            Text="{Binding Info}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!--  Level 2: the recordings of a course  -->
+        <ScrollViewer
+            x:Name="LectureScroll"
+            Grid.Row="1"
+            Margin="0,10,0,0"
+            VerticalScrollBarVisibility="Auto"
+            Visibility="Collapsed">
+            <StackPanel>
+                <TextBlock
+                    x:Name="LectureEmptyHint"
+                    Margin="5,5,5,0"
+                    Opacity="0.7"
+                    Text="这个课程还没有录音。"
+                    Visibility="Collapsed" />
+                <ItemsControl x:Name="LectureList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border
+                                Margin="0,0,10,8"
+                                MouseLeftButtonUp="Lecture_click"
+                                Style="{StaticResource ItemCard}">
+                                <Border.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Click="RenameLectureMenu_click" Header="重命名 / 移到其他课程" />
+                                        <MenuItem Click="DeleteLecture_click" Header="删除这节课" />
+                                    </ContextMenu>
+                                </Border.ContextMenu>
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:SymbolIcon
+                                        VerticalAlignment="Center"
+                                        FontSize="22"
+                                        Opacity="0.8"
+                                        Symbol="DocumentText24" />
+                                    <StackPanel Margin="10,0,0,0">
+                                        <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
+                                        <TextBlock
+                                            Margin="0,2,0,0"
+                                            FontSize="12"
+                                            Opacity="0.7"
+                                            Text="{Binding Info}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!--  Level 3: one recording: section summaries with the original and the translation  -->
+        <ScrollViewer
+            x:Name="DetailScroll"
+            Grid.Row="1"
+            Margin="0,10,0,0"
+            VerticalScrollBarVisibility="Auto"
+            Visibility="Collapsed">
+            <StackPanel>
+                <TextBlock
+                    x:Name="DetailInfo"
+                    Margin="2,0,0,8"
+                    Opacity="0.7"
+                    TextWrapping="Wrap" />
+                <TextBlock
+                    x:Name="DetailEmptyHint"
+                    Margin="2,0,0,0"
+                    Opacity="0.7"
+                    Text="这节课没有识别到内容。"
+                    Visibility="Collapsed" />
+                <ItemsControl x:Name="DetailList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="0,0,10,16">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock
+                                        FontWeight="SemiBold"
+                                        Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                                        Text="{Binding Header}" />
+                                    <TextBlock
+                                        Margin="10,0,0,0"
+                                        FontWeight="SemiBold"
+                                        Text="{Binding Title}"
+                                        TextWrapping="Wrap" />
+                                </StackPanel>
+                                <Border
+                                    Margin="0,6,0,6"
+                                    Padding="10,6,10,8"
+                                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Visibility="{Binding SummaryVisibility}">
+                                    <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" />
+                                </Border>
+                                <ItemsControl ItemsSource="{Binding Lines}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Margin="4,4,0,6">
+                                                <TextBlock
+                                                    FontSize="13"
+                                                    Opacity="0.75"
+                                                    TextWrapping="Wrap">
+                                                    <Run FontFamily="Consolas" Text="{Binding Time, StringFormat=HH:mm:ss, Mode=OneWay}" />
+                                                    <Run Text="  " />
+                                                    <Run Text="{Binding SourceText, Mode=OneWay}" />
+                                                </TextBlock>
+                                                <TextBlock
+                                                    Margin="0,2,0,0"
+                                                    Text="{Binding TranslatedText}"
+                                                    TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!--  All sentences, as before  -->
+        <Grid
+            x:Name="AllView"
+            Grid.Row="1"
+            Visibility="Collapsed">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+                <StackPanel
+                    x:Name="AllToolbar"
+                Grid.Row="0"
+                    MaxHeight="34.94"
+                    Margin="0,0,3,0"
+                    HorizontalAlignment="Left"
+                    Orientation="Horizontal">
+                    <ui:Button
+                        x:Name="PageDown"
+                        Appearance="Transparent"
+                        Click="PageDown_click"
+                        Icon="{ui:SymbolIcon chevronLeft12,
+                                             Filled=False}"
+                        MouseOverBackground="#07000000"
+                        ToolTip="上一页" />
+
+                    <ui:TextBlock
+                        x:Name="PageNumber"
+                        Margin="10,0,10,0"
+                        VerticalAlignment="Center"
+                        FontSize="15"
+                        Text="1/1" />
+
+                    <ui:Button
+                        x:Name="PageUp"
+                        Appearance="Transparent"
+                        Click="PageUp_click"
+                        Icon="{ui:SymbolIcon chevronRight12,
+                                             Filled=False}"
+                        MouseOverBackground="#07000000"
+                        ToolTip="下一页" />
+
+                    <ComboBox
+                        x:Name="HistoryMaxRow"
+                        MinHeight="0"
+                        Margin="5,0,0,0"
+                        Padding="10,4,10,7"
+                        VerticalAlignment="Stretch"
+                        SelectedIndex="1">
+                        <ComboBoxItem Content="20 条/页" Tag="20" />
+                        <ComboBoxItem Content="30 条/页" Tag="30" />
+                        <ComboBoxItem Content="50 条/页" Tag="50" />
+                        <ComboBoxItem Content="100 条/页" Tag="100" />
+                    </ComboBox>
+
+                    <ui:AutoSuggestBox
+                        x:Name="HistorySearchBox"
+                        MinWidth="200"
+                        MaxWidth="200"
+                        Margin="5,0,0,0"
+                        PlaceholderText="搜索"
+                        QuerySubmitted="HistorySearchBox_QuerySubmitted"
+                        TextChanged="HistorySearchBox_TextChanged" />
+
+                </StackPanel>
         <DataGrid
             x:Name="HistoryDataGrid"
             Grid.Row="1"
@@ -184,5 +467,6 @@
                 </DataGridTemplateColumn>
             </DataGrid.Columns>
         </DataGrid>
+        </Grid>
     </Grid>
 </Page>

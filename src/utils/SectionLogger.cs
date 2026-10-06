@@ -32,6 +32,11 @@ namespace LiveCaptionsTranslator.utils
             command.ExecuteNonQuery();
         }
 
+        // Creates the tables (in the static constructor) before another class queries them.
+        public static void EnsureTables()
+        {
+        }
+
         private static SqliteConnection Open()
         {
             var connection = new SqliteConnection(SQLiteHistoryLogger.CONNECTION_STRING);
@@ -113,6 +118,37 @@ namespace LiveCaptionsTranslator.utils
                 Summary = summary,
                 PageNumber = pageNumber,
             };
+        }
+
+        // The sections that start within the history rows (afterId, upToId].
+        public static async Task<List<SectionEntry>> LoadSectionsInRange(long afterId, long upToId,
+            CancellationToken token = default)
+        {
+            var sections = new List<SectionEntry>();
+            await using var connection = Open();
+            await using var command = new SqliteCommand(@"
+                SELECT Id, StartTime, EndTime, FirstHistoryId, LastHistoryId, Summary, PageNumber
+                FROM SectionSummary
+                WHERE FirstHistoryId > @after AND FirstHistoryId <= @upTo
+                ORDER BY FirstHistoryId ASC", connection);
+            command.Parameters.AddWithValue("@after", afterId);
+            command.Parameters.AddWithValue("@upTo", upToId);
+
+            await using var reader = await command.ExecuteReaderAsync(token);
+            while (await reader.ReadAsync(token))
+            {
+                sections.Add(new SectionEntry
+                {
+                    Id = reader.GetInt64(0),
+                    StartTime = ToLocal(reader.GetValue(1)),
+                    EndTime = ToLocal(reader.GetValue(2)),
+                    FirstHistoryId = reader.GetInt64(3),
+                    LastHistoryId = reader.GetInt64(4),
+                    Summary = reader.IsDBNull(5) ? string.Empty : reader.GetString(5),
+                    PageNumber = reader.IsDBNull(6) ? null : reader.GetInt32(6),
+                });
+            }
+            return sections;
         }
 
         public static async Task<List<SectionEntry>> LoadSections(DateTime day, CancellationToken token = default)

@@ -29,7 +29,7 @@ namespace LiveCaptionsTranslator
                 Summarizer.SectionSummarized += OnSectionSummarized;
                 Translator.TranslationLogged += OnTranslationLogged;
                 Refiner.ParagraphRefined += OnTranslationLogged;
-                ClassSession.StateChanged += OnTranslationLogged;
+                ClassSession.StateChanged += OnSessionChanged;
                 await LoadTranscript();
                 await LoadSections(scrollToEnd: true);
             };
@@ -38,7 +38,7 @@ namespace LiveCaptionsTranslator
                 Summarizer.SectionSummarized -= OnSectionSummarized;
                 Translator.TranslationLogged -= OnTranslationLogged;
                 Refiner.ParagraphRefined -= OnTranslationLogged;
-                ClassSession.StateChanged -= OnTranslationLogged;
+                ClassSession.StateChanged -= OnSessionChanged;
             };
 
             ApplyFontSizes();
@@ -47,6 +47,15 @@ namespace LiveCaptionsTranslator
         private void OnTranslationLogged()
         {
             Dispatcher.InvokeAsync(async () => await LoadTranscript());
+        }
+
+        private void OnSessionChanged()
+        {
+            Dispatcher.InvokeAsync(async () =>
+            {
+                await LoadTranscript();
+                await LoadSections(scrollToEnd: true);
+            });
         }
 
         // Shows every sentence logged since the class was started.
@@ -59,7 +68,7 @@ namespace LiveCaptionsTranslator
                 {
                     lines = await SectionLogger.LoadHistoryRange(ClassSession.FirstHistoryId);
                     var paragraphs = await SectionLogger.LoadParagraphs(ClassSession.FirstHistoryId);
-                    lines = MergeParagraphs(lines, paragraphs);
+                    lines = LectureDocument.MergeParagraphs(lines, paragraphs, fadeUnrefined: Refiner.Enabled);
                 }
                 catch (Exception)
                 {
@@ -78,47 +87,6 @@ namespace LiveCaptionsTranslator
             }
         }
 
-        // Refined paragraphs replace the sentences they cover; the sentences after them are still shown as they
-        // came in (fainter while refinement is on, since they will be replaced shortly).
-        private static List<HistoryLine> MergeParagraphs(List<HistoryLine> lines, List<ParagraphEntry> paragraphs)
-        {
-            if (paragraphs.Count == 0 && !Refiner.Enabled)
-                return lines;
-
-            var merged = new List<HistoryLine>();
-            int p = 0;
-            foreach (var line in lines)
-            {
-                while (p < paragraphs.Count && paragraphs[p].LastHistoryId < line.Id)
-                    p++;
-                if (p < paragraphs.Count && line.Id >= paragraphs[p].FirstHistoryId)
-                {
-                    // The first sentence of a paragraph stands for the whole paragraph.
-                    if (line.Id == paragraphs[p].FirstHistoryId || merged.Count == 0 ||
-                        merged[^1].Id < paragraphs[p].FirstHistoryId)
-                    {
-                        merged.Add(new HistoryLine
-                        {
-                            Id = line.Id,
-                            Time = paragraphs[p].Time,
-                            SourceText = paragraphs[p].Source,
-                            TranslatedText = paragraphs[p].Translation,
-                        });
-                    }
-                    continue;
-                }
-                merged.Add(new HistoryLine
-                {
-                    Id = line.Id,
-                    Time = line.Time,
-                    SourceText = line.SourceText,
-                    TranslatedText = line.TranslatedText,
-                    Opacity = Refiner.Enabled ? 0.6 : 1.0,
-                });
-            }
-            return merged;
-        }
-
         private void OnSectionSummarized(SectionEntry section)
         {
             Dispatcher.InvokeAsync(async () => await LoadSections(scrollToEnd: true));
@@ -129,7 +97,10 @@ namespace LiveCaptionsTranslator
             List<SectionEntry> sections;
             try
             {
-                sections = await SectionLogger.LoadSections(DateTime.Today);
+                // Only this class's sections: the previous class is in the history.
+                sections = ClassSession.FirstHistoryId >= 0
+                    ? await SectionLogger.LoadSectionsInRange(ClassSession.FirstHistoryId, long.MaxValue)
+                    : await SectionLogger.LoadSections(DateTime.Today);
             }
             catch (Exception)
             {

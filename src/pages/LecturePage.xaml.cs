@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
@@ -67,7 +68,7 @@ namespace LiveCaptionsTranslator
                 foreach (Action load in new Action[]
                          {
                              LoadEngine, LoadApiSetting, LoadTranslateSetting, LoadDevices, LoadOcrLanguages, LoadVoices,
-                             ShowSlidesInfo, ShowLiveCaptionsState
+                             ShowSlidesInfo, ShowLiveCaptionsState, ShowSaveFolder
                          })
                 {
                     try
@@ -188,6 +189,35 @@ namespace LiveCaptionsTranslator
         }
 
         private bool fillingAsrKeyBox = false;
+
+        private void ShowSaveFolder()
+        {
+            SaveFolderBox.Text = LectureDocument.SaveFolder;
+        }
+
+        private void ChooseSaveFolder_click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new OpenFolderDialog
+            {
+                Title = "选择转录文件的保存位置",
+                InitialDirectory = Directory.Exists(LectureDocument.SaveFolder) ? LectureDocument.SaveFolder : string.Empty,
+            };
+            if (dialog.ShowDialog() != true)
+                return;
+            Translator.Setting.Lecture.SaveFolder = dialog.FolderName;
+            ShowSaveFolder();
+        }
+
+        private void OpenSaveFolder_click(object sender, RoutedEventArgs e)
+        {
+            LectureDialogs.ShowInFolder(LectureDocument.SaveFolder);
+        }
+
+        private void ResetSaveFolder_click(object sender, RoutedEventArgs e)
+        {
+            Translator.Setting.Lecture.SaveFolder = string.Empty;
+            ShowSaveFolder();
+        }
 
         private void LoadEngine()
         {

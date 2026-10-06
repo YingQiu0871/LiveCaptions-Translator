@@ -16,7 +16,6 @@ namespace LiveCaptionsTranslator.utils
             // Init
             captionsTextBlock = null;
             IsHidden = false;
-            shownRect = null;
             KillAllProcessesByPName(PROCESS_NAME);
             var process = Process.Start(PROCESS_NAME);
 
@@ -47,33 +46,47 @@ namespace LiveCaptionsTranslator.utils
         }
 
         public static bool IsHidden { get; private set; } = false;
-        private static RECT? shownRect = null;
 
         private const int HIDDEN_STYLES = WindowsAPI.WS_EX_LAYERED | WindowsAPI.WS_EX_TRANSPARENT |
                                           WindowsAPI.WS_EX_TOOLWINDOW | WindowsAPI.WS_EX_NOACTIVATE;
 
+        // A thin strip right above the taskbar, centered, in physical pixels.
+        private static (int Left, int Top, int Width, int Height) DockRect(nint hWnd)
+        {
+            if (!WindowsAPI.SystemParametersInfo(WindowsAPI.SPI_GETWORKAREA, 0, out RECT area, 0))
+                return (800, 600, 600, 200);
+            uint dpi = 96;
+            try
+            {
+                dpi = Math.Max(WindowsAPI.GetDpiForWindow(hWnd), 96);
+            }
+            catch (Exception)
+            {
+            }
+            int areaWidth = area.Right - area.Left;
+            int width = Math.Min(areaWidth, Math.Max((int)(areaWidth * 0.6), (int)(700 * dpi / 96.0)));
+            int height = (int)(120 * dpi / 96.0);
+            int left = area.Left + (areaWidth - width) / 2;
+            int top = area.Bottom - height;
+            return (left, top, width, height);
+        }
+
+        private static void Dock(nint hWnd)
+        {
+            var (left, top, width, height) = DockRect(hWnd);
+            WindowsAPI.MoveWindow(hWnd, left, top, width, height, true);
+        }
+
         // LiveCaptions stops updating its text when its window is minimized or off screen, so captions would
-        // only arrive while it is visible. Instead it stays on screen, on top, but almost fully transparent
-        // and click-through: Windows still treats it as visible, so it keeps writing captions.
+        // only arrive while it is visible. Instead it stays on screen right above the taskbar, on top, but almost
+        // fully transparent and click-through: Windows still treats it as visible, so it keeps writing captions.
         public static void HideLiveCaptions(AutomationElement window)
         {
             nint hWnd = new nint((long)window.Current.NativeWindowHandle);
             int exStyle = WindowsAPI.GetWindowLong(hWnd, WindowsAPI.GWL_EXSTYLE);
 
             WindowsAPI.ShowWindow(hWnd, WindowsAPI.SW_RESTORE);
-            if (WindowsAPI.GetWindowRect(hWnd, out RECT rect))
-            {
-                if (!IsHidden && rect.Left > -10000 && rect.Top > -10000)
-                    shownRect = rect;
-                // LiveCaptions keeps only the text that fits in its window: a larger window means fewer
-                // sentences scroll away between two reads.
-                var area = System.Windows.SystemParameters.WorkArea;
-                int width = Math.Max(rect.Right - rect.Left, 1000);
-                int height = Math.Max(rect.Bottom - rect.Top, 400);
-                width = Math.Min(width, Math.Max((int)area.Width, 600));
-                height = Math.Min(height, Math.Max((int)area.Height, 300));
-                WindowsAPI.MoveWindow(hWnd, (int)area.Left, (int)area.Top, width, height, true);
-            }
+            Dock(hWnd);
             WindowsAPI.SetWindowLong(hWnd, WindowsAPI.GWL_EXSTYLE, exStyle | HIDDEN_STYLES);
             WindowsAPI.SetLayeredWindowAttributes(hWnd, 0, 1, WindowsAPI.LWA_ALPHA);
             // On top, so that no other window covers it completely.
@@ -82,6 +95,7 @@ namespace LiveCaptionsTranslator.utils
             IsHidden = true;
         }
 
+        // Shown: the same thin strip above the taskbar, now visible and usable.
         public static void RestoreLiveCaptions(AutomationElement window)
         {
             nint hWnd = new nint((long)window.Current.NativeWindowHandle);
@@ -93,13 +107,7 @@ namespace LiveCaptionsTranslator.utils
             WindowsAPI.SetWindowPos(hWnd, WindowsAPI.HWND_NOTOPMOST, 0, 0, 0, 0,
                 WindowsAPI.SWP_NOMOVE | WindowsAPI.SWP_NOSIZE | WindowsAPI.SWP_NOACTIVATE | WindowsAPI.SWP_FRAMECHANGED);
             WindowsAPI.ShowWindow(hWnd, WindowsAPI.SW_RESTORE);
-            if (IsHidden)
-            {
-                if (shownRect is RECT rect)
-                    WindowsAPI.MoveWindow(hWnd, rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top, true);
-                else
-                    WindowsAPI.MoveWindow(hWnd, 800, 600, 600, 200, true);
-            }
+            Dock(hWnd);
             WindowsAPI.SetForegroundWindow(hWnd);
             IsHidden = false;
         }

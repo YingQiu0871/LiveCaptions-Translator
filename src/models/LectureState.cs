@@ -86,6 +86,8 @@ namespace LiveCaptionsTranslator.models
         private string asrEndpoint = DEFAULT_ASR_ENDPOINT;
         private bool refineParagraphs = true;
         private string subject = "";
+        private string saveFolder = "";
+        private string currentCourse = "";
 
         public bool SummaryEnabled
         {
@@ -309,6 +311,28 @@ namespace LiveCaptionsTranslator.models
         }
 
         // The subject of the class, e.g. "基因治疗 / 分子生物学". Used so the model keeps the field's terms.
+        // Where each class's transcript (.md) is saved; empty = Documents\课堂同传助手.
+        public string SaveFolder
+        {
+            get => saveFolder;
+            set
+            {
+                saveFolder = value ?? string.Empty;
+                OnPropertyChanged("SaveFolder");
+            }
+        }
+
+        // The course the next recording goes into (the last one chosen when saving).
+        public string CurrentCourse
+        {
+            get => currentCourse;
+            set
+            {
+                currentCourse = value ?? string.Empty;
+                OnPropertyChanged("CurrentCourse");
+            }
+        }
+
         public string Subject
         {
             get => subject;
