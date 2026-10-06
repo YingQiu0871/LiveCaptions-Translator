@@ -1,15 +1,16 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 
+using LiveCaptionsTranslator.models;
+using LiveCaptionsTranslator.utils;
 using LiveCaptionsTranslator.Utils;
 
 namespace LiveCaptionsTranslator
 {
     public partial class CaptionPage : Page
     {
-        public const int CARD_HEIGHT = 110;
-
         private static CaptionPage instance;
         public static CaptionPage Instance => instance;
 
@@ -19,34 +20,138 @@ namespace LiveCaptionsTranslator
             DataContext = Translator.Caption;
             instance = this;
 
-            Loaded += (s, e) =>
+            SectionColumn.Width = new GridLength(Math.Max(Translator.Setting.MainWindow.SectionPanelWidth, 180));
+            ScrollHelper.UseOwnScrollViewer(this, TranscriptScroll, SectionScroll);
+
+            Loaded += async (s, e) =>
             {
                 AutoHeight();
-                (App.Current.MainWindow as MainWindow).CaptionLogButton.Visibility = Visibility.Visible;
+                Summarizer.SectionSummarized += OnSectionSummarized;
+                Translator.TranslationLogged += OnTranslationLogged;
+                Refiner.ParagraphRefined += OnTranslationLogged;
+                ClassSession.StateChanged += OnSessionChanged;
+                Summarizer.StatusChanged += OnSummaryStatusChanged;
+                OnSummaryStatusChanged();
+                await LoadTranscript();
+                await LoadSections(scrollToEnd: true);
             };
             Unloaded += (s, e) =>
             {
-                (App.Current.MainWindow as MainWindow).CaptionLogButton.Visibility = Visibility.Collapsed;
+                Summarizer.SectionSummarized -= OnSectionSummarized;
+                Translator.TranslationLogged -= OnTranslationLogged;
+                Refiner.ParagraphRefined -= OnTranslationLogged;
+                ClassSession.StateChanged -= OnSessionChanged;
+                Summarizer.StatusChanged -= OnSummaryStatusChanged;
             };
 
-            CollapseTranslatedCaption(Translator.Setting.MainWindow.CaptionLogEnabled);
             ApplyFontSizes();
+        }
+
+        private void OnTranslationLogged()
+        {
+            Dispatcher.InvokeAsync(async () => await LoadTranscript());
+        }
+
+        private void OnSummaryStatusChanged()
+        {
+            Dispatcher.InvokeAsync(() =>
+            {
+                SummaryStatus.Text = Summarizer.Status;
+                SummaryStatus.Visibility = string.IsNullOrEmpty(Summarizer.Status) ? Visibility.Collapsed : Visibility.Visible;
+            });
+        }
+
+        private void OnSessionChanged()
+        {
+            Dispatcher.InvokeAsync(async () =>
+            {
+                await LoadTranscript();
+                await LoadSections(scrollToEnd: true);
+            });
+        }
+
+        // Shows every sentence logged since the class was started.
+        private async Task LoadTranscript()
+        {
+            List<HistoryLine> lines = new();
+            if (ClassSession.FirstHistoryId >= 0)
+            {
+                try
+                {
+                    lines = await SectionLogger.LoadHistoryRange(ClassSession.FirstHistoryId);
+                    var paragraphs = await SectionLogger.LoadParagraphs(ClassSession.FirstHistoryId);
+                    lines = LectureDocument.MergeParagraphs(lines, paragraphs, fadeUnrefined: Refiner.Enabled);
+                }
+                catch (Exception)
+                {
+                    return;
+                }
+            }
+
+            // Keep following new sentences unless the user scrolled up to read.
+            bool atEnd = TranscriptScroll.VerticalOffset >= TranscriptScroll.ScrollableHeight - 20;
+            TranscriptList.ItemsSource = lines;
+            TranscriptEmptyHint.Visibility = lines.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+            if (atEnd)
+            {
+                TranscriptScroll.UpdateLayout();
+                TranscriptScroll.ScrollToEnd();
+            }
+        }
+
+        private void OnSectionSummarized(SectionEntry section)
+        {
+            Dispatcher.InvokeAsync(async () => await LoadSections(scrollToEnd: true));
+        }
+
+        private async Task LoadSections(bool scrollToEnd = false)
+        {
+            List<SectionEntry> sections;
+            try
+            {
+                // Only this class's sections: the previous class is in the history.
+                sections = ClassSession.FirstHistoryId >= 0
+                    ? await SectionLogger.LoadSectionsInRange(ClassSession.FirstHistoryId, long.MaxValue)
+                    : await SectionLogger.LoadSections(DateTime.Today);
+            }
+            catch (Exception)
+            {
+                return;
+            }
+            SectionList.ItemsSource = sections;
+            SectionEmptyHint.Visibility = sections.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+            if (scrollToEnd)
+                SectionScroll.ScrollToEnd();
+        }
+
+        private void SectionSplitter_DragCompleted(object sender, DragCompletedEventArgs e)
+        {
+            Translator.Setting.MainWindow.SectionPanelWidth = Math.Round(SectionColumn.ActualWidth);
         }
 
         private async void TextBlock_MouseLeftButtonDown(object sender, RoutedEventArgs e)
         {
-            if (sender is TextBlock textBlock)
+            if (sender is TextBlock textBlock && !string.IsNullOrWhiteSpace(textBlock.Text))
             {
-                try
+                // Another program (clipboard manager, remote desktop, IME) may hold the clipboard for a moment.
+                for (int attempt = 0; ; attempt++)
                 {
-                    Clipboard.SetText(textBlock.Text);
-                    SnackbarHost.Show("Copied.", textBlock.Text, SnackbarType.Info, 100);
+                    try
+                    {
+                        Clipboard.SetDataObject(textBlock.Text, true);
+                        SnackbarHost.Show("已复制。", textBlock.Text, SnackbarType.Info, 100);
+                        break;
+                    }
+                    catch (Exception) when (attempt < 4)
+                    {
+                        await Task.Delay(150);
+                    }
+                    catch (Exception)
+                    {
+                        SnackbarHost.Show("没能复制：剪贴板被其他程序占用，请再点一次。", string.Empty, SnackbarType.Warning, timeout: 2);
+                        break;
+                    }
                 }
-                catch
-                {
-                    SnackbarHost.Show("Copy Failed.", string.Empty, SnackbarType.Error, 100);
-                }
-                await Task.Delay(500);
             }
         }
 
@@ -82,32 +187,10 @@ namespace LiveCaptionsTranslator
             return Math.Clamp(next, StyleConsts.MIN_FONT_SIZE, StyleConsts.MAX_FONT_SIZE);
         }
 
-        public void CollapseTranslatedCaption(bool isCollapsed)
-        {
-            var converter = new GridLengthConverter();
-
-            if (isCollapsed)
-            {
-                TranslatedCaption_Row.Height = (GridLength)converter.ConvertFromString("Auto");
-                LogCards.Visibility = Visibility.Visible;
-            }
-            else
-            {
-                TranslatedCaption_Row.Height = (GridLength)converter.ConvertFromString("*");
-                LogCards.Visibility = Visibility.Collapsed;
-            }
-        }
-
         public void AutoHeight()
         {
-            if (Translator.Setting.MainWindow.CaptionLogEnabled)
-                (App.Current.MainWindow as MainWindow).AutoHeightAdjust(
-                    minHeight: CARD_HEIGHT * (Translator.Setting.DisplaySentences + 1),
-                    maxHeight: CARD_HEIGHT * (Translator.Setting.DisplaySentences + 1));
-            else
-                (App.Current.MainWindow as MainWindow).AutoHeightAdjust(
-                    minHeight: (int)App.Current.MainWindow.MinHeight,
-                    maxHeight: (int)App.Current.MainWindow.MinHeight);
+            (App.Current.MainWindow as MainWindow).AutoHeightAdjust(
+                minHeight: (int)App.Current.MainWindow.MinHeight);
         }
     }
 }

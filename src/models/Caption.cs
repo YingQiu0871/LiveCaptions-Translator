@@ -18,6 +18,7 @@ namespace LiveCaptionsTranslator.models
         private string overlayOriginalCaption = " ";
         private string overlayCurrentTranslation = " ";
         private string overlayNoticePrefix = " ";
+        private string statusHint = ClassSession.IDLE_HINT;
 
         public string OriginalCaption { get; set; } = string.Empty;
         public string TranslatedCaption { get; set; } = string.Empty;
@@ -37,6 +38,34 @@ namespace LiveCaptionsTranslator.models
             {
                 displayOriginalCaption = value;
                 OnPropertyChanged("DisplayOriginalCaption");
+            }
+        }
+        private string sourceWarning = string.Empty;
+
+        // A problem with what LiveCaptions delivers, shown above the current sentence.
+        public string SourceWarning
+        {
+            get => sourceWarning;
+            set
+            {
+                if (sourceWarning == value)
+                    return;
+                sourceWarning = value;
+                OnPropertyChanged("SourceWarning");
+                OnPropertyChanged("SourceWarningVisibility");
+            }
+        }
+        public System.Windows.Visibility SourceWarningVisibility =>
+            string.IsNullOrEmpty(sourceWarning) ? System.Windows.Visibility.Collapsed : System.Windows.Visibility.Visible;
+
+        // Shown on the caption page while there is no caption yet.
+        public string StatusHint
+        {
+            get => statusHint;
+            set
+            {
+                statusHint = value;
+                OnPropertyChanged("StatusHint");
             }
         }
         public string DisplayTranslatedCaption
@@ -135,6 +164,11 @@ namespace LiveCaptionsTranslator.models
                                 !entry.TranslatedText.Contains("[ERROR]") &&
                                 !entry.TranslatedText.Contains("[WARNING]"));
         }
+
+        public System.Windows.Visibility OriginalVisibility =>
+            Translator.Setting?.Lecture.ShowOriginal == false
+                ? System.Windows.Visibility.Collapsed
+                : System.Windows.Visibility.Visible;
 
         public void OnPropertyChanged([CallerMemberName] string propName = "")
         {

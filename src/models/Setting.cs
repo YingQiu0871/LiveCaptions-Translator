@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using System.Windows;
 
 using LiveCaptionsTranslator.apis;
+using LiveCaptionsTranslator.utils;
 
 namespace LiveCaptionsTranslator.models
 {
@@ -28,6 +29,7 @@ namespace LiveCaptionsTranslator.models
 
         private MainWindowState mainWindowState;
         private OverlayWindowState overlayWindowState;
+        private LectureState lectureState;
         private Dictionary<string, string> windowBounds;
 
         private Dictionary<string, List<TranslateAPIConfig>> configs;
@@ -126,6 +128,15 @@ namespace LiveCaptionsTranslator.models
                 OnPropertyChanged("OverlayWindow");
             }
         }
+        public LectureState Lecture
+        {
+            get => lectureState;
+            set
+            {
+                lectureState = value ?? new LectureState();
+                OnPropertyChanged("Lecture");
+            }
+        }
         public Dictionary<string, string> WindowBounds
         {
             get => windowBounds;
@@ -175,6 +186,7 @@ namespace LiveCaptionsTranslator.models
 
             mainWindowState = new MainWindowState();
             overlayWindowState = new OverlayWindowState();
+            lectureState = new LectureState();
 
             double screenWidth = SystemParameters.PrimaryScreenWidth;
             double screenHeight = SystemParameters.PrimaryScreenHeight;
@@ -182,7 +194,7 @@ namespace LiveCaptionsTranslator.models
             {
                 {
                     "MainWindow", string.Format(System.Globalization.CultureInfo.InvariantCulture,
-                        "{0}, {1}, {2}, {3}", (screenWidth - 775) / 2, screenHeight * 3 / 4 - 167, 775, 167)
+                        "{0}, {1}, {2}, {3}", (screenWidth - 900) / 2, (screenHeight - 560) / 2, 900, 560)
                 },
                 {
                     "OverlayWindow", string.Format(System.Globalization.CultureInfo.InvariantCulture,
@@ -222,15 +234,23 @@ namespace LiveCaptionsTranslator.models
 
         public static Setting Load()
         {
-            string jsonPath = Path.Combine(Directory.GetCurrentDirectory(), FILENAME);
+            string jsonPath = AppPaths.SettingFile;
             try
             {
                 return Load(jsonPath);
             }
-            catch (JsonException)
+            catch (Exception ex) when (ex is JsonException or NotSupportedException or InvalidCastException
+                                           or InvalidOperationException)
             {
-                string backupPath = jsonPath + ".bak";
-                File.Move(jsonPath, backupPath);
+                // Keep the unreadable file instead of overwriting it, so nothing is lost for good.
+                string backupPath = $"{jsonPath}.{DateTime.Now:yyyyMMdd-HHmmss}.bak";
+                try
+                {
+                    File.Move(jsonPath, backupPath);
+                }
+                catch (Exception)
+                {
+                }
                 return Load(jsonPath);
             }
         }
@@ -279,19 +299,40 @@ namespace LiveCaptionsTranslator.models
 
         public void Save()
         {
-            Save(FILENAME);
+            Save(AppPaths.SettingFile);
         }
+
+        private static readonly object saveLock = new();
+        private static string? lastSaveError = null;
 
         public void Save(string jsonPath)
         {
-            using (FileStream fileStream = File.Open(jsonPath, FileMode.Create, FileAccess.Write, FileShare.Read))
+            // Settings are saved from several threads (UI, speech, summaries), so serialize the writes,
+            // and never let a failed write break whatever changed the setting.
+            lock (saveLock)
             {
-                var options = new JsonSerializerOptions
+                try
                 {
-                    WriteIndented = true,
-                    Converters = { new ConfigDictConverter() }
-                };
-                JsonSerializer.Serialize(fileStream, this, options);
+                    using (FileStream fileStream = File.Open(jsonPath, FileMode.Create, FileAccess.Write, FileShare.Read))
+                    {
+                        var options = new JsonSerializerOptions
+                        {
+                            WriteIndented = true,
+                            Converters = { new ConfigDictConverter() }
+                        };
+                        JsonSerializer.Serialize(fileStream, this, options);
+                    }
+                    lastSaveError = null;
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    if (lastSaveError == ex.Message)
+                        return;
+                    lastSaveError = ex.Message;
+                    Application.Current?.Dispatcher.InvokeAsync(() =>
+                        SnackbarHost.Show("[ERROR] 设置没能保存。", ex.Message, SnackbarType.Error,
+                            timeout: 5, closeButton: true));
+                }
             }
         }
 
@@ -303,7 +344,7 @@ namespace LiveCaptionsTranslator.models
 
         public static bool IsConfigExist()
         {
-            string jsonPath = Path.Combine(Directory.GetCurrentDirectory(), FILENAME);
+            string jsonPath = AppPaths.SettingFile;
             return File.Exists(jsonPath);
         }
     }

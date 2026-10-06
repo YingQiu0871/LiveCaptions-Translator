@@ -154,7 +154,7 @@ namespace LiveCaptionsTranslator
 
                 if (string.IsNullOrWhiteSpace(baseUrl))
                 {
-                    System.Windows.MessageBox.Show("Please set the API URL first.", "Load Models", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                    System.Windows.MessageBox.Show("请先填写接口地址。", "加载模型", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
                     return;
                 }
 
@@ -167,9 +167,9 @@ namespace LiveCaptionsTranslator
                     {
                         comboBox.ItemsSource = models;
                         if (models.Count > 0)
-                            System.Windows.MessageBox.Show($"Loaded {models.Count} model(s).", "Load Models", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                            System.Windows.MessageBox.Show($"已加载 {models.Count} 个模型。", "加载模型", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
                         else
-                            System.Windows.MessageBox.Show("No models found or unable to connect. Check that the server is running.", "Load Models", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                            System.Windows.MessageBox.Show("没有找到模型或无法连接，请确认服务已启动。", "加载模型", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
                     }
                 }
                 finally

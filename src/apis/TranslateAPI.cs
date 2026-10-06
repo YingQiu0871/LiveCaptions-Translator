@@ -1,5 +1,6 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -13,7 +14,7 @@ namespace LiveCaptionsTranslator.apis
     public static class TranslateAPI
     {
         /*
-         * The key of this field is used as the content for `translateAPIBox` in the `SettingPage`.
+         * The key of this field is used as the content for `translateAPIBox` in the `LecturePage`.
          * If you'd like to add a new API, please insert the key-value pair here.
          */
         public static readonly Dictionary<string, Func<string, CancellationToken, Task<string>>>
@@ -59,7 +60,7 @@ namespace LiveCaptionsTranslator.apis
 
             var messages = new List<BaseLLMConfig.Message>
             {
-                new BaseLLMConfig.Message { role = "system", content = string.Format(Prompt, language) },
+                new BaseLLMConfig.Message { role = "system", content = string.Format(Prompt, language) + LectureState.SubjectHint() },
                 new BaseLLMConfig.Message { role = "user", content = $"🔤 {text} 🔤" }
             };
 
@@ -79,8 +80,8 @@ namespace LiveCaptionsTranslator.apis
                 }
             }
 
-            client.DefaultRequestHeaders.Clear();
-            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {config.ApiKey}");
+            if (string.IsNullOrWhiteSpace(config.ApiKey))
+                return "[ERROR] 翻译失败：还没有填 API Key，请到“设置”页的“模型与 API”里填写。";
 
             HttpResponseMessage response;
             try
@@ -90,9 +91,15 @@ namespace LiveCaptionsTranslator.apis
                     var requestData = LLMRequestDataFactory.Create(openai_fallback_index,
                         config.ModelName, messages, config.Temperature);
                     string jsonContent = JsonSerializer.Serialize(requestData, requestData.GetType());
-                    var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+                    // Set the key on each request: sentences are translated in parallel, and changing the
+                    // shared client's default headers let some requests go out without it (HTTP 401).
+                    var request = new HttpRequestMessage(HttpMethod.Post, TextUtil.NormalizeUrl(config.ApiUrl))
+                    {
+                        Content = new StringContent(jsonContent, Encoding.UTF8, "application/json")
+                    };
+                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", config.ApiKey.Trim());
 
-                    response = await client.PostAsync(TextUtil.NormalizeUrl(config.ApiUrl), content, token);
+                    response = await client.SendAsync(request, token);
                     if (response.StatusCode != HttpStatusCode.BadRequest &&
                         response.StatusCode != HttpStatusCode.UnprocessableEntity)
                         break;
@@ -109,13 +116,13 @@ namespace LiveCaptionsTranslator.apis
             catch (OperationCanceledException ex)
             {
                 if (ex.Message.StartsWith("The request"))
-                    return $"[ERROR] Translation Failed: The request was canceled due to timeout (> 8 seconds), " +
-                           $"please use a faster API or check network connection.";
+                    return $"[ERROR] 翻译失败：请求超时（超过 8 秒），" +
+                           $"请换一个更快的接口或检查网络。";
                 throw;
             }
             catch (Exception ex)
             {
-                return $"[ERROR] Translation Failed: {ex.Message}";
+                return $"[ERROR] 翻译失败：{ex.Message}";
             }
 
             if (response.IsSuccessStatusCode)
@@ -125,8 +132,10 @@ namespace LiveCaptionsTranslator.apis
                 var output = responseObj.choices[0].message.content;
                 return RegexPatterns.ModelThinking().Replace(output, "");
             }
+            else if (response.StatusCode == HttpStatusCode.Unauthorized)
+                return "[ERROR] 翻译失败：API Key 无效（HTTP 401），请在“设置”页里重新粘贴 API Key 并点“测试连接”。";
             else
-                return $"[ERROR] Translation Failed: HTTP Error - {response.StatusCode}";
+                return $"[ERROR] 翻译失败：HTTP 错误 - {response.StatusCode}";
         }
 
         public static async Task<string> Ollama(string text, CancellationToken token = default)
@@ -172,13 +181,13 @@ namespace LiveCaptionsTranslator.apis
             catch (OperationCanceledException ex)
             {
                 if (ex.Message.StartsWith("The request"))
-                    return $"[ERROR] Translation Failed: The request was canceled due to timeout (> 8 seconds), " +
-                           $"please use a faster API or check network connection.";
+                    return $"[ERROR] 翻译失败：请求超时（超过 8 秒），" +
+                           $"请换一个更快的接口或检查网络。";
                 throw;
             }
             catch (Exception ex)
             {
-                return $"[ERROR] Translation Failed: {ex.Message}";
+                return $"[ERROR] 翻译失败：{ex.Message}";
             }
 
             if (response.IsSuccessStatusCode)
@@ -189,7 +198,7 @@ namespace LiveCaptionsTranslator.apis
                 return RegexPatterns.ModelThinking().Replace(output, "");
             }
             else
-                return $"[ERROR] Translation Failed: HTTP Error - {response.StatusCode}";
+                return $"[ERROR] 翻译失败：HTTP 错误 - {response.StatusCode}";
         }
 
         public static async Task<string> LMStudio(string text, CancellationToken token = default)
@@ -238,13 +247,13 @@ namespace LiveCaptionsTranslator.apis
             catch (OperationCanceledException ex)
             {
                 if (ex.Message.StartsWith("The request"))
-                    return $"[ERROR] Translation Failed: The request was canceled due to timeout (> 8 seconds), " +
-                           $"please use a faster API or check network connection.";
+                    return $"[ERROR] 翻译失败：请求超时（超过 8 秒），" +
+                           $"请换一个更快的接口或检查网络。";
                 throw;
             }
             catch (Exception ex)
             {
-                return $"[ERROR] Translation Failed: {ex.Message}";
+                return $"[ERROR] 翻译失败：{ex.Message}";
             }
 
             if (response.IsSuccessStatusCode)
@@ -269,12 +278,12 @@ namespace LiveCaptionsTranslator.apis
                     }
                 }
 
-                return "[ERROR] Translation Failed: Unexpected response format";
+                return "[ERROR] 翻译失败：接口返回格式异常";
             }
             else
             {
                 string body = await response.Content.ReadAsStringAsync();
-                return $"[ERROR] Translation Failed: HTTP Error - {response.StatusCode}: {body}";
+                return $"[ERROR] 翻译失败：HTTP 错误 - {response.StatusCode}: {body}";
             }
         }
 
@@ -322,13 +331,13 @@ namespace LiveCaptionsTranslator.apis
             catch (OperationCanceledException ex)
             {
                 if (ex.Message.StartsWith("The request"))
-                    return $"[ERROR] Translation Failed: The request was canceled due to timeout (> 8 seconds), " +
-                           $"please use a faster API or check network connection.";
+                    return $"[ERROR] 翻译失败：请求超时（超过 8 秒），" +
+                           $"请换一个更快的接口或检查网络。";
                 throw;
             }
             catch (Exception ex)
             {
-                return $"[ERROR] Translation Failed: {ex.Message}";
+                return $"[ERROR] 翻译失败：{ex.Message}";
             }
 
             if (response.IsSuccessStatusCode)
@@ -342,7 +351,7 @@ namespace LiveCaptionsTranslator.apis
                 return RegexPatterns.ModelThinking().Replace(output, "");
             }
             else
-                return $"[ERROR] Translation Failed: HTTP Error - {response.StatusCode}";
+                return $"[ERROR] 翻译失败：HTTP 错误 - {response.StatusCode}";
         }
 
         public static async Task<string> Google(string text, CancellationToken token = default)
@@ -363,13 +372,13 @@ namespace LiveCaptionsTranslator.apis
             catch (OperationCanceledException ex)
             {
                 if (ex.Message.StartsWith("The request"))
-                    return $"[ERROR] Translation Failed: The request was canceled due to timeout (> 8 seconds), " +
-                           $"please use a faster API or check network connection.";
+                    return $"[ERROR] 翻译失败：请求超时（超过 8 秒），" +
+                           $"请换一个更快的接口或检查网络。";
                 throw;
             }
             catch (Exception ex)
             {
-                return $"[ERROR] Translation Failed: {ex.Message}";
+                return $"[ERROR] 翻译失败：{ex.Message}";
             }
 
             if (response.IsSuccessStatusCode)
@@ -382,7 +391,7 @@ namespace LiveCaptionsTranslator.apis
                 return translatedText;
             }
             else
-                return $"[ERROR] Translation Failed: HTTP Error - {response.StatusCode}";
+                return $"[ERROR] 翻译失败：HTTP 错误 - {response.StatusCode}";
         }
 
         public static async Task<string> Google2(string text, CancellationToken token = default)
@@ -409,13 +418,13 @@ namespace LiveCaptionsTranslator.apis
             catch (OperationCanceledException ex)
             {
                 if (ex.Message.StartsWith("The request"))
-                    return $"[ERROR] Translation Failed: The request was canceled due to timeout (> 8 seconds), " +
-                           $"please use a faster API or check network connection.";
+                    return $"[ERROR] 翻译失败：请求超时（超过 8 秒），" +
+                           $"请换一个更快的接口或检查网络。";
                 throw;
             }
             catch (Exception ex)
             {
-                return $"[ERROR] Translation Failed: {ex.Message}";
+                return $"[ERROR] 翻译失败：{ex.Message}";
             }
 
             if (response.IsSuccessStatusCode)
@@ -431,10 +440,10 @@ namespace LiveCaptionsTranslator.apis
                     return translatedText;
                 }
                 else
-                    return "[ERROR] Translation Failed: Unexpected API response format";
+                    return "[ERROR] 翻译失败：接口返回格式异常";
             }
             else
-                return $"[ERROR] Translation Failed: HTTP Error - {response.StatusCode}";
+                return $"[ERROR] 翻译失败：HTTP 错误 - {response.StatusCode}";
         }
 
         public static async Task<string> DeepL(string text, CancellationToken token = default)
@@ -464,13 +473,13 @@ namespace LiveCaptionsTranslator.apis
             catch (OperationCanceledException ex)
             {
                 if (ex.Message.StartsWith("The request"))
-                    return $"[ERROR] Translation Failed: The request was canceled due to timeout (> 8 seconds), " +
-                           $"please use a faster API or check network connection.";
+                    return $"[ERROR] 翻译失败：请求超时（超过 8 秒），" +
+                           $"请换一个更快的接口或检查网络。";
                 throw;
             }
             catch (Exception ex)
             {
-                return $"[ERROR] Translation Failed: {ex.Message}";
+                return $"[ERROR] 翻译失败：{ex.Message}";
             }
 
             if (response.IsSuccessStatusCode)
@@ -483,10 +492,10 @@ namespace LiveCaptionsTranslator.apis
                 {
                     return translations[0].GetProperty("text").GetString();
                 }
-                return "[ERROR] Translation Failed: No valid feedback";
+                return "[ERROR] 翻译失败：没有有效返回";
             }
             else
-                return $"[ERROR] Translation Failed: HTTP Error - {response.StatusCode}";
+                return $"[ERROR] 翻译失败：HTTP 错误 - {response.StatusCode}";
         }
 
 
@@ -522,13 +531,13 @@ namespace LiveCaptionsTranslator.apis
             catch (OperationCanceledException ex)
             {
                 if (ex.Message.StartsWith("The request"))
-                    return $"[ERROR] Translation Failed: The request was canceled due to timeout (> 8 seconds), " +
-                           $"please use a faster API or check network connection.";
+                    return $"[ERROR] 翻译失败：请求超时（超过 8 秒），" +
+                           $"请换一个更快的接口或检查网络。";
                 throw;
             }
             catch (Exception ex)
             {
-                return $"[ERROR] Translation Failed: {ex.Message}";
+                return $"[ERROR] 翻译失败：{ex.Message}";
             }
 
             if (response.IsSuccessStatusCode)
@@ -537,13 +546,13 @@ namespace LiveCaptionsTranslator.apis
                 var responseObj = JsonSerializer.Deserialize<YoudaoConfig.TranslationResult>(responseString);
 
                 if (responseObj.errorCode != "0")
-                    return $"[ERROR] Translation Failed: Youdao Error - {responseObj.errorCode}";
+                    return $"[ERROR] 翻译失败：有道错误 - {responseObj.errorCode}";
 
-                return responseObj.translation?.FirstOrDefault() ?? "[ERROR] Translation Failed: No content";
+                return responseObj.translation?.FirstOrDefault() ?? "[ERROR] 翻译失败：没有内容";
             }
             else
             {
-                return $"[ERROR] Translation Failed: HTTP Error - {response.StatusCode}";
+                return $"[ERROR] 翻译失败：HTTP 错误 - {response.StatusCode}";
             }
         }
 
@@ -576,13 +585,13 @@ namespace LiveCaptionsTranslator.apis
             catch (OperationCanceledException ex)
             {
                 if (ex.Message.StartsWith("The request"))
-                    return $"[ERROR] Translation Failed: The request was canceled due to timeout (> 8 seconds), " +
-                           $"please use a faster API or check network connection.";
+                    return $"[ERROR] 翻译失败：请求超时（超过 8 秒），" +
+                           $"请换一个更快的接口或检查网络。";
                 throw;
             }
             catch (Exception ex)
             {
-                return $"[ERROR] Translation Failed: {ex.Message}";
+                return $"[ERROR] 翻译失败：{ex.Message}";
             }
 
             if (response.IsSuccessStatusCode)
@@ -592,7 +601,7 @@ namespace LiveCaptionsTranslator.apis
                 return responseObj.result;
             }
             else
-                return $"[ERROR] Translation Failed: HTTP Error - {response.StatusCode}";
+                return $"[ERROR] 翻译失败：HTTP 错误 - {response.StatusCode}";
         }
 
         public static async Task<string> Baidu(string text, CancellationToken token = default)
@@ -627,13 +636,13 @@ namespace LiveCaptionsTranslator.apis
             catch (OperationCanceledException ex)
             {
                 if (ex.Message.StartsWith("The request"))
-                    return $"[ERROR] Translation Failed: The request was canceled due to timeout (> 8 seconds), " +
-                           $"please use a faster API or check network connection.";
+                    return $"[ERROR] 翻译失败：请求超时（超过 8 秒），" +
+                           $"请换一个更快的接口或检查网络。";
                 throw;
             }
             catch (Exception ex)
             {
-                return $"[ERROR] Translation Failed: {ex.Message}";
+                return $"[ERROR] 翻译失败：{ex.Message}";
             }
 
             if (response.IsSuccessStatusCode)
@@ -642,13 +651,13 @@ namespace LiveCaptionsTranslator.apis
                 var responseObj = JsonSerializer.Deserialize<BaiduConfig.TranslationResult>(responseString);
 
                 if (responseObj.error_code is not null && responseObj.error_code != "0")
-                    return $"[ERROR] Translation Failed: Baidu Error - {responseObj.error_code}";
+                    return $"[ERROR] 翻译失败：百度错误 - {responseObj.error_code}";
 
-                return responseObj.trans_result?.FirstOrDefault()?.dst ?? "[ERROR] Translation Failed: No content";
+                return responseObj.trans_result?.FirstOrDefault()?.dst ?? "[ERROR] 翻译失败：没有内容";
             }
             else
             {
-                return $"[ERROR] Translation Failed: HTTP Error - {response.StatusCode}";
+                return $"[ERROR] 翻译失败：HTTP 错误 - {response.StatusCode}";
             }
         }
 
@@ -681,13 +690,13 @@ namespace LiveCaptionsTranslator.apis
             catch (OperationCanceledException ex)
             {
                 if (ex.Message.StartsWith("The request"))
-                    return $"[ERROR] Translation Failed: The request was canceled due to timeout (> 8 seconds), " +
-                           $"please use a faster API or check network connection.";
+                    return $"[ERROR] 翻译失败：请求超时（超过 8 秒），" +
+                           $"请换一个更快的接口或检查网络。";
                 throw;
             }
             catch (Exception ex)
             {
-                return $"[ERROR] Translation Failed: {ex.Message}";
+                return $"[ERROR] 翻译失败：{ex.Message}";
             }
 
             if (response.IsSuccessStatusCode)
@@ -697,7 +706,7 @@ namespace LiveCaptionsTranslator.apis
                 return responseObj.translatedText;
             }
             else
-                return $"[ERROR] Translation Failed: HTTP Error - {response.StatusCode}";
+                return $"[ERROR] 翻译失败：HTTP 错误 - {response.StatusCode}";
         }
     }
 

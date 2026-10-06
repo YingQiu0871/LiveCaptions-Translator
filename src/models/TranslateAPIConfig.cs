@@ -7,7 +7,7 @@ namespace LiveCaptionsTranslator.models
     public class TranslateAPIConfig : INotifyPropertyChanged
     {
         /*
-         * The key of this property is used as the content for `targetLangBox` in the `SettingPage`.
+         * The key of this property is used as the content for `targetLangBox` in the `LecturePage`.
          * Its purpose is to standardize the language selection interface.
          * Therefore, if your API doesn't follow the key format, please override (use `new`) this property.
          * (See the definition of `DeepLConfig` for an example)

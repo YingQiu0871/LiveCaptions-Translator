@@ -1,4 +1,4 @@
-<ui:FluentWindow
+﻿<ui:FluentWindow
     x:Class="LiveCaptionsTranslator.WelcomeWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -6,7 +6,7 @@
     xmlns:local="clr-namespace:LiveCaptionsTranslator"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-    Title="Getting Started"
+    Title="开始使用"
     Width="700"
     Height="490"
     ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
@@ -41,32 +41,32 @@
                 HorizontalAlignment="Left"
                 FontSize="24"
                 FontWeight="Bold"
-                Text="Welcome to LiveCaptions Translator!"
+                Text="欢迎使用课堂同传助手！"
                 TextAlignment="Left" />
             <ui:TextBlock
                 Margin="20,10,20,10"
                 TextAlignment="Left"
                 TextWrapping="Wrap">
-                <Run Text="LiveCaptions Translator is based on Windows LiveCaptions." />
-                <Run Text="Before your first running, you need to configure it according to the following steps:&#x0A;" />
-                <Run Text="&#x0A;1. Open Windows LiveCaptions and follow the guide to download the necessary files for on-device speech recognition and language packs." />
-                <Run Text="&#x0A;2. Click the" />
-                <Run FontWeight="Bold" Text="⚙️ gear" />
-                <Run Text="icon in Windows LiveCaptions to open the settings menu, and select" />
-                <Run FontWeight="Bold" Text="&quot;Position &gt; Overlaid on screen&quot;" />
-                <Run Text=".&#x0A;3. Click the" />
-                <Run FontWeight="Bold" Text="&quot;Hide&quot;" />
-                <Run Text="button located in the setting page of LiveCaptions Translator to hide Windows LiveCaptions.&#x0A;" />
-                <Run Text="&#x0A;The program has automatically navigated to the setting page and opened Windows LiveCaptions." />
-                <Run Text="After completing the configuration, you can switch back to the main page and enjoy real-time audio translation.&#x0A;" />
-                <Run Text="&#x0A;For more details, visit our wiki: " />
+                <Run Text="本工具基于 Windows 的“实时辅助字幕”。" />
+                <Run Text="第一次使用前，请按下面的步骤完成设置：&#x0A;" />
+                <Run Text="&#x0A;1. 打开 Windows 实时辅助字幕，按提示下载本地语音识别所需的文件和语言包。" />
+                <Run Text="&#x0A;2. 点击实时辅助字幕里的" />
+                <Run FontWeight="Bold" Text="⚙️ 齿轮" />
+                <Run Text="图标打开设置菜单，选择" />
+                <Run FontWeight="Bold" Text="“位置 &gt; 叠加在屏幕上”" />
+                <Run Text="。&#x0A;3. 在本工具“设置”页“⓪ 输入来源”里点击" />
+                <Run FontWeight="Bold" Text="“隐藏系统实时辅助字幕”" />
+                <Run Text="按钮，把实时辅助字幕窗口藏起来。&#x0A;" />
+                <Run Text="&#x0A;程序已经自动跳到设置页，并打开了实时辅助字幕。" />
+                <Run Text="设置完成后，切回“字幕”页就能看到实时翻译了。所有设置都在“设置”页。&#x0A;" />
+                <Run Text="&#x0A;更多说明见原项目文档：" />
                 <Hyperlink NavigateUri="https://github.com/SakiRinn/LiveCaptions-Translator/wiki" RequestNavigate="Hyperlink_RequestNavigate">
                     https://github.com/SakiRinn/LiveCaptions-Translator/wiki
                 </Hyperlink>
-                <Run FontWeight="Bold" Text="&#x0A;&#x0A;Tip:" />
-                <Run Text="To change the" />
-                <Run FontWeight="DemiBold" TextDecorations="Underline" Text="Source Language" />
-                <Run Text=", please [Show] LiveCaptions on the setting page and do it in Windows LiveCaptions." />
+                <Run FontWeight="Bold" Text="&#x0A;&#x0A;提示：" />
+                <Run Text="如果要修改" />
+                <Run FontWeight="DemiBold" TextDecorations="Underline" Text="源语言" />
+                <Run Text="，请在设置页点“显示”调出实时辅助字幕，在它里面修改。" />
             </ui:TextBlock>
 
             <ui:Button
@@ -74,7 +74,7 @@
                 Padding="30,10,30,10"
                 HorizontalAlignment="Center"
                 Click="CloseButton_Click"
-                Content="I have fully understood and configured." />
+                Content="我已了解并完成设置" />
         </StackPanel>
     </Grid>
 </ui:FluentWindow>
