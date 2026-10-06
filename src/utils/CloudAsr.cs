@@ -29,6 +29,14 @@ namespace LiveCaptionsTranslator.utils
         private static int accumulatedCount = 0;
         private static double phase = 0;
 
+        // Automatic gain: a quiet lecturer (far from the microphone, low volume) is raised to a steady level,
+        // otherwise the recognizer drops words and cuts sentences into fragments.
+        private const double TARGET_PEAK = 0.5;
+        private const double MAX_GAIN = 30;
+        private const double NOISE_FLOOR = 0.0015;
+        private static double envelope = 0;
+        private static double gain = 1;
+
         private static CancellationTokenSource? cts;
 
         public static bool IsRunning => cts != null;
@@ -107,6 +115,8 @@ namespace LiveCaptionsTranslator.utils
             accumulated = 0;
             accumulatedCount = 0;
             phase = 0;
+            envelope = 0;
+            gain = 1;
             capture = useMicrophone ? new WasapiCapture() : new WasapiLoopbackCapture();
             var format = capture.WaveFormat;
             capture.DataAvailable += (s, e) => OnAudio(e.Buffer, e.BytesRecorded, format);
@@ -136,7 +146,7 @@ namespace LiveCaptionsTranslator.utils
                 if (phase < step)
                     continue;
                 phase -= step;
-                double value = Math.Clamp(accumulated / accumulatedCount, -1.0, 1.0);
+                double value = AutoGain(accumulated / accumulatedCount);
                 accumulated = 0;
                 accumulatedCount = 0;
                 short pcm = (short)Math.Round(value * short.MaxValue);
@@ -151,6 +161,26 @@ namespace LiveCaptionsTranslator.utils
                 if (pending.Count > max)
                     pending.RemoveRange(0, pending.Count - max);
             }
+        }
+
+        private static double AutoGain(double x)
+        {
+            double level = Math.Abs(x);
+            // Peak follower: rises at once, falls over about a second.
+            envelope = level > envelope ? level : envelope * 0.99995;
+            // Below the noise floor nobody is talking: keep the gain instead of blowing up the background noise.
+            if (envelope > NOISE_FLOOR)
+            {
+                double desired = Math.Min(TARGET_PEAK / envelope, MAX_GAIN);
+                // Turn down quickly, turn up slowly.
+                gain += (desired - gain) * (desired < gain ? 0.01 : 0.0002);
+            }
+            double y = x * gain;
+            // Soft limiter for the peaks the gain hasn't caught yet.
+            double magnitude = Math.Abs(y);
+            if (magnitude > 0.8)
+                y = Math.Sign(y) * (0.8 + 0.2 * Math.Tanh((magnitude - 0.8) / 0.2));
+            return y;
         }
 
         private static double ReadSample(byte[] buffer, int offset, int bits, bool isFloat)
@@ -312,7 +342,14 @@ namespace LiveCaptionsTranslator.utils
                 ["format"] = "pcm",
                 ["sample_rate"] = SAMPLE_RATE,
                 ["heartbeat"] = true,
-                ["disfluency_removal_enabled"] = true,
+                // Keep every word: removing "um"/"uh" also removed real words now and then.
+                ["disfluency_removal_enabled"] = false,
+                // Split sentences by meaning rather than by short pauses: a lecturer pauses mid-sentence a lot,
+                // which turned one sentence into fragments like "I." and "And you, I'm.".
+                ["semantic_punctuation_enabled"] = true,
+                // Used when the model splits by pauses: wait longer before ending a sentence (default 800 ms).
+                ["max_sentence_silence"] = 1300,
+                ["punctuation_prediction_enabled"] = true,
             };
             if (!string.IsNullOrWhiteSpace(lecture.AsrLanguage))
                 parameters["language_hints"] = new[] { lecture.AsrLanguage };

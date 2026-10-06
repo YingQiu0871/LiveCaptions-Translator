@@ -8,6 +8,17 @@ namespace LiveCaptionsTranslator.apis
 
         public const int WS_EX_TRANSPARENT = 0x00000020;
         public const int WS_EX_TOOLWINDOW = 0x00000080;
+        public const int WS_EX_LAYERED = 0x00080000;
+        public const int WS_EX_NOACTIVATE = 0x08000000;
+
+        public const uint LWA_ALPHA = 0x00000002;
+
+        public static readonly nint HWND_TOPMOST = -1;
+        public static readonly nint HWND_NOTOPMOST = -2;
+        public const uint SWP_NOSIZE = 0x0001;
+        public const uint SWP_NOMOVE = 0x0002;
+        public const uint SWP_NOACTIVATE = 0x0010;
+        public const uint SWP_FRAMECHANGED = 0x0020;
 
         public const int SW_MINIMIZE = 6;
         public const int SW_RESTORE = 9;
@@ -36,6 +47,12 @@ namespace LiveCaptionsTranslator.apis
             int nHeight,
             bool bRepaint
         );
+
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern bool SetLayeredWindowAttributes(nint hWnd, uint crKey, byte bAlpha, uint dwFlags);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern bool SetWindowPos(nint hWnd, nint hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 
         [DllImport("user32.dll", SetLastError = true)]
         public static extern bool GetWindowRect(nint hWnd, out RECT lpRect);

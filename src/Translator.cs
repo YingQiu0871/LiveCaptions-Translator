@@ -47,6 +47,10 @@ namespace LiveCaptionsTranslator
             {
                 committedSentences.Clear();
                 sentencesSeeded = false;
+                lock (cloudLock)
+                {
+                    heldFragment = string.Empty;
+                }
                 recentChinese.Clear();
                 if (Caption != null)
                     Caption.SourceWarning = string.Empty;
@@ -165,33 +169,83 @@ namespace LiveCaptionsTranslator
 
         private static int lastPreviewLength = 0;
 
+        // A very short "sentence" from the cloud recognizer ("I.", "So."), usually cut off by a pause: it is held
+        // and put in front of the next sentence instead of becoming a line of its own.
+        private static readonly object cloudLock = new();
+        private static string heldFragment = string.Empty;
+        private static readonly System.Threading.Timer fragmentTimer = new(_ => FlushFragment());
+        private static readonly TimeSpan FRAGMENT_HOLD = TimeSpan.FromSeconds(4);
+
+        private static bool HasCjk(string text) => text.Any(c => c >= 0x3000);
+
+        private static bool IsFragment(string text) => HasCjk(text)
+            ? text.Length < 6
+            : text.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length < 4;
+
+        private static string JoinFragment(string text)
+        {
+            if (string.IsNullOrEmpty(heldFragment))
+                return text;
+            return heldFragment + (HasCjk(text) ? string.Empty : " ") + text;
+        }
+
         // Text from the cloud recognizer: partial results while a sentence is spoken, then the final sentence.
         private static void OnCloudRecognized(string text, bool sentenceEnd)
         {
             if (!ClassSession.IsRunning || Caption == null)
                 return;
             ClassSession.LastCaptionTime = DateTime.Now;
-            Caption.DisplayOriginalCaption = TextUtil.ShortenDisplaySentence(text, TextUtil.VERYLONG_THRESHOLD);
-            Caption.OverlayOriginalCaption = text;
+            lock (cloudLock)
+            {
+                text = JoinFragment(text);
+                Caption.DisplayOriginalCaption = TextUtil.ShortenDisplaySentence(text, TextUtil.VERYLONG_THRESHOLD);
+                Caption.OverlayOriginalCaption = text;
 
-            if (sentenceEnd)
-            {
-                lastPreviewLength = 0;
-                Caption.OriginalCaption = text;
-                lock (committedSentences)
+                if (sentenceEnd)
                 {
-                    Commit(text);
-                    CheckAlreadyTranslated(text);
+                    lastPreviewLength = 0;
+                    if (IsFragment(text))
+                    {
+                        heldFragment = text;
+                        fragmentTimer.Change(FRAGMENT_HOLD, Timeout.InfiniteTimeSpan);
+                        return;
+                    }
+                    heldFragment = string.Empty;
+                    fragmentTimer.Change(Timeout.Infinite, Timeout.Infinite);
+                    CommitCloudSentence(text);
                 }
-                pendingTextQueue.Enqueue((text, true));
+                else if (text.Length - lastPreviewLength >= 40)
+                {
+                    // Translate a preview now and then, so a long sentence doesn't leave the translation empty.
+                    lastPreviewLength = text.Length;
+                    Caption.OriginalCaption = text;
+                    pendingTextQueue.Enqueue((text, false));
+                }
             }
-            else if (text.Length - lastPreviewLength >= 40)
+        }
+
+        // Nothing followed the short fragment: keep it after all.
+        private static void FlushFragment()
+        {
+            lock (cloudLock)
             {
-                // Translate a preview now and then, so a long sentence doesn't leave the translation empty.
-                lastPreviewLength = text.Length;
-                Caption.OriginalCaption = text;
-                pendingTextQueue.Enqueue((text, false));
+                if (string.IsNullOrEmpty(heldFragment) || !ClassSession.IsRunning || Caption == null)
+                    return;
+                string text = heldFragment;
+                heldFragment = string.Empty;
+                CommitCloudSentence(text);
             }
+        }
+
+        private static void CommitCloudSentence(string text)
+        {
+            Caption.OriginalCaption = text;
+            lock (committedSentences)
+            {
+                Commit(text);
+                CheckAlreadyTranslated(text);
+            }
+            pendingTextQueue.Enqueue((text, true));
         }
 
         static Translator()

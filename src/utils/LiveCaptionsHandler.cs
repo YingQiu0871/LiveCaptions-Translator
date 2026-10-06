@@ -49,8 +49,12 @@ namespace LiveCaptionsTranslator.utils
         public static bool IsHidden { get; private set; } = false;
         private static RECT? shownRect = null;
 
-        // Moves LiveCaptions off screen instead of minimizing it: a minimized LiveCaptions may stop
-        // updating its text, so captions would only arrive while its window is visible.
+        private const int HIDDEN_STYLES = WindowsAPI.WS_EX_LAYERED | WindowsAPI.WS_EX_TRANSPARENT |
+                                          WindowsAPI.WS_EX_TOOLWINDOW | WindowsAPI.WS_EX_NOACTIVATE;
+
+        // LiveCaptions stops updating its text when its window is minimized or off screen, so captions would
+        // only arrive while it is visible. Instead it stays on screen, on top, but almost fully transparent
+        // and click-through: Windows still treats it as visible, so it keeps writing captions.
         public static void HideLiveCaptions(AutomationElement window)
         {
             nint hWnd = new nint((long)window.Current.NativeWindowHandle);
@@ -59,19 +63,22 @@ namespace LiveCaptionsTranslator.utils
             WindowsAPI.ShowWindow(hWnd, WindowsAPI.SW_RESTORE);
             if (WindowsAPI.GetWindowRect(hWnd, out RECT rect))
             {
-                if (!IsHidden)
+                if (!IsHidden && rect.Left > -10000 && rect.Top > -10000)
                     shownRect = rect;
-                // Off screen it can be as large as we like, and LiveCaptions keeps only the text that fits
-                // in its window: a tall window means fewer sentences scroll away between two reads.
-                int width = Math.Max(rect.Right - rect.Left, 1280);
-                int height = Math.Max(rect.Bottom - rect.Top, 900);
-                int left = (int)System.Windows.SystemParameters.VirtualScreenLeft - width - 200;
-                int top = (int)System.Windows.SystemParameters.VirtualScreenTop - height - 200;
-                WindowsAPI.MoveWindow(hWnd, left, top, width, height, true);
+                // LiveCaptions keeps only the text that fits in its window: a larger window means fewer
+                // sentences scroll away between two reads.
+                var area = System.Windows.SystemParameters.WorkArea;
+                int width = Math.Max(rect.Right - rect.Left, 1000);
+                int height = Math.Max(rect.Bottom - rect.Top, 400);
+                width = Math.Min(width, Math.Max((int)area.Width, 600));
+                height = Math.Min(height, Math.Max((int)area.Height, 300));
+                WindowsAPI.MoveWindow(hWnd, (int)area.Left, (int)area.Top, width, height, true);
             }
-            else
-                WindowsAPI.ShowWindow(hWnd, WindowsAPI.SW_MINIMIZE);
-            WindowsAPI.SetWindowLong(hWnd, WindowsAPI.GWL_EXSTYLE, exStyle | WindowsAPI.WS_EX_TOOLWINDOW);
+            WindowsAPI.SetWindowLong(hWnd, WindowsAPI.GWL_EXSTYLE, exStyle | HIDDEN_STYLES);
+            WindowsAPI.SetLayeredWindowAttributes(hWnd, 0, 1, WindowsAPI.LWA_ALPHA);
+            // On top, so that no other window covers it completely.
+            WindowsAPI.SetWindowPos(hWnd, WindowsAPI.HWND_TOPMOST, 0, 0, 0, 0,
+                WindowsAPI.SWP_NOMOVE | WindowsAPI.SWP_NOSIZE | WindowsAPI.SWP_NOACTIVATE | WindowsAPI.SWP_FRAMECHANGED);
             IsHidden = true;
         }
 
@@ -80,11 +87,15 @@ namespace LiveCaptionsTranslator.utils
             nint hWnd = new nint((long)window.Current.NativeWindowHandle);
             int exStyle = WindowsAPI.GetWindowLong(hWnd, WindowsAPI.GWL_EXSTYLE);
 
-            WindowsAPI.SetWindowLong(hWnd, WindowsAPI.GWL_EXSTYLE, exStyle & ~WindowsAPI.WS_EX_TOOLWINDOW);
+            if ((exStyle & WindowsAPI.WS_EX_LAYERED) != 0)
+                WindowsAPI.SetLayeredWindowAttributes(hWnd, 0, 255, WindowsAPI.LWA_ALPHA);
+            WindowsAPI.SetWindowLong(hWnd, WindowsAPI.GWL_EXSTYLE, exStyle & ~HIDDEN_STYLES);
+            WindowsAPI.SetWindowPos(hWnd, WindowsAPI.HWND_NOTOPMOST, 0, 0, 0, 0,
+                WindowsAPI.SWP_NOMOVE | WindowsAPI.SWP_NOSIZE | WindowsAPI.SWP_NOACTIVATE | WindowsAPI.SWP_FRAMECHANGED);
             WindowsAPI.ShowWindow(hWnd, WindowsAPI.SW_RESTORE);
             if (IsHidden)
             {
-                if (shownRect is RECT rect && rect.Left > -10000 && rect.Top > -10000)
+                if (shownRect is RECT rect)
                     WindowsAPI.MoveWindow(hWnd, rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top, true);
                 else
                     WindowsAPI.MoveWindow(hWnd, 800, 600, 600, 200, true);
@@ -95,7 +106,7 @@ namespace LiveCaptionsTranslator.utils
 
         public static void FixLiveCaptions(AutomationElement window)
         {
-            // Off screen on purpose, see `HideLiveCaptions`.
+            // Placed on purpose while hidden, see `HideLiveCaptions`.
             if (IsHidden)
                 return;
             nint hWnd = new nint((long)window.Current.NativeWindowHandle);
