@@ -66,7 +66,7 @@ namespace LiveCaptionsTranslator
                 // One failing loader (e.g. an audio device that can't be read) must not leave the page read-only.
                 foreach (Action load in new Action[]
                          {
-                             LoadApiSetting, LoadTranslateSetting, LoadDevices, LoadOcrLanguages, LoadVoices,
+                             LoadEngine, LoadApiSetting, LoadTranslateSetting, LoadDevices, LoadOcrLanguages, LoadVoices,
                              ShowSlidesInfo, ShowLiveCaptionsState
                          })
                 {
@@ -185,6 +185,73 @@ namespace LiveCaptionsTranslator
                 ? "还没有保存 API Key。"
                 : $"✓ 已保存：{key[..Math.Min(3, key.Length)]}…{key[Math.Max(0, key.Length - 4)..]}（{key.Length} 位），" +
                   $"保存在 {AppPaths.SettingFile}";
+        }
+
+        private bool fillingAsrKeyBox = false;
+
+        private void LoadEngine()
+        {
+            var lecture = Translator.Setting.Lecture;
+            EngineBox.SelectedIndex = (int)lecture.Engine;
+            AliyunPanel.Visibility = lecture.Engine == RecognitionEngine.Aliyun ? Visibility.Visible : Visibility.Collapsed;
+            fillingAsrKeyBox = true;
+            AsrKeyBox.Password = lecture.AsrApiKey;
+            fillingAsrKeyBox = false;
+            ShowAsrKeyStatus();
+        }
+
+        private void EngineBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (initializing || EngineBox.SelectedIndex < 0)
+                return;
+            var engine = (RecognitionEngine)EngineBox.SelectedIndex;
+            Translator.Setting.Lecture.Engine = engine;
+            AliyunPanel.Visibility = engine == RecognitionEngine.Aliyun ? Visibility.Visible : Visibility.Collapsed;
+            if (ClassSession.IsRunning)
+                SnackbarHost.Show("识别方式已更改。", "点“停止”再点“开始”后生效。", SnackbarType.Info, timeout: 3);
+        }
+
+        private void AsrKeyBox_PasswordChanged(object sender, RoutedEventArgs e)
+        {
+            if (fillingAsrKeyBox)
+                return;
+            var lecture = Translator.Setting.Lecture;
+            string key = new string(AsrKeyBox.Password.Where(c => c > ' ' && c < 0x7F).ToArray());
+            if (key.Length == 0 && lecture.AsrApiKey.Length > 0 && !AsrKeyBox.IsKeyboardFocusWithin)
+            {
+                LoadEngine();
+                return;
+            }
+            if (key != lecture.AsrApiKey)
+                lecture.AsrApiKey = key;
+            ShowAsrKeyStatus();
+        }
+
+        private void ShowAsrKeyStatus()
+        {
+            string key = Translator.Setting.Lecture.AsrApiKey;
+            AsrKeyStatus.Text = key.Length == 0
+                ? "还没有保存阿里云 API Key。"
+                : $"✓ 已保存：{key[..Math.Min(3, key.Length)]}…{key[Math.Max(0, key.Length - 4)..]}（{key.Length} 位）";
+        }
+
+        private async void TestAsr_click(object sender, RoutedEventArgs e)
+        {
+            TestAsrButton.IsEnabled = false;
+            TestAsrResult.Text = "测试中……";
+            try
+            {
+                await CloudAsr.Test();
+                TestAsrResult.Text = "✓ 连接成功";
+            }
+            catch (Exception ex)
+            {
+                TestAsrResult.Text = $"✗ {ex.Message}";
+            }
+            finally
+            {
+                TestAsrButton.IsEnabled = true;
+            }
         }
 
         private void LoadTranslateSetting()

@@ -26,8 +26,19 @@ namespace LiveCaptionsTranslator.models
         Microphone = 1,
     }
 
+    public enum RecognitionEngine
+    {
+        // Windows 11 Live Captions: free, runs locally.
+        LiveCaptions = 0,
+        // Alibaba Cloud Model Studio (DashScope) real-time speech recognition.
+        Aliyun = 1,
+    }
+
     public class LectureState : INotifyPropertyChanged
     {
+        public const string DEFAULT_ASR_ENDPOINT = "wss://dashscope.aliyuncs.com/api-ws/v1/inference";
+        public const string DEFAULT_ASR_MODEL = "paraformer-realtime-v2";
+
         public event PropertyChangedEventHandler? PropertyChanged;
 
         public const string DEFAULT_SUMMARY_PROMPT =
@@ -68,6 +79,11 @@ namespace LiveCaptionsTranslator.models
         private bool speechMuted = false;
         private bool showOriginal = true;
         private bool captionsOnly = false;
+        private RecognitionEngine engine = RecognitionEngine.LiveCaptions;
+        private string asrApiKey = "";
+        private string asrModel = DEFAULT_ASR_MODEL;
+        private string asrLanguage = "en";
+        private string asrEndpoint = DEFAULT_ASR_ENDPOINT;
         private bool refineParagraphs = true;
         private string subject = "";
 
@@ -227,6 +243,57 @@ namespace LiveCaptionsTranslator.models
             {
                 refineParagraphs = value;
                 OnPropertyChanged("RefineParagraphs");
+            }
+        }
+
+        public RecognitionEngine Engine
+        {
+            get => engine;
+            set
+            {
+                engine = value;
+                OnPropertyChanged("Engine");
+            }
+        }
+
+        public string AsrApiKey
+        {
+            get => asrApiKey;
+            set
+            {
+                asrApiKey = value ?? string.Empty;
+                OnPropertyChanged("AsrApiKey");
+            }
+        }
+
+        public string AsrModel
+        {
+            get => asrModel;
+            set
+            {
+                asrModel = string.IsNullOrWhiteSpace(value) ? DEFAULT_ASR_MODEL : value.Trim();
+                OnPropertyChanged("AsrModel");
+            }
+        }
+
+        // Language of the lecture as a hint for recognition ("en", "zh", ...); empty = detect.
+        public string AsrLanguage
+        {
+            get => asrLanguage;
+            set
+            {
+                asrLanguage = value ?? string.Empty;
+                OnPropertyChanged("AsrLanguage");
+            }
+        }
+
+        public string AsrEndpoint
+        {
+            get => asrEndpoint;
+            set
+            {
+                asrEndpoint = string.IsNullOrWhiteSpace(value) ? DEFAULT_ASR_ENDPOINT : value.Trim();
+                OnPropertyChanged("AsrEndpoint");
             }
         }
 

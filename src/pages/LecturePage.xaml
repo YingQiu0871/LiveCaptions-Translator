@@ -53,6 +53,57 @@
                     <StackPanel>
                         <TextBlock Style="{StaticResource CardTitle}" Text="⓪ 输入源" />
 
+                        <TextBlock Style="{StaticResource Label}" Text="语音识别方式" />
+                        <ComboBox x:Name="EngineBox" SelectionChanged="EngineBox_SelectionChanged">
+                            <ComboBoxItem Content="Windows 系统实时字幕（免费）" />
+                            <ComboBoxItem Content="阿里云实时语音识别（更准，按时长收费）" />
+                        </ComboBox>
+
+                        <StackPanel x:Name="AliyunPanel" Visibility="Collapsed">
+                            <TextBlock Style="{StaticResource Label}" Text="阿里云百炼 API Key" />
+                            <PasswordBox x:Name="AsrKeyBox" PasswordChanged="AsrKeyBox_PasswordChanged" />
+                            <TextBlock x:Name="AsrKeyStatus" Style="{StaticResource Hint}" />
+                            <TextBlock Style="{StaticResource Hint}" Text="在阿里云百炼控制台（bailian.console.aliyun.com）开通后创建 API Key。如果 ① 里用的是通义千问，可以填同一个 Key。" />
+
+                            <TextBlock Style="{StaticResource Label}" Text="老师讲课的语言" />
+                            <ComboBox SelectedValue="{Binding AsrLanguage, Mode=TwoWay}" SelectedValuePath="Tag">
+                                <ComboBoxItem Content="英语" Tag="en" />
+                                <ComboBoxItem Content="中文" Tag="zh" />
+                                <ComboBoxItem Content="日语" Tag="ja" />
+                                <ComboBoxItem Content="韩语" Tag="ko" />
+                                <ComboBoxItem Content="德语" Tag="de" />
+                                <ComboBoxItem Content="法语" Tag="fr" />
+                                <ComboBoxItem Content="俄语" Tag="ru" />
+                                <ComboBoxItem Content="粤语" Tag="yue" />
+                                <ComboBoxItem Content="自动判断" Tag="" />
+                            </ComboBox>
+
+                            <Expander Margin="0,8,0,0" Header="高级：模型和接口地址">
+                                <StackPanel Margin="0,6,0,0">
+                                    <TextBlock Style="{StaticResource Label}" Text="识别模型" />
+                                    <ComboBox IsEditable="True" Text="{Binding AsrModel, Mode=TwoWay, UpdateSourceTrigger=LostFocus}">
+                                        <ComboBoxItem Content="paraformer-realtime-v2" />
+                                        <ComboBoxItem Content="fun-asr-realtime" />
+                                    </ComboBox>
+                                    <TextBlock Style="{StaticResource Label}" Text="接口地址" />
+                                    <ui:TextBox Text="{Binding AsrEndpoint, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                    <TextBlock Style="{StaticResource Hint}" Text="国内账号保持默认；国际站账号改成 wss://dashscope-intl.aliyuncs.com/api-ws/v1/inference。" />
+                                </StackPanel>
+                            </Expander>
+
+                            <StackPanel Margin="0,10,0,0" Orientation="Horizontal">
+                                <ui:Button
+                                    x:Name="TestAsrButton"
+                                    Click="TestAsr_click"
+                                    Content="测试连接" />
+                                <TextBlock
+                                    x:Name="TestAsrResult"
+                                    Margin="10,0,0,0"
+                                    VerticalAlignment="Center"
+                                    TextWrapping="Wrap" />
+                            </StackPanel>
+                        </StackPanel>
+
                         <TextBlock Style="{StaticResource Label}" Text="听哪里的声音" />
                         <ComboBox x:Name="SourceBox" SelectionChanged="SourceBox_SelectionChanged">
                             <ComboBoxItem Content="电脑播放的声音（网课、视频）" />

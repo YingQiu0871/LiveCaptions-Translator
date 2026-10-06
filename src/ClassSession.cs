@@ -29,8 +29,14 @@ namespace LiveCaptionsTranslator
             StateChanged?.Invoke();
             try
             {
-                SetHint("正在启动实时辅助字幕……");
-                string? problem = await Task.Run(Prepare);
+                bool cloud = Translator.Setting.Lecture.Engine == RecognitionEngine.Aliyun;
+                if (cloud && string.IsNullOrWhiteSpace(Translator.Setting.Lecture.AsrApiKey))
+                {
+                    SetHint("识别方式选了阿里云，但还没有填阿里云 API Key：请到“设置”页的“⓪ 输入源”里填写。");
+                    return;
+                }
+                SetHint(cloud ? "正在连接阿里云语音识别……" : "正在启动实时辅助字幕……");
+                string? problem = cloud ? null : await Task.Run(Prepare);
                 try
                 {
                     FirstHistoryId = await SectionLogger.GetMaxHistoryId();
@@ -44,6 +50,8 @@ namespace LiveCaptionsTranslator
                 Translator.ResetSentences();
                 Refiner.Reset(FirstHistoryId);
                 IsRunning = true;
+                if (cloud)
+                    CloudAsr.Start(Translator.Setting.Lecture.InputSource == InputSource.Microphone);
                 SetHint(problem ?? "已开始，正在听……说话或播放课程声音后，原文会出现在这里。");
                 _ = WatchForSilence(++generation, problem);
             }
@@ -64,6 +72,7 @@ namespace LiveCaptionsTranslator
                 return;
             IsRunning = false;
             generation++;
+            CloudAsr.Stop();
             Speaker.StopAll();
             SetHint("已停止。点击右上角的“开始”继续。");
             StateChanged?.Invoke();
@@ -115,6 +124,13 @@ namespace LiveCaptionsTranslator
                 return;
 
             bool useMicrophone = Translator.Setting.Lecture.InputSource == InputSource.Microphone;
+            if (Translator.Setting.Lecture.Engine == RecognitionEngine.Aliyun)
+            {
+                SetHint($"已经 {NO_CAPTION_WARNING_SECONDS} 秒没有识别到文字。" + (useMicrophone
+                    ? "现在听的是 Windows 默认麦克风，请确认它没有静音，并在“设置 ⓪”里选对了麦克风。"
+                    : "现在听的是电脑正在播放的声音（Windows 默认输出设备），请确认课程声音正在播放、没有静音。"));
+                return;
+            }
             string advice = useMicrophone
                 ? "现在听的是麦克风。请确认实时辅助字幕“首选项”里已勾选“包含麦克风音频”，" +
                   "并在“设置 ⓪”里选对了麦克风（不要选蓝牙耳机的麦克风）。"
@@ -137,6 +153,23 @@ namespace LiveCaptionsTranslator
             {
                 return false;
             }
+        }
+
+        static ClassSession()
+        {
+            // Connection problems of the cloud recognizer are shown above the current sentence.
+            CloudAsr.StatusChanged += status =>
+            {
+                if (Translator.Caption == null || !IsRunning)
+                    return;
+                if (string.IsNullOrEmpty(status))
+                {
+                    if (Translator.Caption.SourceWarning.StartsWith("阿里云") || Translator.Caption.SourceWarning.StartsWith("正在连接阿里云"))
+                        Translator.Caption.SourceWarning = string.Empty;
+                }
+                else
+                    Translator.Caption.SourceWarning = status;
+            };
         }
 
         private static void SetHint(string text)

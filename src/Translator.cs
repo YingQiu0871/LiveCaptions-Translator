@@ -163,6 +163,37 @@ namespace LiveCaptionsTranslator
             return queued;
         }
 
+        private static int lastPreviewLength = 0;
+
+        // Text from the cloud recognizer: partial results while a sentence is spoken, then the final sentence.
+        private static void OnCloudRecognized(string text, bool sentenceEnd)
+        {
+            if (!ClassSession.IsRunning || Caption == null)
+                return;
+            ClassSession.LastCaptionTime = DateTime.Now;
+            Caption.DisplayOriginalCaption = TextUtil.ShortenDisplaySentence(text, TextUtil.VERYLONG_THRESHOLD);
+            Caption.OverlayOriginalCaption = text;
+
+            if (sentenceEnd)
+            {
+                lastPreviewLength = 0;
+                Caption.OriginalCaption = text;
+                lock (committedSentences)
+                {
+                    Commit(text);
+                    CheckAlreadyTranslated(text);
+                }
+                pendingTextQueue.Enqueue((text, true));
+            }
+            else if (text.Length - lastPreviewLength >= 40)
+            {
+                // Translate a preview now and then, so a long sentence doesn't leave the translation empty.
+                lastPreviewLength = text.Length;
+                Caption.OriginalCaption = text;
+                pendingTextQueue.Enqueue((text, false));
+            }
+        }
+
         static Translator()
         {
             window = LiveCaptionsHandler.LaunchLiveCaptions();
@@ -174,6 +205,7 @@ namespace LiveCaptionsTranslator
 
             caption = Caption.GetInstance();
             setting = Setting.Load();
+            CloudAsr.Recognized += OnCloudRecognized;
         }
 
         public static void SyncLoop()
@@ -188,7 +220,7 @@ namespace LiveCaptionsTranslator
                     Thread.Sleep(2000);
                     continue;
                 }
-                if (!ClassSession.IsRunning)
+                if (!ClassSession.IsRunning || Setting.Lecture.Engine != RecognitionEngine.LiveCaptions)
                 {
                     Thread.Sleep(200);
                     continue;
