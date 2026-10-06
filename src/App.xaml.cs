@@ -10,7 +10,9 @@ namespace LiveCaptionsTranslator
         App()
         {
             // Settings and history are stored next to the program, so do not depend on how it was started.
-            Directory.SetCurrentDirectory(AppContext.BaseDirectory);
+            // If that folder is read-only (e.g. installed under Program Files without write access),
+            // fall back to a per-user folder.
+            Directory.SetCurrentDirectory(DataDirectory());
             AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
             Translator.Setting?.Save();
 
@@ -19,6 +21,25 @@ namespace LiveCaptionsTranslator
             Task.Run(() => Translator.DisplayLoop());
             Task.Run(() => Summarizer.SummaryLoop());
             Speaker.Start();
+        }
+
+        private static string DataDirectory()
+        {
+            string programDir = AppContext.BaseDirectory;
+            try
+            {
+                string probe = Path.Combine(programDir, ".write-test");
+                File.WriteAllText(probe, string.Empty);
+                File.Delete(probe);
+                return programDir;
+            }
+            catch (Exception)
+            {
+                string userDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LiveCaptionsTranslator");
+                Directory.CreateDirectory(userDir);
+                return userDir;
+            }
         }
 
         private static void OnProcessExit(object sender, EventArgs e)

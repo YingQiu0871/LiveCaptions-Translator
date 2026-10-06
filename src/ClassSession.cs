@@ -16,6 +16,8 @@ namespace LiveCaptionsTranslator
         public static bool IsRunning { get; private set; } = false;
         public static bool IsStarting { get; private set; } = false;
         public static DateTime LastCaptionTime { get; set; } = DateTime.MinValue;
+        // History rows after this id belong to the current class; -1 before the first start.
+        public static long FirstHistoryId { get; private set; } = -1;
 
         public static event Action? StateChanged;
 
@@ -29,6 +31,14 @@ namespace LiveCaptionsTranslator
             {
                 SetHint("正在启动实时辅助字幕……");
                 string? problem = await Task.Run(Prepare);
+                try
+                {
+                    FirstHistoryId = await SectionLogger.GetMaxHistoryId();
+                }
+                catch (Exception)
+                {
+                    FirstHistoryId = 0;
+                }
 
                 LastCaptionTime = DateTime.MinValue;
                 IsRunning = true;

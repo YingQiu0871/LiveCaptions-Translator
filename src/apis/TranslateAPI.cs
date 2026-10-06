@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -79,8 +80,8 @@ namespace LiveCaptionsTranslator.apis
                 }
             }
 
-            client.DefaultRequestHeaders.Clear();
-            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {config.ApiKey}");
+            if (string.IsNullOrWhiteSpace(config.ApiKey))
+                return "[ERROR] 翻译失败：还没有填 API Key，请到“课堂设置”的“模型与 API”里填写。";
 
             HttpResponseMessage response;
             try
@@ -90,9 +91,15 @@ namespace LiveCaptionsTranslator.apis
                     var requestData = LLMRequestDataFactory.Create(openai_fallback_index,
                         config.ModelName, messages, config.Temperature);
                     string jsonContent = JsonSerializer.Serialize(requestData, requestData.GetType());
-                    var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+                    // Set the key on each request: sentences are translated in parallel, and changing the
+                    // shared client's default headers let some requests go out without it (HTTP 401).
+                    var request = new HttpRequestMessage(HttpMethod.Post, TextUtil.NormalizeUrl(config.ApiUrl))
+                    {
+                        Content = new StringContent(jsonContent, Encoding.UTF8, "application/json")
+                    };
+                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", config.ApiKey.Trim());
 
-                    response = await client.PostAsync(TextUtil.NormalizeUrl(config.ApiUrl), content, token);
+                    response = await client.SendAsync(request, token);
                     if (response.StatusCode != HttpStatusCode.BadRequest &&
                         response.StatusCode != HttpStatusCode.UnprocessableEntity)
                         break;
@@ -125,6 +132,8 @@ namespace LiveCaptionsTranslator.apis
                 var output = responseObj.choices[0].message.content;
                 return RegexPatterns.ModelThinking().Replace(output, "");
             }
+            else if (response.StatusCode == HttpStatusCode.Unauthorized)
+                return "[ERROR] 翻译失败：API Key 无效（HTTP 401），请在“课堂设置”里重新粘贴 API Key 并点“测试连接”。";
             else
                 return $"[ERROR] 翻译失败：HTTP 错误 - {response.StatusCode}";
         }

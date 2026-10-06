@@ -20,8 +20,9 @@
     <MajorUpgrade DowngradeErrorMessage="已经安装了更新版本的上课同传助手。" />
     <MediaTemplate EmbedCab="yes" />
 
-    <Icon Id="AppIcon" SourceFile="$(var.IconFile)" />
-    <Property Id="ARPPRODUCTICON" Value="AppIcon" />
+    <!-- The Icon id must keep the .ico extension, or Windows shows a blank icon. -->
+    <Icon Id="AppIcon.ico" SourceFile="$(var.IconFile)" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon.ico" />
 
     <!-- Standard installer wizard with a page to choose the install folder. -->
     <WixVariable Id="WixUILicenseRtf" Value="$(var.LicenseRtf)" />
@@ -41,15 +42,17 @@
               Directory="ProgramMenuFolder"
               Name="上课同传助手"
               WorkingDirectory="INSTALLFOLDER"
-              Icon="AppIcon"
-              Advertise="yes" />
+              Icon="AppIcon.ico"
+              IconIndex="0"
+              Advertise="no" />
           <Shortcut
               Id="DesktopShortcut"
               Directory="DesktopFolder"
               Name="上课同传助手"
               WorkingDirectory="INSTALLFOLDER"
-              Icon="AppIcon"
-              Advertise="yes" />
+              Icon="AppIcon.ico"
+              IconIndex="0"
+              Advertise="no" />
         </File>
       </Component>
 

@@ -82,6 +82,7 @@ namespace LiveCaptionsTranslator
                 ApplyProvider(PROVIDERS[index], config);
 
             ApiKeyBox.Password = config.ApiKey;
+            ShowApiKeyStatus();
             UseForTranslation.IsChecked = Translator.Setting.ApiName == Summarizer.SUMMARY_API;
         }
 
@@ -105,9 +106,35 @@ namespace LiveCaptionsTranslator
 
         private void ApiKeyBox_PasswordChanged(object sender, RoutedEventArgs e)
         {
-            if (initializing || ApiConfig == null)
+            if (initializing)
                 return;
-            ApiConfig.ApiKey = ApiKeyBox.Password.Trim();
+            SaveApiKey();
+        }
+
+        private void ApiKeyBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (!initializing)
+                SaveApiKey();
+        }
+
+        private void SaveApiKey()
+        {
+            if (ApiConfig == null)
+                return;
+            // Pasted keys sometimes carry spaces, line breaks or invisible characters.
+            string key = new string(ApiKeyBox.Password.Where(c => c > ' ' && c < 0x7F).ToArray());
+            if (key != ApiConfig.ApiKey)
+                ApiConfig.ApiKey = key;
+            ShowApiKeyStatus();
+        }
+
+        // Shows that a key is stored without revealing it.
+        private void ShowApiKeyStatus()
+        {
+            string key = ApiConfig?.ApiKey ?? string.Empty;
+            ApiKeyStatus.Text = key.Length == 0
+                ? "还没有保存 API Key。"
+                : $"✓ 已保存：{key[..Math.Min(3, key.Length)]}…{key[Math.Max(0, key.Length - 4)..]}（{key.Length} 位）";
         }
 
         private void UseForTranslation_Changed(object sender, RoutedEventArgs e)

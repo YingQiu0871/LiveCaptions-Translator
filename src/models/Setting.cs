@@ -293,16 +293,37 @@ namespace LiveCaptionsTranslator.models
             Save(FILENAME);
         }
 
+        private static readonly object saveLock = new();
+        private static string? lastSaveError = null;
+
         public void Save(string jsonPath)
         {
-            using (FileStream fileStream = File.Open(jsonPath, FileMode.Create, FileAccess.Write, FileShare.Read))
+            // Settings are saved from several threads (UI, speech, summaries), so serialize the writes,
+            // and never let a failed write break whatever changed the setting.
+            lock (saveLock)
             {
-                var options = new JsonSerializerOptions
+                try
                 {
-                    WriteIndented = true,
-                    Converters = { new ConfigDictConverter() }
-                };
-                JsonSerializer.Serialize(fileStream, this, options);
+                    using (FileStream fileStream = File.Open(jsonPath, FileMode.Create, FileAccess.Write, FileShare.Read))
+                    {
+                        var options = new JsonSerializerOptions
+                        {
+                            WriteIndented = true,
+                            Converters = { new ConfigDictConverter() }
+                        };
+                        JsonSerializer.Serialize(fileStream, this, options);
+                    }
+                    lastSaveError = null;
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    if (lastSaveError == ex.Message)
+                        return;
+                    lastSaveError = ex.Message;
+                    Application.Current?.Dispatcher.InvokeAsync(() =>
+                        SnackbarHost.Show("[ERROR] 设置没能保存。", ex.Message, SnackbarType.Error,
+                            timeout: 5, closeButton: true));
+                }
             }
         }
 

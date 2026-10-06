@@ -233,7 +233,6 @@ namespace LiveCaptionsTranslator
         {
             Translator.Setting.MainWindow.CaptionLogEnabled = !Translator.Setting.MainWindow.CaptionLogEnabled;
             ShowLogCard(Translator.Setting.MainWindow.CaptionLogEnabled);
-            CaptionPage.Instance?.AutoHeight();
         }
 
         private void MainWindow_LocationChanged(object sender, EventArgs e)
@@ -340,7 +339,6 @@ namespace LiveCaptionsTranslator
                     icon.Symbol = SymbolRegular.History24;
                 else
                     icon.Symbol = SymbolRegular.HistoryDismiss24;
-                CaptionPage.Instance?.CollapseTranslatedCaption(enabled);
             }
         }
 

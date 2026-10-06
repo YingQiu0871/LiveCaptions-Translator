@@ -10,7 +10,7 @@ namespace LiveCaptionsTranslator.utils
         // Makes `scroller` the one that scrolls `page`. The navigation view wraps every page in its
         // own ScrollViewer, which gives the page unlimited height: the page's ScrollViewer then has
         // nothing to scroll but still swallows the mouse wheel, so neither of them moves.
-        public static void UseOwnScrollViewer(Page page, ScrollViewer scroller)
+        public static void UseOwnScrollViewer(Page page, params ScrollViewer[] scrollers)
         {
             var disabled = new List<(ScrollViewer Viewer, ScrollBarVisibility Visibility)>();
 
@@ -38,13 +38,16 @@ namespace LiveCaptionsTranslator.utils
 
             // Scroll by the actual wheel delta, so precision touchpads (many small deltas) scroll
             // smoothly instead of jumping a few lines per event.
-            scroller.PreviewMouseWheel += (s, e) =>
+            foreach (var scroller in scrollers)
             {
-                if (e.Handled || scroller.ScrollableHeight <= 0)
-                    return;
-                scroller.ScrollToVerticalOffset(scroller.VerticalOffset - e.Delta * 0.5);
-                e.Handled = true;
-            };
+                scroller.PreviewMouseWheel += (s, e) =>
+                {
+                    if (e.Handled || scroller.ScrollableHeight <= 0)
+                        return;
+                    scroller.ScrollToVerticalOffset(scroller.VerticalOffset - e.Delta * 0.5);
+                    e.Handled = true;
+                };
+            }
         }
     }
 }

@@ -322,6 +322,8 @@ namespace LiveCaptionsTranslator
             using (response)
             {
                 string responseString = await response.Content.ReadAsStringAsync();
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                    throw new HttpRequestException("API Key 无效（HTTP 401），请重新粘贴 API Key。");
                 if (!response.IsSuccessStatusCode)
                     throw new HttpRequestException($"HTTP Error - {(int)response.StatusCode} {response.StatusCode}");
 
@@ -337,7 +339,7 @@ namespace LiveCaptionsTranslator
         private static async Task<HttpResponseMessage> Post(OpenAIConfig config, Dictionary<string, object> requestData)
         {
             using var request = new HttpRequestMessage(HttpMethod.Post, TextUtil.NormalizeUrl(config.ApiUrl));
-            request.Headers.Add("Authorization", $"Bearer {config.ApiKey}");
+            request.Headers.Add("Authorization", $"Bearer {config.ApiKey.Trim()}");
             request.Content = new StringContent(JsonSerializer.Serialize(requestData), Encoding.UTF8, "application/json");
             return await client.SendAsync(request);
         }

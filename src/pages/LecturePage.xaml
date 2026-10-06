@@ -94,7 +94,11 @@
                             Text="{Binding ApiUrl, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
 
                         <TextBlock Style="{StaticResource Label}" Text="API Key" />
-                        <PasswordBox x:Name="ApiKeyBox" PasswordChanged="ApiKeyBox_PasswordChanged" />
+                        <PasswordBox
+                            x:Name="ApiKeyBox"
+                            LostFocus="ApiKeyBox_LostFocus"
+                            PasswordChanged="ApiKeyBox_PasswordChanged" />
+                        <TextBlock x:Name="ApiKeyStatus" Style="{StaticResource Hint}" />
 
                         <TextBlock Style="{StaticResource Label}" Text="模型（可从列表选，也可以直接输入）" />
                         <ComboBox
