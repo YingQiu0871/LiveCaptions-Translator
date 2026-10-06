@@ -15,13 +15,13 @@ namespace LiveCaptionsTranslator
         public const int MIN_HEIGHT = 360;
 
         private List<SectionEntry> sections = new();
+        private bool selecting = false;
 
         public TimelinePage()
         {
             InitializeComponent();
             ApplicationThemeManager.ApplySystemTheme();
 
-            DayPicker.SelectedDate = DateTime.Today;
             ScrollHelper.UseOwnScrollViewer(this, SectionScroll);
 
             Loaded += async (s, e) =>
@@ -29,25 +29,96 @@ namespace LiveCaptionsTranslator
                 (App.Current.MainWindow as MainWindow)?.AutoHeightAdjust(minHeight: MIN_HEIGHT, maxHeight: MIN_HEIGHT);
                 Summarizer.SectionSummarized += OnSectionSummarized;
                 Summarizer.CurrentPageChanged += OnCurrentPageChanged;
+                ClassSession.StateChanged += OnSessionChanged;
                 ShowSlidesInfo();
-                await LoadSections();
+                await SelectCurrent();
             };
             Unloaded += (s, e) =>
             {
                 Summarizer.SectionSummarized -= OnSectionSummarized;
                 Summarizer.CurrentPageChanged -= OnCurrentPageChanged;
+                ClassSession.StateChanged -= OnSessionChanged;
             };
         }
 
-        private DateTime SelectedDay => DayPicker.SelectedDate ?? DateTime.Today;
+        private LectureRecord? SelectedLecture => LectureBox.SelectedItem as LectureRecord;
 
         private void OnSectionSummarized(SectionEntry section)
         {
             Dispatcher.InvokeAsync(async () =>
             {
-                if (section.StartTime.Date == SelectedDay.Date)
+                if (SelectedLecture is LectureRecord lecture && section.FirstHistoryId > lecture.FirstHistoryId &&
+                    (lecture.LastHistoryId == null || section.FirstHistoryId <= lecture.LastHistoryId))
                     await LoadSections(scrollToEnd: true);
             });
+        }
+
+        // A class was started: follow it.
+        private void OnSessionChanged()
+        {
+            Dispatcher.InvokeAsync(async () =>
+            {
+                if (ClassSession.IsRunning && SelectedLecture?.Id != ClassSession.CurrentLectureId)
+                    await SelectCurrent();
+            });
+        }
+
+        // Shows the running (or most recent) class of the current course.
+        private async Task SelectCurrent()
+        {
+            List<CourseEntry> courses;
+            LectureRecord? current = null;
+            try
+            {
+                courses = await LectureStore.LoadCourses();
+                if (ClassSession.CurrentLectureId >= 0)
+                    current = await LectureStore.GetLecture(ClassSession.CurrentLectureId);
+            }
+            catch (Exception ex)
+            {
+                SnackbarHost.Show("[ERROR] 读取课程失败。", ex.Message, SnackbarType.Error, timeout: 2, closeButton: true);
+                return;
+            }
+
+            selecting = true;
+            CourseBox.ItemsSource = courses;
+            CourseBox.SelectedItem = courses.FirstOrDefault(c => c.Id == current?.CourseId)
+                                     ?? courses.FirstOrDefault(c => c.Name == Translator.Setting.Lecture.CurrentCourse)
+                                     ?? courses.FirstOrDefault();
+            selecting = false;
+            await LoadLectures(current?.Id);
+        }
+
+        private async Task LoadLectures(long? selectId = null)
+        {
+            List<LectureRecord> lectures = new();
+            if (CourseBox.SelectedItem is CourseEntry course)
+            {
+                try
+                {
+                    lectures = await LectureStore.LoadLectures(course.Id);
+                }
+                catch (Exception)
+                {
+                }
+            }
+            selecting = true;
+            LectureBox.ItemsSource = lectures;
+            LectureBox.SelectedItem = lectures.FirstOrDefault(l => l.Id == selectId) ?? lectures.FirstOrDefault();
+            selecting = false;
+            await LoadSections(scrollToEnd: true);
+        }
+
+        private async void CourseBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!selecting && IsLoaded)
+                await LoadLectures();
+        }
+
+        private async void LectureBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!selecting && IsLoaded)
+                await LoadSections();
         }
 
         private void OnCurrentPageChanged(int? page)
@@ -102,7 +173,13 @@ namespace LiveCaptionsTranslator
         {
             try
             {
-                sections = await SectionLogger.LoadSections(SelectedDay);
+                if (SelectedLecture is LectureRecord lecture)
+                {
+                    long last = await LectureStore.EffectiveLastHistoryId(lecture);
+                    sections = await SectionLogger.LoadSectionsInRange(lecture.FirstHistoryId, last);
+                }
+                else
+                    sections = new List<SectionEntry>();
             }
             catch (Exception ex)
             {
@@ -116,12 +193,6 @@ namespace LiveCaptionsTranslator
                 SectionScroll.ScrollToEnd();
         }
 
-        private async void DayPicker_SelectedDateChanged(object? sender, SelectionChangedEventArgs e)
-        {
-            if (IsLoaded)
-                await LoadSections();
-        }
-
         private void EndSection_click(object sender, RoutedEventArgs e)
         {
             Summarizer.RequestEndSection();
@@ -130,81 +201,30 @@ namespace LiveCaptionsTranslator
 
         private async void Refresh_click(object sender, RoutedEventArgs e)
         {
-            await LoadSections();
+            long? selected = SelectedLecture?.Id;
+            await LoadLectures(selected);
         }
 
         private async void Export_click(object sender, RoutedEventArgs e)
         {
-            if (sections.Count == 0)
+            if (SelectedLecture is not LectureRecord selected)
             {
-                SnackbarHost.Show("这一天没有可导出的小节。", "", SnackbarType.Warning, timeout: 2);
+                SnackbarHost.Show("还没有可导出的课。", "", SnackbarType.Warning, timeout: 2);
                 return;
             }
 
-            var dialog = new SaveFileDialog
-            {
-                Filter = "Markdown (*.md)|*.md",
-                DefaultExt = ".md",
-                FileName = $"课堂笔记_{SelectedDay:yyyy-MM-dd}.md",
-                RestoreDirectory = true,
-            };
-            if (dialog.ShowDialog() != true)
-                return;
-
             try
             {
-                string markdown = await BuildMarkdown(SelectedDay, sections);
-                await File.WriteAllTextAsync(dialog.FileName, markdown, new UTF8Encoding(false));
-                SnackbarHost.Show("已导出。", dialog.FileName, SnackbarType.Success, timeout: 2);
+                var lecture = await LectureStore.GetLecture(selected.Id) ?? selected;
+                string path = await LectureDocument.Save(lecture);
+                SnackbarHost.Show("已导出。", path, SnackbarType.Success, timeout: 2);
+                LectureDialogs.ShowInFolder(path);
             }
             catch (Exception ex)
             {
                 SnackbarHost.Show("[ERROR] 导出失败。", ex.Message, SnackbarType.Error,
                     timeout: 2, closeButton: true);
             }
-        }
-
-        public static async Task<string> BuildMarkdown(DateTime day, List<SectionEntry> sections)
-        {
-            var sb = new StringBuilder();
-            sb.AppendLine($"# 课堂笔记 {day:yyyy-MM-dd}");
-            sb.AppendLine();
-
-            sb.AppendLine("## 时间线");
-            sb.AppendLine();
-            for (int i = 0; i < sections.Count; i++)
-                sb.AppendLine($"{i + 1}. **{sections[i].TimeRange}** {sections[i].Title}");
-            sb.AppendLine();
-
-            for (int i = 0; i < sections.Count; i++)
-            {
-                var section = sections[i];
-                sb.AppendLine($"## {i + 1}. {section.TimeRange} {section.Title}");
-                sb.AppendLine();
-                if (!string.IsNullOrWhiteSpace(section.Body))
-                {
-                    sb.AppendLine(section.Body);
-                    sb.AppendLine();
-                }
-
-                var lines = await SectionLogger.LoadHistoryRange(section.FirstHistoryId - 1, section.LastHistoryId);
-                if (lines.Count == 0)
-                    continue;
-
-                sb.AppendLine("<details><summary>原文与译文</summary>");
-                sb.AppendLine();
-                foreach (var line in lines)
-                {
-                    string translated = RegexPatterns.NoticePrefix().Replace(line.TranslatedText, string.Empty).Trim();
-                    sb.AppendLine($"- `{line.Time:HH:mm:ss}` {line.SourceText}");
-                    if (!string.IsNullOrEmpty(translated) && translated != "N/A" && !translated.StartsWith("[ERROR]"))
-                        sb.AppendLine($"  - {translated}");
-                }
-                sb.AppendLine();
-                sb.AppendLine("</details>");
-                sb.AppendLine();
-            }
-            return sb.ToString();
         }
     }
 }
