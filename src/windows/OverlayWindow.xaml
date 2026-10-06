@@ -7,10 +7,10 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     Title="悬浮字幕"
-    Width="650"
-    Height="135"
-    MinWidth="650"
-    MinHeight="135"
+    Width="480"
+    Height="100"
+    MinWidth="300"
+    MinHeight="60"
     AllowsTransparency="True"
     Background="Transparent"
     MouseEnter="Window_MouseEnter"
@@ -93,7 +93,7 @@
                     </local:StrokeDecorator>
                 </ui:Card>
 
-                <StackPanel
+                <WrapPanel
                     x:Name="ControlPanel"
                     Grid.Row="1"
                     Margin="0,0,5,5"
@@ -200,7 +200,7 @@
                         Icon="{ui:SymbolIcon lockClosed16,
                                              Filled=False}"
                         ToolTip="鼠标穿透" />
-                </StackPanel>
+                </WrapPanel>
             </Grid>
         </Border>
 

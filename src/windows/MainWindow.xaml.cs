@@ -102,10 +102,15 @@ namespace LiveCaptionsTranslator
                     windowState.Top <= 0 || windowState.Top >= screenHeight)
                 {
                     WindowHandler.RestoreState(OverlayWindow, new Rect(
-                        (screenWidth - 650) / 2, screenHeight * 5 / 6 - 135, 650, 135));
+                        (screenWidth - 480) / 2, screenHeight * 5 / 6 - 100, 480, 100));
                 }
                 else
+                {
+                    // 650 was the old minimum width: start such a window at the new, smaller default.
+                    if (Math.Abs(windowState.Width - 650) < 1)
+                        windowState.Width = 480;
                     WindowHandler.RestoreState(OverlayWindow, windowState);
+                }
 
                 OverlayWindow.Show();
             }
