@@ -47,8 +47,10 @@ namespace LiveCaptionsTranslator.utils
 
         public static bool IsHidden { get; private set; } = false;
 
-        private const int HIDDEN_STYLES = WindowsAPI.WS_EX_LAYERED | WindowsAPI.WS_EX_TRANSPARENT |
-                                          WindowsAPI.WS_EX_TOOLWINDOW | WindowsAPI.WS_EX_NOACTIVATE;
+        // Left over from versions that tried to make the window transparent and click-through. LiveCaptions
+        // draws itself in a way that ignores window transparency, so it only became impossible to move.
+        private const int OLD_HIDDEN_STYLES = WindowsAPI.WS_EX_LAYERED | WindowsAPI.WS_EX_TRANSPARENT |
+                                              WindowsAPI.WS_EX_NOACTIVATE;
 
         // A thin strip right above the taskbar, centered, in physical pixels.
         private static (int Left, int Top, int Width, int Height) DockRect(nint hWnd)
@@ -65,49 +67,65 @@ namespace LiveCaptionsTranslator.utils
             }
             int areaWidth = area.Right - area.Left;
             int width = Math.Min(areaWidth, Math.Max((int)(areaWidth * 0.6), (int)(700 * dpi / 96.0)));
-            int height = (int)(120 * dpi / 96.0);
+            // LiveCaptions keeps its own minimum height if this is smaller.
+            int height = (int)(64 * dpi / 96.0);
             int left = area.Left + (areaWidth - width) / 2;
             int top = area.Bottom - height;
             return (left, top, width, height);
         }
 
+        // Where the user dragged the hidden strip to: kept when it is hidden again.
+        private static RECT? hiddenRect = null;
+
         private static void Dock(nint hWnd)
         {
+            if (hiddenRect is RECT rect && rect.Left > -10000 && rect.Top > -10000 &&
+                rect.Right - rect.Left >= 200 && rect.Bottom - rect.Top >= 40)
+            {
+                WindowsAPI.MoveWindow(hWnd, rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top, true);
+                return;
+            }
             var (left, top, width, height) = DockRect(hWnd);
             WindowsAPI.MoveWindow(hWnd, left, top, width, height, true);
         }
 
-        // LiveCaptions stops updating its text when its window is minimized or off screen, so captions would
-        // only arrive while it is visible. Instead it stays on screen right above the taskbar, on top, but almost
-        // fully transparent and click-through: Windows still treats it as visible, so it keeps writing captions.
+        private static void ClearOldStyles(nint hWnd, ref int exStyle)
+        {
+            if ((exStyle & WindowsAPI.WS_EX_LAYERED) != 0)
+                WindowsAPI.SetLayeredWindowAttributes(hWnd, 0, 255, WindowsAPI.LWA_ALPHA);
+            exStyle &= ~OLD_HIDDEN_STYLES;
+        }
+
+        // LiveCaptions stops updating its text when its window is minimized or off screen, so it can't really be
+        // hidden. "Hidden" is a thin caption strip right above the taskbar, kept on top and out of the taskbar;
+        // it can still be dragged elsewhere.
         public static void HideLiveCaptions(AutomationElement window)
         {
             nint hWnd = new nint((long)window.Current.NativeWindowHandle);
             int exStyle = WindowsAPI.GetWindowLong(hWnd, WindowsAPI.GWL_EXSTYLE);
+            ClearOldStyles(hWnd, ref exStyle);
 
             WindowsAPI.ShowWindow(hWnd, WindowsAPI.SW_RESTORE);
+            WindowsAPI.SetWindowLong(hWnd, WindowsAPI.GWL_EXSTYLE, exStyle | WindowsAPI.WS_EX_TOOLWINDOW);
             Dock(hWnd);
-            WindowsAPI.SetWindowLong(hWnd, WindowsAPI.GWL_EXSTYLE, exStyle | HIDDEN_STYLES);
-            WindowsAPI.SetLayeredWindowAttributes(hWnd, 0, 1, WindowsAPI.LWA_ALPHA);
-            // On top, so that no other window covers it completely.
             WindowsAPI.SetWindowPos(hWnd, WindowsAPI.HWND_TOPMOST, 0, 0, 0, 0,
                 WindowsAPI.SWP_NOMOVE | WindowsAPI.SWP_NOSIZE | WindowsAPI.SWP_NOACTIVATE | WindowsAPI.SWP_FRAMECHANGED);
             IsHidden = true;
         }
 
-        // Shown: the same thin strip above the taskbar, now visible and usable.
+        // Shown: the same strip, as a normal window to change LiveCaptions' settings.
         public static void RestoreLiveCaptions(AutomationElement window)
         {
             nint hWnd = new nint((long)window.Current.NativeWindowHandle);
             int exStyle = WindowsAPI.GetWindowLong(hWnd, WindowsAPI.GWL_EXSTYLE);
+            ClearOldStyles(hWnd, ref exStyle);
+            if (IsHidden && WindowsAPI.GetWindowRect(hWnd, out RECT current))
+                hiddenRect = current;
 
-            if ((exStyle & WindowsAPI.WS_EX_LAYERED) != 0)
-                WindowsAPI.SetLayeredWindowAttributes(hWnd, 0, 255, WindowsAPI.LWA_ALPHA);
-            WindowsAPI.SetWindowLong(hWnd, WindowsAPI.GWL_EXSTYLE, exStyle & ~HIDDEN_STYLES);
+            WindowsAPI.SetWindowLong(hWnd, WindowsAPI.GWL_EXSTYLE, exStyle & ~WindowsAPI.WS_EX_TOOLWINDOW);
             WindowsAPI.SetWindowPos(hWnd, WindowsAPI.HWND_NOTOPMOST, 0, 0, 0, 0,
                 WindowsAPI.SWP_NOMOVE | WindowsAPI.SWP_NOSIZE | WindowsAPI.SWP_NOACTIVATE | WindowsAPI.SWP_FRAMECHANGED);
             WindowsAPI.ShowWindow(hWnd, WindowsAPI.SW_RESTORE);
-            Dock(hWnd);
             WindowsAPI.SetForegroundWindow(hWnd);
             IsHidden = false;
         }
