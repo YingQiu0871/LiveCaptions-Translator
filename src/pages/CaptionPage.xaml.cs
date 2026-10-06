@@ -30,6 +30,8 @@ namespace LiveCaptionsTranslator
                 Translator.TranslationLogged += OnTranslationLogged;
                 Refiner.ParagraphRefined += OnTranslationLogged;
                 ClassSession.StateChanged += OnSessionChanged;
+                Summarizer.StatusChanged += OnSummaryStatusChanged;
+                OnSummaryStatusChanged();
                 await LoadTranscript();
                 await LoadSections(scrollToEnd: true);
             };
@@ -39,6 +41,7 @@ namespace LiveCaptionsTranslator
                 Translator.TranslationLogged -= OnTranslationLogged;
                 Refiner.ParagraphRefined -= OnTranslationLogged;
                 ClassSession.StateChanged -= OnSessionChanged;
+                Summarizer.StatusChanged -= OnSummaryStatusChanged;
             };
 
             ApplyFontSizes();
@@ -47,6 +50,15 @@ namespace LiveCaptionsTranslator
         private void OnTranslationLogged()
         {
             Dispatcher.InvokeAsync(async () => await LoadTranscript());
+        }
+
+        private void OnSummaryStatusChanged()
+        {
+            Dispatcher.InvokeAsync(() =>
+            {
+                SummaryStatus.Text = Summarizer.Status;
+                SummaryStatus.Visibility = string.IsNullOrEmpty(Summarizer.Status) ? Visibility.Collapsed : Visibility.Visible;
+            });
         }
 
         private void OnSessionChanged()

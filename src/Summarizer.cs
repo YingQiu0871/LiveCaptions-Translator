@@ -44,6 +44,17 @@ namespace LiveCaptionsTranslator
         private static int detectionFailures = 0;
 
         public static event Action<SectionEntry>? SectionSummarized;
+        // What the automatic sections are doing, shown above the summaries on the caption page.
+        public static event Action? StatusChanged;
+        public static string Status { get; private set; } = string.Empty;
+
+        private static void SetStatus(string status)
+        {
+            if (Status == status)
+                return;
+            Status = status;
+            StatusChanged?.Invoke();
+        }
         public static event Action<int?>? CurrentPageChanged;
 
         // The slide page the lecturer is currently believed to be on (null if unknown or no slides).
@@ -127,8 +138,16 @@ namespace LiveCaptionsTranslator
                 }
                 catch (Exception ex)
                 {
-                    SnackbarHost.Show("[ERROR] 小节总结失败。", ex.Message, SnackbarType.Error,
-                        timeout: 3, closeButton: true);
+                    // Never let an error end the loop: it is retried on the next round.
+                    try
+                    {
+                        SetStatus($"总结出错，稍后自动重试：{ex.Message}");
+                        SnackbarHost.Show("[ERROR] 小节总结失败。", ex.Message, SnackbarType.Error,
+                            timeout: 3, closeButton: true);
+                    }
+                    catch (Exception)
+                    {
+                    }
                 }
                 finally
                 {
@@ -146,7 +165,10 @@ namespace LiveCaptionsTranslator
 
             bool manual = endSectionRequested;
             if (!manual && !lecture.SummaryEnabled)
+            {
+                SetStatus("自动分节总结已关闭（设置 ③），可以按 Ctrl+Alt+S 手动总结。");
                 return;
+            }
 
             var lines = (await SectionLogger.LoadHistoryRange(lastHistoryId))
                 .Where(line => !string.IsNullOrWhiteSpace(line.SourceText))
@@ -163,11 +185,18 @@ namespace LiveCaptionsTranslator
             }
 
             if (lines.Count == 0 || lines.Sum(line => line.SourceText.Length) < MIN_SECTION_CHARS)
+            {
+                SetStatus(ClassSession.IsRunning ? "等本节内容多一些再总结……" : string.Empty);
                 return;
+            }
 
             var elapsed = DateTime.Now - lines[0].Time;
             bool fixedTime = lecture.SegmentMode == SegmentMode.FixedTime ||
                              detectionFailures >= MAX_DETECTION_FAILURES;
+            int limit = fixedTime ? lecture.SummaryIntervalMinutes : lecture.MaxSectionMinutes;
+            SetStatus($"本节已讲 {(int)elapsed.TotalMinutes} 分钟" +
+                      (fixedTime ? $"，满 {limit} 分钟自动总结" : $"，换话题时总结，最晚 {limit} 分钟") +
+                      (detectionFailures > 0 ? $"（话题判断失败 {detectionFailures} 次）" : string.Empty));
 
             if (fixedTime)
             {
@@ -194,6 +223,7 @@ namespace LiveCaptionsTranslator
             lastCheckedHistoryId = lines[^1].Id;
 
             Boundary boundary;
+            SetStatus("正在判断老师是否换了话题……");
             try
             {
                 boundary = await DetectBoundary(lines);
@@ -266,7 +296,7 @@ namespace LiveCaptionsTranslator
             for (int i = 0; i < lines.Count; i++)
                 transcript.AppendLine($"{i + 1}. {lines[i].SourceText}");
 
-            string output = await Chat(system.ToString(), transcript.ToString(), maxTokens: 80, temperature: 0, json: true);
+            string output = await Chat(system.ToString(), transcript.ToString(), maxTokens: 200, temperature: 0, json: true);
             var match = JsonObject().Match(output);
             if (!match.Success)
                 throw new FormatException($"Unexpected reply: {output}");
@@ -280,6 +310,7 @@ namespace LiveCaptionsTranslator
 
         private static async Task CloseSection(List<HistoryLine> lines, int? page, LectureState lecture)
         {
+            SetStatus("正在总结本节……");
             string summary;
             try
             {
@@ -296,6 +327,7 @@ namespace LiveCaptionsTranslator
             lastBoundaryCheck = DateTime.Now;
 
             SectionSummarized?.Invoke(section);
+            SetStatus(string.Empty);
             if (!summary.StartsWith("[Summary failed]"))
                 Speaker.EnqueueSummary(summary);
             else
