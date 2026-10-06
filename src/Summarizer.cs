@@ -272,7 +272,7 @@ namespace LiveCaptionsTranslator
             string language = OpenAIConfig.SupportedLanguages.TryGetValue(targetLanguage, out var name)
                 ? name : targetLanguage;
 
-            string system = string.Format(lecture.SummaryPrompt, language);
+            string system = string.Format(lecture.SummaryPrompt, language) + LectureState.SubjectHint();
             var slide = SlideDeck.GetPage(page);
             if (slide != null)
                 system += $"\n\nThis section corresponds to slide page {slide.Number}: {slide.Text}";

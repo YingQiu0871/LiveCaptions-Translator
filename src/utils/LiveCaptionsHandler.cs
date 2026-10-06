@@ -61,8 +61,10 @@ namespace LiveCaptionsTranslator.utils
             {
                 if (!IsHidden)
                     shownRect = rect;
-                int width = Math.Max(rect.Right - rect.Left, 100);
-                int height = Math.Max(rect.Bottom - rect.Top, 100);
+                // Off screen it can be as large as we like, and LiveCaptions keeps only the text that fits
+                // in its window: a tall window means fewer sentences scroll away between two reads.
+                int width = Math.Max(rect.Right - rect.Left, 1280);
+                int height = Math.Max(rect.Bottom - rect.Top, 900);
                 int left = (int)System.Windows.SystemParameters.VirtualScreenLeft - width - 200;
                 int top = (int)System.Windows.SystemParameters.VirtualScreenTop - height - 200;
                 WindowsAPI.MoveWindow(hWnd, left, top, width, height, true);

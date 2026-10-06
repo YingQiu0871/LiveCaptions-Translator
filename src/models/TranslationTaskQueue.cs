@@ -20,13 +20,14 @@ namespace LiveCaptionsTranslator.models
             output = (string.Empty, false);
         }
 
-        public void Enqueue(Func<CancellationToken, Task<(string, bool)>> worker, string originalText)
+        public void Enqueue(Func<CancellationToken, Task<(string, bool)>> worker, string originalText, bool isFinal)
         {
             lock (_lock)
             {
-                var newTranslationTask = new TranslationTask(worker, originalText, new CancellationTokenSource(), nextSeq++);
+                var newTranslationTask = new TranslationTask(worker, originalText, new CancellationTokenSource(), nextSeq++, isFinal);
                 tasks.Add(newTranslationTask);
-                logChain = logChain.ContinueWith(_ => LogInOrder(newTranslationTask)).Unwrap();
+                if (isFinal)
+                    logChain = logChain.ContinueWith(_ => LogInOrder(newTranslationTask)).Unwrap();
                 // Run `OnTaskCompleted` in a new thread.
                 newTranslationTask.Task.ContinueWith(
                     task => OnTaskCompleted(newTranslationTask),
@@ -44,7 +45,7 @@ namespace LiveCaptionsTranslator.models
                 var index = tasks.IndexOf(translationTask);
                 for (int i = index - 1; i >= 0; i--)
                 {
-                    if (!tasks[i].IsComplete)
+                    if (!tasks[i].IsFinal)
                     {
                         tasks[i].CTS.Cancel();
                         tasks.RemoveAt(i);
@@ -75,10 +76,8 @@ namespace LiveCaptionsTranslator.models
 
             try
             {
-                bool isOverwrite = await Translator.IsOverwrite(translationTask.OriginalText);
-                if (!isOverwrite)
-                    await Translator.AddContexts();
-                await Translator.Log(translationTask.OriginalText, result.translatedText, isOverwrite);
+                await Translator.AddContexts();
+                await Translator.Log(translationTask.OriginalText, result.translatedText);
 
                 // Read complete sentences aloud (only when the speak mode includes translations).
                 if (result.isChoke)
@@ -96,16 +95,17 @@ namespace LiveCaptionsTranslator.models
         public string OriginalText { get; }
         public CancellationTokenSource CTS { get; }
         public long Seq { get; }
-        public bool IsComplete => OriginalText.Length > 0 &&
-                                  Array.IndexOf(TextUtil.PUNC_EOS, OriginalText[^1]) != -1;
+        // A finished sentence: it belongs in the transcript and is never dropped for a newer one.
+        public bool IsFinal { get; }
 
         public TranslationTask(Func<CancellationToken, Task<(string, bool)>> worker,
-            string originalText, CancellationTokenSource cts, long seq)
+            string originalText, CancellationTokenSource cts, long seq, bool isFinal)
         {
             Task = worker(cts.Token);
             OriginalText = originalText;
             CTS = cts;
             Seq = seq;
+            IsFinal = isFinal;
         }
     }
 }

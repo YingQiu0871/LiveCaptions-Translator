@@ -42,6 +42,16 @@ namespace LiveCaptionsTranslator.models
             "Output plain text only, no Markdown headings, no preamble. " +
             "If the section has no substantive content (small talk, silence, noise), output only the title line.";
 
+        // Added to the translation and summary prompts when the user named the subject of the class.
+        public static string SubjectHint()
+        {
+            string subject = Translator.Setting?.Lecture.Subject?.Trim() ?? string.Empty;
+            if (subject.Length == 0)
+                return string.Empty;
+            return $" This is a university lecture on {subject}; use the standard terminology of that field, " +
+                   "and prefer its technical reading of a word over the everyday one.";
+        }
+
         private bool summaryEnabled = true;
         private int summaryIntervalMinutes = 2;
         private SegmentMode segmentMode = SegmentMode.Auto;
@@ -57,6 +67,8 @@ namespace LiveCaptionsTranslator.models
         private bool forceOcr = false;
         private bool speechMuted = false;
         private bool showOriginal = true;
+        private bool captionsOnly = false;
+        private string subject = "";
 
         public bool SummaryEnabled
         {
@@ -203,6 +215,28 @@ namespace LiveCaptionsTranslator.models
             {
                 speechMuted = value;
                 OnPropertyChanged("SpeechMuted");
+            }
+        }
+
+        // Only transcribe, don't translate.
+        public bool CaptionsOnly
+        {
+            get => captionsOnly;
+            set
+            {
+                captionsOnly = value;
+                OnPropertyChanged("CaptionsOnly");
+            }
+        }
+
+        // The subject of the class, e.g. "基因治疗 / 分子生物学". Used so the model keeps the field's terms.
+        public string Subject
+        {
+            get => subject;
+            set
+            {
+                subject = value ?? string.Empty;
+                OnPropertyChanged("Subject");
             }
         }
 

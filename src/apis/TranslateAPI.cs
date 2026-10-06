@@ -60,7 +60,7 @@ namespace LiveCaptionsTranslator.apis
 
             var messages = new List<BaseLLMConfig.Message>
             {
-                new BaseLLMConfig.Message { role = "system", content = string.Format(Prompt, language) },
+                new BaseLLMConfig.Message { role = "system", content = string.Format(Prompt, language) + LectureState.SubjectHint() },
                 new BaseLLMConfig.Message { role = "user", content = $"🔤 {text} 🔤" }
             };
 

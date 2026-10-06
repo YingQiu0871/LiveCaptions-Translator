@@ -287,6 +287,12 @@
                     <StackPanel Grid.Column="0">
                         <TextBlock Style="{StaticResource CardTitle}" Text="⑤ 翻译" />
 
+                        <TextBlock Style="{StaticResource Label}" Text="这门课的学科 / 主题" />
+                        <ui:TextBox
+                            PlaceholderText="例如：基因治疗、分子生物学、宏观经济学"
+                            Text="{Binding Subject, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                        <TextBlock Style="{StaticResource Hint}" Text="填了之后，翻译和小结会按这个学科的术语来，例如 vector 译成“载体”而不是“向量”。也会写进课件识别和小结里。" />
+
                         <TextBlock Style="{StaticResource Label}" Text="翻译接口" />
                         <ComboBox
                             x:Name="TranslateApiBox"
@@ -313,6 +319,12 @@
                     <StackPanel Grid.Column="2">
                         <ui:ToggleSwitch
                             Margin="0,34,0,0"
+                            Content="只转录，不翻译"
+                            IsChecked="{Binding CaptionsOnly, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock Style="{StaticResource Hint}" Text="只显示听写出来的原文，不调用翻译接口（小节总结仍然会做）。" />
+
+                        <ui:ToggleSwitch
+                            Margin="0,12,0,0"
                             Content="中外对照（译文上方保留原文）"
                             IsChecked="{Binding ShowOriginal, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 

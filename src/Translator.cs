@@ -16,7 +16,8 @@ namespace LiveCaptionsTranslator
         private static Caption? caption = null;
         private static Setting? setting = null;
 
-        private static readonly ConcurrentQueue<string> pendingTextQueue = new();
+        // `Final`: a finished sentence that goes into the transcript; otherwise a preview of the sentence being spoken.
+        private static readonly ConcurrentQueue<(string Text, bool Final)> pendingTextQueue = new();
         private static readonly TranslationTaskQueue translationTaskQueue = new();
 
         public static AutomationElement? Window
@@ -59,11 +60,16 @@ namespace LiveCaptionsTranslator
                 if (string.CompareOrdinal(committed, sentence) == 0 || committed.EndsWith(sentence, StringComparison.Ordinal))
                     return true;
             }
-            // LiveCaptions keeps revising recent sentences; a revised one is not a new sentence.
+            // LiveCaptions keeps revising recent sentences; a revised one is not a new sentence. The text may
+            // also start in the middle of a sentence that scrolled away, so compare with the same-length ending too.
             int checkedCount = 0;
             for (var node = committedSentences.Last; node != null && checkedCount < 10; node = node.Previous, checkedCount++)
             {
-                if (TextUtil.Similarity(node.Value, sentence) > 0.75)
+                string committed = node.Value;
+                if (TextUtil.Similarity(committed, sentence) > 0.75)
+                    return true;
+                if (sentence.Length >= 12 && committed.Length > sentence.Length &&
+                    TextUtil.Similarity(committed[^sentence.Length..], sentence) > 0.75)
                     return true;
             }
             return false;
@@ -141,17 +147,16 @@ namespace LiveCaptionsTranslator
                     sentencesSeeded = true;
                     return false;
                 }
-                // The first sentence may be cut off at the top of LiveCaptions' buffer.
-                int first = Math.Max(1, sentences.Count - MAX_NEW_PER_READ);
-                if (sentences.Count == 1)
-                    first = 0;
+                // Even a first sentence cut off at the top of LiveCaptions' text is kept, unless it is
+                // the end of a sentence we already have.
+                int first = Math.Max(0, sentences.Count - MAX_NEW_PER_READ);
                 for (int i = first; i < sentences.Count; i++)
                 {
                     if (IsCommitted(sentences[i]))
                         continue;
                     Commit(sentences[i]);
                     CheckAlreadyTranslated(sentences[i]);
-                    pendingTextQueue.Enqueue(sentences[i]);
+                    pendingTextQueue.Enqueue((sentences[i], true));
                     queued = true;
                 }
             }
@@ -281,10 +286,25 @@ namespace LiveCaptionsTranslator
                 // for the full stop. When `OriginalCaption` remains unchanged, `idleCount` +1;
                 // when it changes, `syncCount` +1.
                 bool unfinished = Array.IndexOf(TextUtil.PUNC_EOS, Caption.OriginalCaption[^1]) == -1;
-                if (unfinished && (syncCount > Setting.MaxSyncInterval || idleCount == Setting.MaxIdleInterval))
+                if (unfinished && idleCount == Setting.MaxIdleInterval)
+                {
+                    // The speaker paused without LiveCaptions adding a full stop: the sentence is over.
+                    syncCount = 0;
+                    string sentence = Caption.OriginalCaption.Trim();
+                    lock (committedSentences)
+                    {
+                        if (Encoding.UTF8.GetByteCount(sentence) >= TextUtil.SHORT_THRESHOLD && !IsCommitted(sentence))
+                        {
+                            Commit(sentence);
+                            CheckAlreadyTranslated(sentence);
+                            pendingTextQueue.Enqueue((sentence, true));
+                        }
+                    }
+                }
+                else if (unfinished && syncCount > Setting.MaxSyncInterval)
                 {
                     syncCount = 0;
-                    pendingTextQueue.Enqueue(Caption.OriginalCaption);
+                    pendingTextQueue.Enqueue((Caption.OriginalCaption, false));
                 }
 
                 Thread.Sleep(25);
@@ -306,8 +326,9 @@ namespace LiveCaptionsTranslator
                 }
 
                 // Translate
-                if (pendingTextQueue.TryDequeue(out var originalSnapshot))
+                if (pendingTextQueue.TryDequeue(out var pending))
                 {
+                    var (originalSnapshot, isFinal) = pending;
 
                     // LiveCaptions also hears our own speech when it plays on the default output device.
                     if (Speaker.SuppressCaptions)
@@ -315,13 +336,21 @@ namespace LiveCaptionsTranslator
 
                     if (LogOnlyFlag)
                     {
-                        bool isOverwrite = await IsOverwrite(originalSnapshot);
-                        await LogOnly(originalSnapshot, isOverwrite);
+                        if (isFinal)
+                            await LogOnly(originalSnapshot);
                     }
                     else
                     {
-                        translationTaskQueue.Enqueue(token => Task.Run(
-                            () => Translate(originalSnapshot, token), token), originalSnapshot);
+                        if (Setting.Lecture.CaptionsOnly)
+                        {
+                            Caption.TranslatedCaption = string.Empty;
+                            Caption.DisplayTranslatedCaption = string.Empty;
+                            if (isFinal)
+                                await Log(originalSnapshot, string.Empty);
+                        }
+                        else
+                            translationTaskQueue.Enqueue(token => Task.Run(
+                                () => Translate(originalSnapshot, token), token), originalSnapshot, isFinal);
                     }
                 }
 
@@ -335,7 +364,14 @@ namespace LiveCaptionsTranslator
             {
                 var (translatedText, isChoke) = translationTaskQueue.Output;
 
-                if (LogOnlyFlag)
+                if (Setting.Lecture.CaptionsOnly)
+                {
+                    Caption.TranslatedCaption = string.Empty;
+                    Caption.DisplayTranslatedCaption = string.Empty;
+                    Caption.OverlayNoticePrefix = string.Empty;
+                    Caption.OverlayCurrentTranslation = string.Empty;
+                }
+                else if (LogOnlyFlag)
                 {
                     Caption.TranslatedCaption = string.Empty;
                     Caption.DisplayTranslatedCaption = "[已暂停]";
@@ -408,7 +444,7 @@ namespace LiveCaptionsTranslator
         }
 
         public static async Task Log(string originalText, string translatedText,
-            bool isOverwrite = false, CancellationToken token = default)
+            CancellationToken token = default)
         {
             string targetLanguage, apiName;
             if (Setting != null)
@@ -424,8 +460,6 @@ namespace LiveCaptionsTranslator
 
             try
             {
-                if (isOverwrite)
-                    await SQLiteHistoryLogger.DeleteLastTranslation(token);
                 await SQLiteHistoryLogger.LogTranslation(originalText, translatedText, targetLanguage, apiName);
                 TranslationLogged?.Invoke();
             }
@@ -439,13 +473,10 @@ namespace LiveCaptionsTranslator
             }
         }
 
-        public static async Task LogOnly(string originalText,
-            bool isOverwrite = false, CancellationToken token = default)
+        public static async Task LogOnly(string originalText, CancellationToken token = default)
         {
             try
             {
-                if (isOverwrite)
-                    await SQLiteHistoryLogger.DeleteLastTranslation(token);
                 await SQLiteHistoryLogger.LogTranslation(originalText, "N/A", "N/A", "LogOnly");
                 TranslationLogged?.Invoke();
             }
@@ -496,23 +527,6 @@ namespace LiveCaptionsTranslator
             Caption?.OnPropertyChanged("OverlayPreviousTranslation");
         }
 
-        // If this text is too similar to the last one, overwrite it when logging.
-        public static async Task<bool> IsOverwrite(string originalText, CancellationToken token = default)
-        {
-            string lastOriginalText = await SQLiteHistoryLogger.LoadLastSourceText(token);
-            if (lastOriginalText == null)
-                return false;
-            // A finished sentence is final; only a preview of an unfinished one gets replaced.
-            string lastTrimmed = lastOriginalText.TrimEnd();
-            if (lastTrimmed.Length > 0 && Array.IndexOf(TextUtil.PUNC_EOS, lastTrimmed[^1]) != -1)
-                return false;
 
-            int minLen = Math.Min(originalText.Length, lastOriginalText.Length);
-            originalText = originalText.Substring(0, minLen);
-            lastOriginalText = lastOriginalText.Substring(0, minLen);
-
-            double similarity = TextUtil.Similarity(originalText, lastOriginalText);
-            return similarity > TextUtil.SIM_THRESHOLD;
-        }
     }
 }
