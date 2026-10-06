@@ -2,6 +2,7 @@
 using System.Windows.Automation;
 
 using LiveCaptionsTranslator.apis;
+using LiveCaptionsTranslator.models;
 
 namespace LiveCaptionsTranslator.utils
 {
@@ -68,7 +69,7 @@ namespace LiveCaptionsTranslator.utils
             int areaWidth = area.Right - area.Left;
             int width = Math.Min(areaWidth, Math.Max((int)(areaWidth * 0.6), (int)(700 * dpi / 96.0)));
             // LiveCaptions keeps its own minimum height if this is smaller.
-            int height = (int)(64 * dpi / 96.0);
+            int height = (int)(100 * dpi / 96.0);
             int left = area.Left + (areaWidth - width) / 2;
             int top = area.Bottom - height;
             return (left, top, width, height);
@@ -104,6 +105,17 @@ namespace LiveCaptionsTranslator.utils
             nint hWnd = new nint((long)window.Current.NativeWindowHandle);
             int exStyle = WindowsAPI.GetWindowLong(hWnd, WindowsAPI.GWL_EXSTYLE);
             ClearOldStyles(hWnd, ref exStyle);
+
+            // With Alibaba Cloud recognition its text is not used at all: just get it out of the way.
+            if (Translator.Setting?.Lecture.Engine == RecognitionEngine.Aliyun)
+            {
+                WindowsAPI.SetWindowLong(hWnd, WindowsAPI.GWL_EXSTYLE, exStyle | WindowsAPI.WS_EX_TOOLWINDOW);
+                WindowsAPI.SetWindowPos(hWnd, WindowsAPI.HWND_NOTOPMOST, 0, 0, 0, 0,
+                    WindowsAPI.SWP_NOMOVE | WindowsAPI.SWP_NOSIZE | WindowsAPI.SWP_NOACTIVATE | WindowsAPI.SWP_FRAMECHANGED);
+                WindowsAPI.ShowWindow(hWnd, WindowsAPI.SW_MINIMIZE);
+                IsHidden = true;
+                return;
+            }
 
             WindowsAPI.ShowWindow(hWnd, WindowsAPI.SW_RESTORE);
             WindowsAPI.SetWindowLong(hWnd, WindowsAPI.GWL_EXSTYLE, exStyle | WindowsAPI.WS_EX_TOOLWINDOW);

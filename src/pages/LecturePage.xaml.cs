@@ -237,6 +237,17 @@ namespace LiveCaptionsTranslator
             var engine = (RecognitionEngine)EngineBox.SelectedIndex;
             Translator.Setting.Lecture.Engine = engine;
             AliyunPanel.Visibility = engine == RecognitionEngine.Aliyun ? Visibility.Visible : Visibility.Collapsed;
+            // The system captions strip is only needed by the system engine.
+            if (Translator.Window != null && LiveCaptionsHandler.IsHidden)
+            {
+                try
+                {
+                    LiveCaptionsHandler.HideLiveCaptions(Translator.Window);
+                }
+                catch (Exception)
+                {
+                }
+            }
             if (ClassSession.IsRunning)
                 SnackbarHost.Show("识别方式已更改。", "点“停止”再点“开始”后生效。", SnackbarType.Info, timeout: 3);
         }
