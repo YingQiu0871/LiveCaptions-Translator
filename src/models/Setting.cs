@@ -239,10 +239,18 @@ namespace LiveCaptionsTranslator.models
             {
                 return Load(jsonPath);
             }
-            catch (JsonException)
+            catch (Exception ex) when (ex is JsonException or NotSupportedException or InvalidCastException
+                                           or InvalidOperationException)
             {
-                string backupPath = jsonPath + ".bak";
-                File.Move(jsonPath, backupPath);
+                // Keep the unreadable file instead of overwriting it, so nothing is lost for good.
+                string backupPath = $"{jsonPath}.{DateTime.Now:yyyyMMdd-HHmmss}.bak";
+                try
+                {
+                    File.Move(jsonPath, backupPath);
+                }
+                catch (Exception)
+                {
+                }
                 return Load(jsonPath);
             }
         }

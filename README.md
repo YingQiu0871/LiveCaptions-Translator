@@ -45,12 +45,12 @@
 
 到 [Releases](https://github.com/YingQiu0871/LiveCaptions-Translator/releases/latest) 下载最新版本：
 
-- `LiveCaptionsTranslator-win-x64-setup.msi`：**推荐**。Windows 标准安装程序，双击安装，安装时可以选择安装位置。装好后开始菜单和桌面都有“上课同传助手”的快捷方式；以后装新版会自动替换旧版，卸载在“设置 > 应用”里。
+- `LiveCaptionsTranslator-win-x64-setup.msi`：**推荐**。Windows 标准安装程序，双击安装，安装时可以选择安装位置。装好后开始菜单和桌面都有“课堂同传助手”的快捷方式；以后装新版会自动替换旧版，卸载在“设置 > 应用”里。
 - `LiveCaptionsTranslator-win-x64-withruntime.exe`：免安装版，自带运行库，下载后直接运行。
 - `LiveCaptionsTranslator-win-x64.exe`：免安装版，体积小，需要先安装 [.NET 8 桌面运行时](https://dotnet.microsoft.com/download/dotnet/8.0)。
 - ARM 电脑选文件名带 `arm64` 的版本。
 
-设置（`setting.json`）和历史记录（`translation_history.db`）保存在程序所在的文件夹。用免安装版时，建议把 exe 单独放进一个文件夹。卸载时这两个文件会保留。
+设置（`setting.json`）和历史记录（`translation_history.db`）保存在 `%LOCALAPPDATA%\LiveCaptionsTranslator`，装新版、卸载都不会动它们。旧版本放在程序文件夹里的设置，新版第一次启动时会自动搬过去。
 
 发布新版本：在 Actions 里手动运行 "CI/CD Pipeline"，勾选 "Publish a GitHub Release from this build"。
 

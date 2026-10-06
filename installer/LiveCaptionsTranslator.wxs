@@ -7,7 +7,7 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
      xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
   <Package
-      Name="上课同传助手"
+      Name="课堂同传助手"
       Manufacturer="YingQiu0871"
       Version="$(var.Version)"
       UpgradeCode="A77AA4CA-971E-4ADB-AE4A-DA3772A9DEA4"
@@ -15,9 +15,9 @@
       Codepage="936"
       InstallerVersion="500"
       Scope="perMachine">
-    <SummaryInformation Codepage="936" Description="上课同传助手 安装程序" />
+    <SummaryInformation Codepage="936" Description="课堂同传助手 安装程序" />
 
-    <MajorUpgrade DowngradeErrorMessage="已经安装了更新版本的上课同传助手。" />
+    <MajorUpgrade DowngradeErrorMessage="已经安装了更新版本的课堂同传助手。" />
     <MediaTemplate EmbedCab="yes" />
 
     <!-- The Icon id must keep the .ico extension, or Windows shows a blank icon. -->
@@ -34,13 +34,13 @@
     <StandardDirectory Id="ProgramMenuFolder" />
     <StandardDirectory Id="DesktopFolder" />
 
-    <Feature Id="Main" Title="上课同传助手">
+    <Feature Id="Main" Title="课堂同传助手">
       <Component Id="AppExe" Directory="INSTALLFOLDER">
         <File Id="AppExe" Source="$(var.SourceExe)" Name="LiveCaptionsTranslator.exe" KeyPath="yes">
           <Shortcut
               Id="StartMenuShortcut"
               Directory="ProgramMenuFolder"
-              Name="上课同传助手"
+              Name="课堂同传助手"
               WorkingDirectory="INSTALLFOLDER"
               Icon="AppIcon.ico"
               IconIndex="0"
@@ -48,7 +48,7 @@
           <Shortcut
               Id="DesktopShortcut"
               Directory="DesktopFolder"
-              Name="上课同传助手"
+              Name="课堂同传助手"
               WorkingDirectory="INSTALLFOLDER"
               Icon="AppIcon.ico"
               IconIndex="0"
@@ -56,7 +56,8 @@
         </File>
       </Component>
 
-      <!-- The app keeps its settings and history next to the program, so users must be able to
+      <!-- Versions before 1.7-lecture.53 kept settings and history next to the program (newer ones move them to
+           %LOCALAPPDATA%), so users must be able to
            write there even when the folder is under Program Files. -->
       <Component Id="InstallFolderAccess" Directory="INSTALLFOLDER" Guid="5B0C2F7E-3E54-4C61-9A0B-6C1F4D2E8A31">
         <CreateFolder>

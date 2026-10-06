@@ -41,7 +41,7 @@
                 HorizontalAlignment="Left"
                 FontSize="24"
                 FontWeight="Bold"
-                Text="欢迎使用上课同传助手！"
+                Text="欢迎使用课堂同传助手！"
                 TextAlignment="Left" />
             <ui:TextBlock
                 Margin="20,10,20,10"
