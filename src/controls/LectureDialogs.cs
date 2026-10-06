@@ -99,10 +99,28 @@ namespace LiveCaptionsTranslator
                     return;
                 string path = await LectureDocument.Save(lecture);
                 SnackbarHost.Show("本节课已保存。", path, SnackbarType.Success, timeout: 3);
+                if (Translator.Setting.Lecture.NotesDraft)
+                    await WriteNotesDraft(lecture);
             }
             catch (Exception ex)
             {
                 SnackbarHost.Show("[ERROR] 保存本节课失败。", ex.Message, SnackbarType.Error, timeout: 3, closeButton: true);
+            }
+        }
+
+        public static async Task<string?> WriteNotesDraft(LectureRecord lecture)
+        {
+            SnackbarHost.Show("正在生成笔记初稿……", "整节课的内容较多，大约需要半分钟到一两分钟。", SnackbarType.Info, timeout: 3);
+            try
+            {
+                string path = await LectureNotes.Generate(lecture);
+                SnackbarHost.Show("笔记初稿已生成。", path, SnackbarType.Success, timeout: 3);
+                return path;
+            }
+            catch (Exception ex)
+            {
+                SnackbarHost.Show("[ERROR] 笔记初稿生成失败。", ex.Message, SnackbarType.Error, timeout: 3, closeButton: true);
+                return null;
             }
         }
 

@@ -8,6 +8,8 @@ namespace LiveCaptionsTranslator.models
         Off = 0,
         SummaryOnly = 1,
         SummaryAndTranslation = 2,
+        // Simultaneous interpretation: every translated sentence is read at once, summaries are not.
+        Interpretation = 3,
     }
 
     public enum SegmentMode
@@ -88,6 +90,7 @@ namespace LiveCaptionsTranslator.models
         private string subject = "";
         private string saveFolder = "";
         private string currentCourse = "";
+        private bool notesDraft = true;
 
         public bool SummaryEnabled
         {
@@ -157,7 +160,7 @@ namespace LiveCaptionsTranslator.models
         public int SpeakModeIndex
         {
             get => (int)speakMode;
-            set => SpeakMode = (SpeakMode)Math.Clamp(value, 0, 2);
+            set => SpeakMode = (SpeakMode)Math.Clamp(value, 0, 3);
         }
         public int SpeechRate
         {
@@ -319,6 +322,17 @@ namespace LiveCaptionsTranslator.models
             {
                 saveFolder = value ?? string.Empty;
                 OnPropertyChanged("SaveFolder");
+            }
+        }
+
+        // After each class, write a draft of study notes (from the summaries, the transcript and the slides).
+        public bool NotesDraft
+        {
+            get => notesDraft;
+            set
+            {
+                notesDraft = value;
+                OnPropertyChanged("NotesDraft");
             }
         }
 

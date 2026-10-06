@@ -118,6 +118,16 @@
                                          Filled=False}"
                     MouseOverBackground="#07000000" />
                 <ui:Button
+                    x:Name="NotesDraft"
+                    Margin="5,0,0,0"
+                    Appearance="Transparent"
+                    Click="NotesDraft_click"
+                    Content="生成笔记初稿"
+                    Icon="{ui:SymbolIcon Notebook16,
+                                         Filled=False}"
+                    MouseOverBackground="#07000000"
+                    ToolTip="结合小节总结、转录和课件（若已上传）生成笔记初稿，保存在转录文件旁边" />
+                <ui:Button
                     x:Name="OpenFile"
                     Margin="5,0,0,0"
                     Appearance="Transparent"

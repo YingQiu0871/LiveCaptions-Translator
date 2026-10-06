@@ -82,6 +82,7 @@ namespace LiveCaptionsTranslator
             AllSentences.Visibility = NewCourse.Visibility;
             RenameLecture.Visibility = view == View.Detail ? Visibility.Visible : Visibility.Collapsed;
             OpenFile.Visibility = RenameLecture.Visibility;
+            NotesDraft.Visibility = RenameLecture.Visibility;
             Export.Visibility = view == View.All ? Visibility.Visible : Visibility.Collapsed;
             Delete.Visibility = Export.Visibility;
         }
@@ -289,6 +290,31 @@ namespace LiveCaptionsTranslator
             catch (Exception ex)
             {
                 SnackbarHost.Show("[ERROR] 保存文件失败。", ex.Message, SnackbarType.Error, timeout: 3, closeButton: true);
+            }
+        }
+
+        private async void NotesDraft_click(object sender, RoutedEventArgs e)
+        {
+            if (currentLecture == null)
+                return;
+            NotesDraft.IsEnabled = false;
+            try
+            {
+                var lecture = await LectureStore.GetLecture(currentLecture.Id) ?? currentLecture;
+                // The draft goes next to the transcript file, so make sure that exists.
+                if (string.IsNullOrEmpty(lecture.FilePath) || !System.IO.File.Exists(lecture.FilePath))
+                    await LectureDocument.Save(lecture);
+                string? path = await LectureDialogs.WriteNotesDraft(lecture);
+                if (path != null)
+                    LectureDialogs.ShowInFolder(path);
+            }
+            catch (Exception ex)
+            {
+                SnackbarHost.Show("[ERROR] 笔记初稿生成失败。", ex.Message, SnackbarType.Error, timeout: 3, closeButton: true);
+            }
+            finally
+            {
+                NotesDraft.IsEnabled = true;
             }
         }
 

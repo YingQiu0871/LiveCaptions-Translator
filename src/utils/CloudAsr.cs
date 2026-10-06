@@ -23,6 +23,7 @@ namespace LiveCaptionsTranslator.utils
         private static readonly object audioLock = new();
         private static readonly List<byte> pending = new();
         private static IWaveIn? capture;
+        private static bool isMicrophone = false;
 
         // Box-filter resampler state.
         private static double accumulated = 0;
@@ -117,6 +118,7 @@ namespace LiveCaptionsTranslator.utils
             phase = 0;
             envelope = 0;
             gain = 1;
+            isMicrophone = useMicrophone;
             capture = useMicrophone ? new WasapiCapture() : new WasapiLoopbackCapture();
             var format = capture.WaveFormat;
             capture.DataAvailable += (s, e) => OnAudio(e.Buffer, e.BytesRecorded, format);
@@ -134,6 +136,8 @@ namespace LiveCaptionsTranslator.utils
             bool isFloat = format.BitsPerSample == 32 && format.Encoding != WaveFormatEncoding.Pcm;
             double step = (double)format.SampleRate / SAMPLE_RATE;
 
+            // Our own speech on the computer's output would be recognized again as the lecture: send silence then.
+            bool mute = !isMicrophone && Speaker.SuppressCaptions;
             var output = new List<byte>(count / blockAlign / Math.Max((int)step, 1) * 2 + 4);
             for (int offset = 0; offset + blockAlign <= count; offset += blockAlign)
             {
@@ -146,7 +150,7 @@ namespace LiveCaptionsTranslator.utils
                 if (phase < step)
                     continue;
                 phase -= step;
-                double value = AutoGain(accumulated / accumulatedCount);
+                double value = mute ? 0 : AutoGain(accumulated / accumulatedCount);
                 accumulated = 0;
                 accumulatedCount = 0;
                 short pcm = (short)Math.Round(value * short.MaxValue);

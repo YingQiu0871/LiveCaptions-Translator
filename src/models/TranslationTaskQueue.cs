@@ -79,8 +79,8 @@ namespace LiveCaptionsTranslator.models
                 await Translator.AddContexts();
                 await Translator.Log(translationTask.OriginalText, result.translatedText);
 
-                // Read complete sentences aloud (only when the speak mode includes translations).
-                if (result.isChoke)
+                // Read finished sentences aloud (only when the speak mode includes translations).
+                if (result.isChoke || translationTask.IsFinal)
                     Speaker.EnqueueTranslation(translationTask.OriginalText, result.translatedText);
             }
             catch (Exception)

@@ -55,7 +55,7 @@ namespace LiveCaptionsTranslator.utils
 
         public static void EnqueueSummary(string summary)
         {
-            if (Muted || Lecture == null || Lecture.SpeakMode == SpeakMode.Off)
+            if (Muted || Lecture == null || Lecture.SpeakMode is SpeakMode.Off or SpeakMode.Interpretation)
                 return;
             string text = CleanForSpeech(summary);
             if (string.IsNullOrWhiteSpace(text))
@@ -87,14 +87,18 @@ namespace LiveCaptionsTranslator.utils
             {
                 queue.AddLast((text, false));
             }
+            signal.Set();
         }
 
         public static void EnqueueTranslation(string sourceText, string translatedText)
         {
-            if (Muted || Lecture == null || Lecture.SpeakMode != SpeakMode.SummaryAndTranslation)
+            if (Muted || Lecture == null)
                 return;
-            // With paragraph refinement on, the refined paragraph is read instead of each raw sentence.
-            if (Refiner.Enabled)
+            // Interpretation reads every sentence at once. Otherwise, with paragraph refinement on, the refined
+            // paragraph is read instead of each raw sentence (a few seconds later, but more accurate).
+            bool read = Lecture.SpeakMode == SpeakMode.Interpretation ||
+                        (Lecture.SpeakMode == SpeakMode.SummaryAndTranslation && !Refiner.Enabled);
+            if (!read)
                 return;
             if (string.IsNullOrWhiteSpace(translatedText) ||
                 translatedText.Contains("[ERROR]") || translatedText.Contains("[WARNING]"))

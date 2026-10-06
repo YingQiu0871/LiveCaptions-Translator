@@ -33,6 +33,11 @@ namespace LiveCaptionsTranslator
         {
             Timeout = TimeSpan.FromSeconds(40)
         };
+        // For long answers such as the notes draft of a whole class.
+        private static readonly HttpClient longClient = new HttpClient()
+        {
+            Timeout = TimeSpan.FromMinutes(5)
+        };
 
         private static long lastHistoryId = -1;
         // Tick and FinishLecture never run at the same time.
@@ -357,7 +362,7 @@ namespace LiveCaptionsTranslator
             Chat("Reply with the single word OK.", "ping", maxTokens: 16, temperature: 0);
 
         internal static async Task<string> Chat(string system, string user, int maxTokens, double temperature,
-            bool json = false)
+            bool json = false, bool longRequest = false)
         {
             var config = Translator.Setting[SUMMARY_API] as OpenAIConfig;
             if (config == null || string.IsNullOrWhiteSpace(config.ApiUrl))
@@ -379,13 +384,13 @@ namespace LiveCaptionsTranslator
             if (json)
                 requestData["response_format"] = new { type = "json_object" };
 
-            var response = await Post(config, requestData);
+            var response = await Post(config, requestData, longRequest);
             // Some OpenAI-compatible servers do not support `response_format`.
             if (json && (int)response.StatusCode is 400 or 422)
             {
                 response.Dispose();
                 requestData.Remove("response_format");
-                response = await Post(config, requestData);
+                response = await Post(config, requestData, longRequest);
             }
 
             using (response)
@@ -405,12 +410,13 @@ namespace LiveCaptionsTranslator
             }
         }
 
-        private static async Task<HttpResponseMessage> Post(OpenAIConfig config, Dictionary<string, object> requestData)
+        private static async Task<HttpResponseMessage> Post(OpenAIConfig config, Dictionary<string, object> requestData,
+            bool longRequest = false)
         {
             using var request = new HttpRequestMessage(HttpMethod.Post, TextUtil.NormalizeUrl(config.ApiUrl));
             request.Headers.Add("Authorization", $"Bearer {config.ApiKey.Trim()}");
             request.Content = new StringContent(JsonSerializer.Serialize(requestData), Encoding.UTF8, "application/json");
-            return await client.SendAsync(request);
+            return await (longRequest ? longClient : client).SendAsync(request);
         }
     }
 }

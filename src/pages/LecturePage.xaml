@@ -271,7 +271,9 @@
                             <ComboBoxItem Content="关闭" />
                             <ComboBoxItem Content="只读小节总结" />
                             <ComboBoxItem Content="小节总结 + 每句译文" />
+                            <ComboBoxItem Content="实时同传：每句中文译文马上读（不读总结）" />
                         </ComboBox>
+                        <TextBlock Style="{StaticResource Hint}" Text="实时同传会把每句译文一出来就读给你听，读不过来时跳过积压的旧句子，保证跟得上老师。" />
 
                         <TextBlock Style="{StaticResource Label}" Text="输出设备" />
                         <ComboBox x:Name="SpeechDeviceBox" SelectionChanged="SpeechDeviceBox_SelectionChanged" />
@@ -453,6 +455,11 @@
                             Content="恢复默认" />
                     </Grid>
                     <TextBlock Style="{StaticResource Hint}" Text="每节课点“停止”后，会让你给这节课命名并选择课程，然后保存为“保存位置\课程名\本节课名称.md”，里面有小节总结、原文和译文。历史页里也能按课程查看。改位置只影响之后保存的文件。" />
+                    <ui:ToggleSwitch
+                        Margin="0,12,0,0"
+                        Content="下课后自动生成笔记初稿"
+                        IsChecked="{Binding NotesDraft, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBlock Style="{StaticResource Hint}" Text="点“停止”保存后，用 ① 的模型把小节总结、转录和已上传的课件整理成一份笔记初稿（按课件结构，标出课上补充的内容，附复习题），保存为“本节课名称 笔记初稿.md”，和转录文件放在一起。历史页里也可以对任意一节课重新生成。" />
                 </StackPanel>
             </Border>
 
