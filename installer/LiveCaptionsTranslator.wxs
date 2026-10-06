@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Windows Installer (MSI) package. Built in CI with WiX Toolset 5:
+    wix build installer/LiveCaptionsTranslator.wxs -arch x64 -culture zh-CN -ext WixToolset.UI.wixext
+      -d Version=1.7.N -d SourceExe=... -d IconFile=... -d LicenseRtf=... -o setup.msi
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+  <Package
+      Name="上课同传助手"
+      Manufacturer="YingQiu0871"
+      Version="$(var.Version)"
+      UpgradeCode="A77AA4CA-971E-4ADB-AE4A-DA3772A9DEA4"
+      Language="2052"
+      Codepage="936"
+      InstallerVersion="500"
+      Scope="perMachine">
+    <SummaryInformation Codepage="936" Description="上课同传助手 安装程序" />
+
+    <MajorUpgrade DowngradeErrorMessage="已经安装了更新版本的上课同传助手。" />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Icon Id="AppIcon" SourceFile="$(var.IconFile)" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon" />
+
+    <!-- Standard installer wizard with a page to choose the install folder. -->
+    <WixVariable Id="WixUILicenseRtf" Value="$(var.LicenseRtf)" />
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+
+    <StandardDirectory Id="ProgramFiles6432Folder">
+      <Directory Id="INSTALLFOLDER" Name="LiveCaptionsTranslator" />
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder" />
+    <StandardDirectory Id="DesktopFolder" />
+
+    <Feature Id="Main" Title="上课同传助手">
+      <Component Id="AppExe" Directory="INSTALLFOLDER">
+        <File Id="AppExe" Source="$(var.SourceExe)" Name="LiveCaptionsTranslator.exe" KeyPath="yes">
+          <Shortcut
+              Id="StartMenuShortcut"
+              Directory="ProgramMenuFolder"
+              Name="上课同传助手"
+              WorkingDirectory="INSTALLFOLDER"
+              Icon="AppIcon"
+              Advertise="yes" />
+          <Shortcut
+              Id="DesktopShortcut"
+              Directory="DesktopFolder"
+              Name="上课同传助手"
+              WorkingDirectory="INSTALLFOLDER"
+              Icon="AppIcon"
+              Advertise="yes" />
+        </File>
+      </Component>
+
+      <!-- The app keeps its settings and history next to the program, so users must be able to
+           write there even when the folder is under Program Files. -->
+      <Component Id="InstallFolderAccess" Directory="INSTALLFOLDER" Guid="5B0C2F7E-3E54-4C61-9A0B-6C1F4D2E8A31">
+        <CreateFolder>
+          <PermissionEx Sddl="D:PAI(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;0x1301bf;;;BU)" />
+        </CreateFolder>
+      </Component>
+    </Feature>
+  </Package>
+</Wix>

@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using System.IO;
+using System.Windows;
 
 using LiveCaptionsTranslator.utils;
 
@@ -8,6 +9,8 @@ namespace LiveCaptionsTranslator
     {
         App()
         {
+            // Settings and history are stored next to the program, so do not depend on how it was started.
+            Directory.SetCurrentDirectory(AppContext.BaseDirectory);
             AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
             Translator.Setting?.Save();
 
