@@ -20,7 +20,7 @@
 > 如果想给视频、会议、直播加实时翻译字幕，或者需要英文界面、更多翻译接口，推荐使用[原项目](https://github.com/SakiRinn/LiveCaptions-Translator)。
 > 本分支中与课堂无关的通用修复，会整理成独立的小改动，供原作者参考。本分支的问题请在本仓库反馈，以免给原作者添麻烦。
 >
-> *A classroom-interpretation fork of [SakiRinn/LiveCaptions-Translator](https://github.com/SakiRinn/LiveCaptions-Translator) (Chinese UI only). For the general-purpose app, please use the original project.*
+> *A classroom-interpretation fork of [SakiRinn/LiveCaptions-Translator](https://github.com/SakiRinn/LiveCaptions-Translator) (Chinese UI only). Many thanks to SakiRinn and all contributors of the original project, which is the one to use for general-purpose live caption translation.*
 
 ## 这是什么
 
