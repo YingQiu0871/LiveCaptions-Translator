@@ -1,4 +1,3 @@
-using System.IO;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
@@ -41,8 +40,6 @@ namespace LiveCaptionsTranslator.utils
         private static CancellationTokenSource? cts;
         // The hot word list made from the glossary, if any.
         private static string? vocabularyId;
-
-        public static bool IsRunning => cts != null;
 
         // (text, isSentenceEnd)
         public static event Action<string, bool>? Recognized;
@@ -95,9 +92,10 @@ namespace LiveCaptionsTranslator.utils
             using var ws = await Connect(timeout.Token);
             string taskId = Guid.NewGuid().ToString("N");
             await SendText(ws, RunTask(taskId), timeout.Token);
+            var buffer = new byte[8192];
             while (true)
             {
-                var (evt, root) = await ReceiveEvent(ws, timeout.Token);
+                var (evt, root) = await ReceiveEvent(ws, buffer, timeout.Token);
                 if (evt == "task-started")
                     break;
                 if (evt == "task-failed")
@@ -302,9 +300,10 @@ namespace LiveCaptionsTranslator.utils
             var started = new TaskCompletionSource();
             var receiver = Task.Run(async () =>
             {
+                var buffer = new byte[8192];
                 while (ws.State == WebSocketState.Open)
                 {
-                    var (evt, root) = await ReceiveEvent(ws, token);
+                    var (evt, root) = await ReceiveEvent(ws, buffer, token);
                     switch (evt)
                     {
                         case "task-started":
@@ -428,9 +427,9 @@ namespace LiveCaptionsTranslator.utils
         private static Task SendText(ClientWebSocket ws, string text, CancellationToken token) =>
             ws.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(text)), WebSocketMessageType.Text, true, token);
 
-        private static async Task<(string Event, JsonElement Root)> ReceiveEvent(ClientWebSocket ws, CancellationToken token)
+        private static async Task<(string Event, JsonElement Root)> ReceiveEvent(
+            ClientWebSocket ws, byte[] buffer, CancellationToken token)
         {
-            var buffer = new byte[8192];
             while (true)
             {
                 using var message = new MemoryStream();

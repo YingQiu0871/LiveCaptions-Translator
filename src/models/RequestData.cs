@@ -2,6 +2,11 @@ namespace LiveCaptionsTranslator.models
 {
     // Reasoning/thinking for all LLMs is disabled or minimal to reduce response time.
 
+    public class ThinkingOptions
+    {
+        public string type { get; set; } = "disabled";
+    }
+
     public class BaseLLMRequestData(string model, List<BaseLLMConfig.Message> messages, double temperature)
     {
         public string model { get; set; } = model;
@@ -25,16 +30,12 @@ namespace LiveCaptionsTranslator.models
             public bool enabled { get; set; } = false;
             public string effort { get; set; } = "low";
         }
-        public class Thinking
-        {
-            public string type { get; set; } = "disabled";
-        }
 
         public bool think { get; set; } = false;
         public bool enable_thinking { get; set; } = false;
         public string reasoning_effort { get; set; } = "low";
         public Reasoning reasoning { get; set; } = new();
-        public Thinking thinking { get; set; } = new();
+        public ThinkingOptions thinking { get; set; } = new();
     }
 
     public class OllamaRequestData(string model, List<BaseLLMConfig.Message> messages, double temperature)
@@ -58,11 +59,7 @@ namespace LiveCaptionsTranslator.models
         : BaseLLMRequestData(model, messages, temperature)
     {
         // Supported Platform: Anthropic, Zhipu (BigModel)
-        public class Thinking
-        {
-            public string type { get; set; } = "disabled";
-        }
-        public Thinking thinking { get; set; } = new();
+        public ThinkingOptions thinking { get; set; } = new();
     }
 
     public class AliyunRequestData(string model, List<BaseLLMConfig.Message> messages, double temperature)

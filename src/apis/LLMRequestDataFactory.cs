@@ -33,10 +33,5 @@ namespace LiveCaptionsTranslator.apis
                 return null;
             return (BaseLLMRequestData)Activator.CreateInstance((Type)typeSequence[index], model, messages, temperature);
         }
-
-        public static BaseLLMRequestData Create(string model, List<BaseLLMConfig.Message> messages, double temperature)
-        {
-            return (BaseLLMRequestData)Activator.CreateInstance(typeof(BaseLLMRequestData), model, messages, temperature);
-        }
     }
 }

@@ -1,4 +1,3 @@
-using System.IO;
 using System.IO.Compression;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -10,14 +9,12 @@ namespace LiveCaptionsTranslator.utils
     public class SlidePage
     {
         public int Number { get; set; }
-        public string Title { get; set; } = string.Empty;
         public string Text { get; set; } = string.Empty;
     }
 
     // The lecture slides (PDF) loaded for the current class, used to align sections with pages.
     public static partial class SlideDeck
     {
-        private const int TITLE_MAX_CHARS = 80;
         private const int TEXT_MAX_CHARS = 500;
 
         private static List<SlidePage> pages = new();
@@ -76,7 +73,7 @@ namespace LiveCaptionsTranslator.utils
             {
                 // Unreadable text layer: OCR every page.
                 int count = await SlideOcr.PageCount(path);
-                result = Enumerable.Range(1, count).Select(n => MakePage(n, null, new List<string>())).ToList();
+                result = Enumerable.Range(1, count).Select(n => MakePage(n, new List<string>())).ToList();
                 forceOcr = true;
             }
 
@@ -104,7 +101,7 @@ namespace LiveCaptionsTranslator.utils
             for (int i = 0; i < result.Count; i++)
             {
                 if (recognized.TryGetValue(result[i].Number, out var lines) && lines.Count > 0)
-                    result[i] = MakePage(result[i].Number, lines[0], lines);
+                    result[i] = MakePage(result[i].Number, lines);
             }
             lastOcrPageCount = recognized.Count(pair => pair.Value.Count > 0);
             return result;
@@ -122,7 +119,7 @@ namespace LiveCaptionsTranslator.utils
                     .Select(group => string.Join(" ", group.OrderBy(w => w.BoundingBox.Left).Select(w => w.Text)))
                     .Where(line => !string.IsNullOrWhiteSpace(line))
                     .ToList();
-                result.Add(MakePage(page.Number, lines.FirstOrDefault(), lines));
+                result.Add(MakePage(page.Number, lines));
             }
             return result;
         }
@@ -163,18 +160,14 @@ namespace LiveCaptionsTranslator.utils
                 string entryName = target.StartsWith("/") ? target.TrimStart('/') : "ppt/" + target;
                 var slide = ReadXml(entryName);
 
-                string? title = null;
                 var lines = new List<string>();
                 foreach (var shape in slide.Descendants(NS_P + "sp"))
                 {
-                    string? placeholder = (string?)shape.Descendants(NS_P + "ph").FirstOrDefault()?.Attribute("type");
                     foreach (var paragraph in shape.Descendants(NS_A + "p"))
                     {
                         string line = string.Concat(paragraph.Descendants(NS_A + "t").Select(t => t.Value)).Trim();
                         if (line.Length == 0)
                             continue;
-                        if (title == null && placeholder is ("title" or "ctrTitle"))
-                            title = line;
                         lines.Add(line);
                     }
                 }
@@ -185,15 +178,14 @@ namespace LiveCaptionsTranslator.utils
                     if (line.Length > 0 && !lines.Contains(line))
                         lines.Add(line);
                 }
-                result.Add(MakePage(number, title ?? lines.FirstOrDefault(), lines));
+                result.Add(MakePage(number, lines));
             }
             return result;
         }
 
-        private static SlidePage MakePage(int number, string? title, List<string> lines) => new()
+        private static SlidePage MakePage(int number, List<string> lines) => new()
         {
             Number = number,
-            Title = Truncate(title ?? string.Empty, TITLE_MAX_CHARS),
             Text = Truncate(Whitespace().Replace(string.Join(" / ", lines), " ").Trim(), TEXT_MAX_CHARS),
         };
 

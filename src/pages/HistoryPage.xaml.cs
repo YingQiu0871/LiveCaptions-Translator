@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Microsoft.Win32;
@@ -39,7 +38,7 @@ namespace LiveCaptionsTranslator
             ScrollHelper.UseOwnScrollViewer(this, CourseScroll, LectureScroll, DetailScroll);
             Loaded += async (s, e) =>
             {
-                (App.Current.MainWindow as MainWindow)?.AutoHeightAdjust(minHeight: MIN_HEIGHT, maxHeight: MIN_HEIGHT);
+                (App.Current.MainWindow as MainWindow)?.AutoHeightAdjust(minHeight: MIN_HEIGHT);
                 Translator.TranslationLogged += OnTranslationLogged;
                 await ShowCourses();
             };
@@ -318,32 +317,37 @@ namespace LiveCaptionsTranslator
             }
         }
 
-        private async Task<bool> Confirm(string title, string message, string primary)
+        private static async Task<bool> Confirm(string title, string message, string primary)
+        {
+            var result = await ShowDialog(title, message, primary, ContentDialogButton.Close);
+            return result == ContentDialogResult.Primary;
+        }
+
+        // Shows a dialog in the main window's dialog host; null when there is no host.
+        private static async Task<ContentDialogResult?> ShowDialog(
+            string title, object content, string primary, ContentDialogButton defaultButton)
         {
             var host = (Application.Current.MainWindow as MainWindow)?.DialogHostContainer;
             if (host == null)
-                return false;
+                return null;
             var dialog = new ContentDialog
             {
                 Title = new TextBlock { Text = title, FontSize = 18, FontWeight = FontWeights.Regular },
-                Content = message,
+                Content = content,
                 PrimaryButtonText = primary,
                 CloseButtonText = "取消",
-                DefaultButton = ContentDialogButton.Close,
+                DefaultButton = defaultButton,
                 DialogHost = host,
                 Padding = new Thickness(8, 4, 8, 8),
             };
             host.Visibility = Visibility.Visible;
             var result = await dialog.ShowAsync();
             host.Visibility = Visibility.Collapsed;
-            return result == ContentDialogResult.Primary;
+            return result;
         }
 
         private async Task<string?> AskText(string title, string label, string text)
         {
-            var host = (Application.Current.MainWindow as MainWindow)?.DialogHostContainer;
-            if (host == null)
-                return null;
             var box = new System.Windows.Controls.TextBox { Text = text, MinWidth = 320 };
             box.Loaded += (s, e) =>
             {
@@ -353,19 +357,7 @@ namespace LiveCaptionsTranslator
             var panel = new StackPanel();
             panel.Children.Add(new TextBlock { Text = label, Margin = new Thickness(0, 0, 0, 4) });
             panel.Children.Add(box);
-            var dialog = new ContentDialog
-            {
-                Title = new TextBlock { Text = title, FontSize = 18, FontWeight = FontWeights.Regular },
-                Content = panel,
-                PrimaryButtonText = "确定",
-                CloseButtonText = "取消",
-                DefaultButton = ContentDialogButton.Primary,
-                DialogHost = host,
-                Padding = new Thickness(8, 4, 8, 8),
-            };
-            host.Visibility = Visibility.Visible;
-            var result = await dialog.ShowAsync();
-            host.Visibility = Visibility.Collapsed;
+            var result = await ShowDialog(title, panel, "确定", ContentDialogButton.Primary);
             return result == ContentDialogResult.Primary ? box.Text.Trim() : null;
         }
 
@@ -385,29 +377,8 @@ namespace LiveCaptionsTranslator
 
         private async void Delete_click(object sender, RoutedEventArgs e)
         {
-            var dialogHostContainer = (Application.Current.MainWindow as MainWindow)?.DialogHostContainer;
-
-            var dialog = new ContentDialog
-            {
-                Title = new TextBlock
-                {
-                    Text = "要删除全部历史记录吗？",
-                    FontSize = 18,
-                    FontWeight = FontWeights.Regular
-                },
-                Content = "所有课程里的录音、时间线上的小节总结都会一起删除（课程文件夹和已保存的文件保留），此操作无法撤销！",
-                PrimaryButtonText = "删除",
-                CloseButtonText = "取消",
-                DefaultButton = ContentDialogButton.Close,
-                DialogHost = dialogHostContainer,
-                Padding = new Thickness(8, 4, 8, 8),
-            };
-
-            dialogHostContainer.Visibility = Visibility.Visible;
-            var result = await dialog.ShowAsync();
-            dialogHostContainer.Visibility = Visibility.Collapsed;
-
-            if (result == ContentDialogResult.Primary)
+            if (await Confirm("要删除全部历史记录吗？",
+                    "所有课程里的录音、时间线上的小节总结都会一起删除（课程文件夹和已保存的文件保留），此操作无法撤销！", "删除"))
             {
                 currentPage = 1;
                 await SQLiteHistoryLogger.ClearHistory();

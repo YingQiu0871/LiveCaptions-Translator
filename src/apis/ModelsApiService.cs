@@ -1,4 +1,3 @@
-using System.Net.Http;
 using System.Text.Json;
 using LiveCaptionsTranslator.utils;
 
@@ -12,15 +11,6 @@ namespace LiveCaptionsTranslator.apis
         private static readonly HttpClient client = new HttpClient()
         {
             Timeout = TimeSpan.FromSeconds(10)
-        };
-
-        /// <summary>
-        /// APIs que soportan obtener modelos desde un endpoint.
-        /// </summary>
-        public static readonly List<string> APIs_WITH_MODELS_ENDPOINT = new()
-        {
-            "LMStudio",
-            "Ollama"
         };
 
         /// <summary>

@@ -1,4 +1,3 @@
-using System.IO;
 using Windows.Graphics.Imaging;
 using Windows.Media.Ocr;
 using Windows.Storage;

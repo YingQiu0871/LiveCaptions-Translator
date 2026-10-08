@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Windows;
@@ -59,7 +58,7 @@ namespace LiveCaptionsTranslator
 
             Loaded += (s, e) =>
             {
-                (App.Current.MainWindow as MainWindow)?.AutoHeightAdjust(minHeight: MIN_HEIGHT, maxHeight: MIN_HEIGHT);
+                (App.Current.MainWindow as MainWindow)?.AutoHeightAdjust(minHeight: MIN_HEIGHT);
                 Summarizer.CurrentPageChanged += OnCurrentPageChanged;
                 if (ApiConfig != null)
                     ApiConfig.PropertyChanged += OnApiConfigChanged;
@@ -162,8 +161,7 @@ namespace LiveCaptionsTranslator
         {
             if (fillingKeyBox || ApiConfig == null)
                 return;
-            // Pasted keys sometimes carry spaces, line breaks or invisible characters.
-            string key = new string(ApiKeyBox.Password.Where(c => c > ' ' && c < 0x7F).ToArray());
+            string key = CleanKey(ApiKeyBox.Password);
             // Only the user clearing the box may erase a saved key, never a control reloading itself.
             if (key.Length == 0 && ApiConfig.ApiKey.Length > 0 && !ApiKeyBox.IsKeyboardFocusWithin)
             {
@@ -184,11 +182,22 @@ namespace LiveCaptionsTranslator
             string key = ApiConfig?.ApiKey ?? string.Empty;
             ApiKeyStatus.Text = key.Length == 0
                 ? "还没有保存 API Key。"
-                : $"✓ 已保存：{key[..Math.Min(3, key.Length)]}…{key[Math.Max(0, key.Length - 4)..]}（{key.Length} 位），" +
+                : $"✓ 已保存：{MaskKey(key)}，" +
                   $"保存在 {AppPaths.SettingFile}";
         }
 
         private bool fillingAsrKeyBox = false;
+
+        // Pasted keys sometimes carry spaces, line breaks or invisible characters.
+        private static string CleanKey(string text)
+        {
+            return new string(text.Where(c => c > ' ' && c < 0x7F).ToArray());
+        }
+
+        private static string MaskKey(string key)
+        {
+            return $"{key[..Math.Min(3, key.Length)]}…{key[Math.Max(0, key.Length - 4)..]}（{key.Length} 位）";
+        }
 
         private void ShowSaveFolder()
         {
@@ -263,7 +272,7 @@ namespace LiveCaptionsTranslator
             if (fillingAsrKeyBox)
                 return;
             var lecture = Translator.Setting.Lecture;
-            string key = new string(AsrKeyBox.Password.Where(c => c > ' ' && c < 0x7F).ToArray());
+            string key = CleanKey(AsrKeyBox.Password);
             if (key.Length == 0 && lecture.AsrApiKey.Length > 0 && !AsrKeyBox.IsKeyboardFocusWithin)
             {
                 LoadEngine();
@@ -279,7 +288,7 @@ namespace LiveCaptionsTranslator
             string key = Translator.Setting.Lecture.AsrApiKey;
             AsrKeyStatus.Text = key.Length == 0
                 ? "还没有保存阿里云 API Key。"
-                : $"✓ 已保存：{key[..Math.Min(3, key.Length)]}…{key[Math.Max(0, key.Length - 4)..]}（{key.Length} 位）";
+                : $"✓ 已保存：{MaskKey(key)}";
         }
 
         private async void TestAsr_click(object sender, RoutedEventArgs e)
@@ -649,7 +658,7 @@ namespace LiveCaptionsTranslator
         {
             try
             {
-                Process.Start(new ProcessStartInfo { FileName = "ms-settings:sound", UseShellExecute = true });
+                ShellUtil.Open("ms-settings:sound");
             }
             catch (Exception ex)
             {

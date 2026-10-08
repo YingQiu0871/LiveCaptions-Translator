@@ -1,5 +1,3 @@
-using System.IO;
-using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
@@ -26,7 +24,7 @@ namespace LiveCaptionsTranslator
 
             Loaded += async (s, e) =>
             {
-                (App.Current.MainWindow as MainWindow)?.AutoHeightAdjust(minHeight: MIN_HEIGHT, maxHeight: MIN_HEIGHT);
+                (App.Current.MainWindow as MainWindow)?.AutoHeightAdjust(minHeight: MIN_HEIGHT);
                 Summarizer.SectionSummarized += OnSectionSummarized;
                 Summarizer.CurrentPageChanged += OnCurrentPageChanged;
                 ClassSession.StateChanged += OnSessionChanged;
@@ -195,8 +193,7 @@ namespace LiveCaptionsTranslator
 
         private void EndSection_click(object sender, RoutedEventArgs e)
         {
-            Summarizer.RequestEndSection();
-            SnackbarHost.Show("正在总结本节……", "", SnackbarType.Info, timeout: 1);
+            MainWindow.EndSection();
         }
 
         private async void Refresh_click(object sender, RoutedEventArgs e)

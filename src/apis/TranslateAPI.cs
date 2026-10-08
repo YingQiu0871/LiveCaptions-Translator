@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -52,6 +51,16 @@ namespace LiveCaptionsTranslator.apis
         };
         private static int openai_fallback_index = 0;
 
+        private static string HttpError(HttpResponseMessage response)
+        {
+            return $"[ERROR] 翻译失败：HTTP 错误 - {response.StatusCode}";
+        }
+
+        private static string Md5Hex(string input)
+        {
+            return Convert.ToHexString(MD5.HashData(Encoding.UTF8.GetBytes(input))).ToLowerInvariant();
+        }
+
         public static async Task<string> OpenAI(string text, CancellationToken token = default)
         {
             var config = Translator.Setting["OpenAI"] as OpenAIConfig;
@@ -103,7 +112,7 @@ namespace LiveCaptionsTranslator.apis
                     if (response.StatusCode != HttpStatusCode.BadRequest &&
                         response.StatusCode != HttpStatusCode.UnprocessableEntity)
                         break;
-                    Thread.Sleep(15);
+                    await Task.Delay(15, token);
 
                     openai_fallback_index++;
                     if (openai_fallback_index >= LLMRequestDataFactory.FallbackCount)
@@ -135,7 +144,7 @@ namespace LiveCaptionsTranslator.apis
             else if (response.StatusCode == HttpStatusCode.Unauthorized)
                 return "[ERROR] 翻译失败：API Key 无效（HTTP 401），请在“设置”页里重新粘贴 API Key 并点“测试连接”。";
             else
-                return $"[ERROR] 翻译失败：HTTP 错误 - {response.StatusCode}";
+                return HttpError(response);
         }
 
         public static async Task<string> Ollama(string text, CancellationToken token = default)
@@ -198,7 +207,7 @@ namespace LiveCaptionsTranslator.apis
                 return RegexPatterns.ModelThinking().Replace(output, "");
             }
             else
-                return $"[ERROR] 翻译失败：HTTP 错误 - {response.StatusCode}";
+                return HttpError(response);
         }
 
         public static async Task<string> LMStudio(string text, CancellationToken token = default)
@@ -351,7 +360,7 @@ namespace LiveCaptionsTranslator.apis
                 return RegexPatterns.ModelThinking().Replace(output, "");
             }
             else
-                return $"[ERROR] 翻译失败：HTTP 错误 - {response.StatusCode}";
+                return HttpError(response);
         }
 
         public static async Task<string> Google(string text, CancellationToken token = default)
@@ -391,7 +400,7 @@ namespace LiveCaptionsTranslator.apis
                 return translatedText;
             }
             else
-                return $"[ERROR] 翻译失败：HTTP 错误 - {response.StatusCode}";
+                return HttpError(response);
         }
 
         public static async Task<string> Google2(string text, CancellationToken token = default)
@@ -443,7 +452,7 @@ namespace LiveCaptionsTranslator.apis
                     return "[ERROR] 翻译失败：接口返回格式异常";
             }
             else
-                return $"[ERROR] 翻译失败：HTTP 错误 - {response.StatusCode}";
+                return HttpError(response);
         }
 
         public static async Task<string> DeepL(string text, CancellationToken token = default)
@@ -495,7 +504,7 @@ namespace LiveCaptionsTranslator.apis
                 return "[ERROR] 翻译失败：没有有效返回";
             }
             else
-                return $"[ERROR] 翻译失败：HTTP 错误 - {response.StatusCode}";
+                return HttpError(response);
         }
 
 
@@ -506,9 +515,7 @@ namespace LiveCaptionsTranslator.apis
                 Translator.Setting.TargetLanguage, out var langValue) ? langValue : Translator.Setting.TargetLanguage;
 
             string salt = DateTime.Now.Millisecond.ToString();
-            string sign = BitConverter.ToString(
-                MD5.Create().ComputeHash(
-                    Encoding.UTF8.GetBytes($"{config.AppKey}{text}{salt}{config.AppSecret}"))).Replace("-", "").ToLower();
+            string sign = Md5Hex($"{config.AppKey}{text}{salt}{config.AppSecret}");
 
             var parameters = new Dictionary<string, string>
             {
@@ -552,7 +559,7 @@ namespace LiveCaptionsTranslator.apis
             }
             else
             {
-                return $"[ERROR] 翻译失败：HTTP 错误 - {response.StatusCode}";
+                return HttpError(response);
             }
         }
 
@@ -601,7 +608,7 @@ namespace LiveCaptionsTranslator.apis
                 return responseObj.result;
             }
             else
-                return $"[ERROR] 翻译失败：HTTP 错误 - {response.StatusCode}";
+                return HttpError(response);
         }
 
         public static async Task<string> Baidu(string text, CancellationToken token = default)
@@ -611,9 +618,7 @@ namespace LiveCaptionsTranslator.apis
                 Translator.Setting.TargetLanguage, out var langValue) ? langValue : Translator.Setting.TargetLanguage;
 
             string salt = DateTime.Now.Millisecond.ToString();
-            string sign = BitConverter.ToString(
-                MD5.Create().ComputeHash(
-                    Encoding.UTF8.GetBytes($"{config.AppId}{text}{salt}{config.AppSecret}"))).Replace("-", "").ToLower();
+            string sign = Md5Hex($"{config.AppId}{text}{salt}{config.AppSecret}");
 
             var parameters = new Dictionary<string, string>
             {
@@ -657,7 +662,7 @@ namespace LiveCaptionsTranslator.apis
             }
             else
             {
-                return $"[ERROR] 翻译失败：HTTP 错误 - {response.StatusCode}";
+                return HttpError(response);
             }
         }
 
@@ -706,12 +711,20 @@ namespace LiveCaptionsTranslator.apis
                 return responseObj.translatedText;
             }
             else
-                return $"[ERROR] 翻译失败：HTTP 错误 - {response.StatusCode}";
+                return HttpError(response);
         }
     }
 
     public class ConfigDictConverter : JsonConverter<Dictionary<string, List<TranslateAPIConfig>>>
     {
+        private static Type ResolveConfigType(string key)
+        {
+            var configType = Type.GetType($"LiveCaptionsTranslator.models.{key}Config");
+            return configType != null && typeof(TranslateAPIConfig).IsAssignableFrom(configType)
+                ? configType
+                : typeof(TranslateAPIConfig);
+        }
+
         public override Dictionary<string, List<TranslateAPIConfig>> Read(
             ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
@@ -725,7 +738,7 @@ namespace LiveCaptionsTranslator.apis
                 string key = reader.GetString();
                 reader.Read();
 
-                var configType = Type.GetType($"LiveCaptionsTranslator.models.{key}Config");
+                var configType = ResolveConfigType(key);
                 TranslateAPIConfig config;
 
                 if (reader.TokenType == JsonTokenType.StartArray)
@@ -735,10 +748,7 @@ namespace LiveCaptionsTranslator.apis
 
                     while (reader.TokenType != JsonTokenType.EndArray)
                     {
-                        if (configType != null && typeof(TranslateAPIConfig).IsAssignableFrom(configType))
-                            config = (TranslateAPIConfig)JsonSerializer.Deserialize(ref reader, configType, options);
-                        else
-                            config = (TranslateAPIConfig)JsonSerializer.Deserialize(ref reader, typeof(TranslateAPIConfig), options);
+                        config = (TranslateAPIConfig)JsonSerializer.Deserialize(ref reader, configType, options);
 
                         list.Add(config);
                         reader.Read();
@@ -763,17 +773,14 @@ namespace LiveCaptionsTranslator.apis
             foreach (var kvp in value)
             {
                 writer.WritePropertyName(kvp.Key);
-                var configType = Type.GetType($"LiveCaptionsTranslator.models.{kvp.Key}Config");
+                var configType = ResolveConfigType(kvp.Key);
 
                 if (kvp.Value is IEnumerable<TranslateAPIConfig> configList)
                 {
                     writer.WriteStartArray();
                     foreach (var config in configList)
                     {
-                        if (configType != null && typeof(TranslateAPIConfig).IsAssignableFrom(configType))
-                            JsonSerializer.Serialize(writer, config, configType, options);
-                        else
-                            JsonSerializer.Serialize(writer, config, typeof(TranslateAPIConfig), options);
+                        JsonSerializer.Serialize(writer, config, configType, options);
                     }
                     writer.WriteEndArray();
                 }
