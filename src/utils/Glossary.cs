@@ -17,6 +17,7 @@ namespace LiveCaptionsTranslator.utils
         private const int MAX_PROMPT_CHARS = 3000;
         private const int MAX_HOT_WORDS = 500;
         private const string VOCABULARY_PREFIX = "lctgloss";
+        private static readonly char[] SEPARATORS = { '=', '＝', '\t' };
         private static readonly string[] HOT_WORD_LANGUAGES = { "zh", "en", "ja", "yue", "ko", "de", "fr", "ru" };
 
         private static readonly HttpClient client = new HttpClient()
@@ -34,7 +35,7 @@ namespace LiveCaptionsTranslator.utils
                 if (line.Length == 0 || line.StartsWith('#'))
                     continue;
                 string term = line, translation = string.Empty;
-                int separator = line.IndexOfAny(new[] { '=', '＝', '\t' });
+                int separator = line.IndexOfAny(SEPARATORS);
                 if (separator > 0)
                 {
                     term = line[..separator].Trim();

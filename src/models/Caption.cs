@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 using LiveCaptionsTranslator.utils;
 
@@ -121,6 +120,10 @@ namespace LiveCaptionsTranslator.models
             return instance;
         }
 
+        private static bool IsUsableContext(TranslationHistoryEntry? entry) =>
+            entry != null && string.CompareOrdinal(entry.TranslatedText, "N/A") != 0 &&
+            !entry.TranslatedText.Contains("[ERROR]") && !entry.TranslatedText.Contains("[WARNING]");
+
         public string GetPreviousText(int count, TextType textType)
         {
             if (count <= 0 || Contexts.Count == 0)
@@ -128,8 +131,7 @@ namespace LiveCaptionsTranslator.models
 
             var prev = Contexts
                 .Reverse().Take(count).Reverse()
-                .Select(entry => entry == null || string.CompareOrdinal(entry.TranslatedText, "N/A") == 0 ||
-                                 entry.TranslatedText.Contains("[ERROR]") || entry.TranslatedText.Contains("[WARNING]") ?
+                .Select(entry => !IsUsableContext(entry) ?
                     "" : (textType == TextType.Caption ? entry.SourceText : entry.TranslatedText))
                 .Aggregate((accu, cur) =>
                 {
@@ -148,7 +150,7 @@ namespace LiveCaptionsTranslator.models
                 prev = RegexPatterns.NoticePrefix().Replace(prev, "");
             if (!string.IsNullOrEmpty(prev) && Array.IndexOf(TextUtil.PUNC_EOS, prev[^1]) == -1)
                 prev += TextUtil.isCJChar(prev[^1]) ? "。" : ".";
-            if (!string.IsNullOrEmpty(prev) && Encoding.UTF8.GetByteCount(prev[^1].ToString()) < 2)
+            if (!string.IsNullOrEmpty(prev) && prev[^1] < 0x80)
                 prev += " ";
             return prev;
         }
@@ -160,9 +162,7 @@ namespace LiveCaptionsTranslator.models
 
             return Contexts
                 .Reverse().Take(count).Reverse()
-                .Where(entry => entry != null && string.CompareOrdinal(entry.TranslatedText, "N/A") != 0 &&
-                                !entry.TranslatedText.Contains("[ERROR]") &&
-                                !entry.TranslatedText.Contains("[WARNING]"));
+                .Where(IsUsableContext);
         }
 
         public System.Windows.Visibility OriginalVisibility =>

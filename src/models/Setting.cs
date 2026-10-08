@@ -12,8 +12,6 @@ namespace LiveCaptionsTranslator.models
 {
     public class Setting : INotifyPropertyChanged
     {
-        public static readonly string FILENAME = "setting.json";
-
         public event PropertyChangedEventHandler? PropertyChanged;
 
         private int maxIdleInterval = 50;
@@ -264,12 +262,7 @@ namespace LiveCaptionsTranslator.models
             {
                 using (FileStream fileStream = File.Open(jsonPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                 {
-                    var options = new JsonSerializerOptions
-                    {
-                        WriteIndented = true,
-                        Converters = { new ConfigDictConverter() }
-                    };
-                    setting = JsonSerializer.Deserialize<Setting>(fileStream, options) ?? new Setting();
+                    setting = JsonSerializer.Deserialize<Setting>(fileStream, JsonOptions) ?? new Setting();
                 }
             }
             else
@@ -302,6 +295,12 @@ namespace LiveCaptionsTranslator.models
             Save(AppPaths.SettingFile);
         }
 
+        private static readonly JsonSerializerOptions JsonOptions = new()
+        {
+            WriteIndented = true,
+            Converters = { new ConfigDictConverter() }
+        };
+
         private static readonly object saveLock = new();
         private static string? lastSaveError = null;
 
@@ -315,12 +314,7 @@ namespace LiveCaptionsTranslator.models
                 {
                     using (FileStream fileStream = File.Open(jsonPath, FileMode.Create, FileAccess.Write, FileShare.Read))
                     {
-                        var options = new JsonSerializerOptions
-                        {
-                            WriteIndented = true,
-                            Converters = { new ConfigDictConverter() }
-                        };
-                        JsonSerializer.Serialize(fileStream, this, options);
+                        JsonSerializer.Serialize(fileStream, this, JsonOptions);
                     }
                     lastSaveError = null;
                 }
@@ -340,12 +334,6 @@ namespace LiveCaptionsTranslator.models
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propName));
             Translator.Setting?.Save();
-        }
-
-        public static bool IsConfigExist()
-        {
-            string jsonPath = AppPaths.SettingFile;
-            return File.Exists(jsonPath);
         }
     }
 }

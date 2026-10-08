@@ -1,8 +1,9 @@
 using System.Windows;
-using System.Diagnostics;
 using System.Windows.Navigation;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Appearance;
+
+using LiveCaptionsTranslator.utils;
 
 namespace LiveCaptionsTranslator
 {
@@ -30,7 +31,7 @@ namespace LiveCaptionsTranslator
 
         private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
         {
-            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+            ShellUtil.Open(e.Uri.AbsoluteUri);
             e.Handled = true;
         }
     }

@@ -177,12 +177,6 @@ namespace LiveCaptionsTranslator.models
 
     public class LMStudioConfig : BaseLLMConfig
     {
-        public class Response
-        {
-            public string model { get; set; }
-            public string output { get; set; }
-        }
-
         private string apiUrl = "http://localhost:1234/api/v1";
 
         public string ApiUrl

@@ -102,7 +102,7 @@
                     Icon="{ui:SymbolIcon ArrowDown12,
                                          Filled=False}"
                     MouseOverBackground="#07000000"
-                    ToolTip="导出这节课的笔记 (Markdown)" />
+                    ToolTip="导出这节课的转录 (Markdown)" />
                 <ui:Button
                     x:Name="Refresh"
                     Margin="5,0,0,0"
