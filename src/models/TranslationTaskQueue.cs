@@ -14,6 +14,18 @@ namespace LiveCaptionsTranslator.models
         private (string translatedText, bool isChoke) output;
         public (string translatedText, bool isChoke) Output => output;
 
+        // Translations are still running.
+        public bool IsBusy
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    return tasks.Count > 0;
+                }
+            }
+        }
+
         public TranslationTaskQueue()
         {
             tasks = new List<TranslationTask>();

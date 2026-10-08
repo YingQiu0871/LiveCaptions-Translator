@@ -56,7 +56,8 @@ namespace LiveCaptionsTranslator
                 {
                     // A failed round is retried on the next tick; after that the sentences stay as they are.
                 }
-                await Task.Delay(LOOP_INTERVAL_MS);
+                // Between classes there is little to do: check less often.
+                await Task.Delay(ClassSession.IsRunning ? LOOP_INTERVAL_MS : 5 * LOOP_INTERVAL_MS);
             }
         }
 

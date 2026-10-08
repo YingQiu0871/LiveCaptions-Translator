@@ -158,7 +158,8 @@ namespace LiveCaptionsTranslator
                 {
                     gate.Release();
                 }
-                await Task.Delay(LOOP_INTERVAL_MS);
+                // Between classes there is little to do: check less often.
+                await Task.Delay(ClassSession.IsRunning || endSectionRequested ? LOOP_INTERVAL_MS : 3 * LOOP_INTERVAL_MS);
             }
         }
 

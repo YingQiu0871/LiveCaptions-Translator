@@ -237,8 +237,14 @@ namespace LiveCaptionsTranslator
             var engine = (RecognitionEngine)EngineBox.SelectedIndex;
             Translator.Setting.Lecture.Engine = engine;
             AliyunPanel.Visibility = engine == RecognitionEngine.Aliyun ? Visibility.Visible : Visibility.Collapsed;
-            // The system captions strip is only needed by the system engine.
-            if (Translator.Window != null && LiveCaptionsHandler.IsHidden)
+            // LiveCaptions is only needed by the system engine; with the cloud engine it is closed to save power
+            // (it is started again when a class with the system engine starts).
+            if (engine == RecognitionEngine.Aliyun && !ClassSession.IsRunning)
+            {
+                Translator.CloseLiveCaptions();
+                ShowLiveCaptionsState();
+            }
+            else if (Translator.Window != null && LiveCaptionsHandler.IsHidden)
             {
                 try
                 {
@@ -372,16 +378,11 @@ namespace LiveCaptionsTranslator
                 : "隐藏系统实时辅助字幕";
         }
 
-        private void LiveCaptionsButton_click(object sender, RoutedEventArgs e)
+        private async void LiveCaptionsButton_click(object sender, RoutedEventArgs e)
         {
-            var window = Translator.Window;
-            if (window == null)
-            {
-                SnackbarHost.Show("实时辅助字幕还没启动。", "点“开始”后再试。", SnackbarType.Warning, timeout: 2);
-                return;
-            }
             try
             {
+                var window = Translator.Window ?? await Task.Run(Translator.EnsureLiveCaptions);
                 if (LiveCaptionsHandler.IsHidden)
                     LiveCaptionsHandler.RestoreLiveCaptions(window);
                 else
@@ -480,7 +481,9 @@ namespace LiveCaptionsTranslator
             var window = Translator.Window;
             if (window == null)
             {
-                SourceStatus.Text = "实时字幕还没启动，请稍后再切换一次。";
+                SourceStatus.Text = Translator.Setting.Lecture.Engine == RecognitionEngine.Aliyun
+                    ? "✓ 已保存。阿里云识别会直接使用这里选的声音来源。"
+                    : "✓ 已保存，点“开始”时会自动设置好系统实时辅助字幕。";
                 return;
             }
 

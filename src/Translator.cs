@@ -250,22 +250,64 @@ namespace LiveCaptionsTranslator
 
         static Translator()
         {
-            window = LiveCaptionsHandler.LaunchLiveCaptions();
-            LiveCaptionsHandler.FixLiveCaptions(Window);
-            LiveCaptionsHandler.HideLiveCaptions(Window);
-
             if (!File.Exists(AppPaths.SettingFile))
                 FirstUseFlag = true;
 
             caption = Caption.GetInstance();
             setting = Setting.Load();
             CloudAsr.Recognized += OnCloudRecognized;
+
+            // LiveCaptions runs its own speech recognition all the time, so it is not started at all when the
+            // cloud engine is used.
+            if (setting.Lecture.Engine == RecognitionEngine.LiveCaptions)
+            {
+                window = LiveCaptionsHandler.LaunchLiveCaptions();
+                LiveCaptionsHandler.FixLiveCaptions(Window);
+                LiveCaptionsHandler.HideLiveCaptions(Window);
+            }
         }
+
+        // Reading LiveCaptions over UI Automation costs CPU on both sides, so it is read often only while the text
+        // is changing. `idleCount` counts in steps of 25 ms whatever the actual interval.
+        private const int ACTIVE_POLL_MS = 50;
+        private const int IDLE_POLL_MS = 150;
+        private const int FAST_POLL_TICKS = 16;
 
         public static void SyncLoop()
         {
             int idleCount = 0;
             int syncCount = 0;
+            bool pauseHandled = false;
+            string lastRawText = string.Empty;
+
+            // The sentence still being spoken: translate a preview now and then, so the user is not waiting
+            // for the full stop; when the speaker pauses without LiveCaptions adding a full stop, the sentence is over.
+            void HandlePause()
+            {
+                if (Caption.OriginalCaption.Length == 0)
+                    return;
+                bool unfinished = Array.IndexOf(TextUtil.PUNC_EOS, Caption.OriginalCaption[^1]) == -1;
+                if (unfinished && idleCount >= Setting.MaxIdleInterval && !pauseHandled)
+                {
+                    pauseHandled = true;
+                    syncCount = 0;
+                    string sentence = Caption.OriginalCaption.Trim();
+                    lock (committedSentences)
+                    {
+                        if (Encoding.UTF8.GetByteCount(sentence) >= TextUtil.SHORT_THRESHOLD && !IsCommitted(sentence))
+                        {
+                            Commit(sentence);
+                            CheckAlreadyTranslated(sentence);
+                            pendingTextQueue.Enqueue((sentence, true));
+                        }
+                    }
+                }
+                else if (unfinished && syncCount > Setting.MaxSyncInterval)
+                {
+                    syncCount = 0;
+                    pendingTextQueue.Enqueue((Caption.OriginalCaption, false));
+                }
+            }
 
             while (true)
             {
@@ -276,7 +318,7 @@ namespace LiveCaptionsTranslator
                 }
                 if (!ClassSession.IsRunning || Setting.Lecture.Engine != RecognitionEngine.LiveCaptions)
                 {
-                    Thread.Sleep(200);
+                    Thread.Sleep(500);
                     continue;
                 }
 
@@ -295,8 +337,22 @@ namespace LiveCaptionsTranslator
                     continue;
                 }
                 if (string.IsNullOrEmpty(fullText))
+                {
+                    Thread.Sleep(IDLE_POLL_MS);
                     continue;
+                }
                 ClassSession.LastCaptionTime = DateTime.Now;
+
+                int pollMs = idleCount < FAST_POLL_TICKS ? ACTIVE_POLL_MS : IDLE_POLL_MS;
+                // Nothing changed (a pause, or silence): skip the parsing and only count the idle time.
+                if (string.CompareOrdinal(fullText, lastRawText) == 0)
+                {
+                    idleCount += pollMs / 25;
+                    HandlePause();
+                    Thread.Sleep(pollMs);
+                    continue;
+                }
+                lastRawText = fullText;
 
                 // Preprocess
                 fullText = RegexPatterns.Acronym().Replace(fullText, "$1$2");
@@ -357,43 +413,21 @@ namespace LiveCaptionsTranslator
                     Caption.OriginalCaption = latestCaption;
 
                     idleCount = 0;
+                    pauseHandled = false;
                     if (Array.IndexOf(TextUtil.PUNC_EOS, Caption.OriginalCaption[^1]) == -1 &&
                         Encoding.UTF8.GetByteCount(Caption.OriginalCaption) >= TextUtil.SHORT_THRESHOLD)
                         syncCount++;
                 }
                 else
-                    idleCount++;
+                    idleCount += pollMs / 25;
 
                 // Every finished sentence is translated once, including ones that scrolled by between reads.
                 if (QueueNewSentences(fullText))
                     syncCount = 0;
 
-                // The sentence still being spoken: translate a preview now and then, so the user is not waiting
-                // for the full stop. When `OriginalCaption` remains unchanged, `idleCount` +1;
-                // when it changes, `syncCount` +1.
-                bool unfinished = Array.IndexOf(TextUtil.PUNC_EOS, Caption.OriginalCaption[^1]) == -1;
-                if (unfinished && idleCount == Setting.MaxIdleInterval)
-                {
-                    // The speaker paused without LiveCaptions adding a full stop: the sentence is over.
-                    syncCount = 0;
-                    string sentence = Caption.OriginalCaption.Trim();
-                    lock (committedSentences)
-                    {
-                        if (Encoding.UTF8.GetByteCount(sentence) >= TextUtil.SHORT_THRESHOLD && !IsCommitted(sentence))
-                        {
-                            Commit(sentence);
-                            CheckAlreadyTranslated(sentence);
-                            pendingTextQueue.Enqueue((sentence, true));
-                        }
-                    }
-                }
-                else if (unfinished && syncCount > Setting.MaxSyncInterval)
-                {
-                    syncCount = 0;
-                    pendingTextQueue.Enqueue((Caption.OriginalCaption, false));
-                }
+                HandlePause();
 
-                Thread.Sleep(25);
+                Thread.Sleep(pollMs);
             }
         }
 
@@ -401,8 +435,10 @@ namespace LiveCaptionsTranslator
         {
             while (true)
             {
-                // Check LiveCaptions.exe still alive
-                if (Window == null)
+                // Check LiveCaptions.exe still alive. It is only needed (and only kept running, since its own speech
+                // recognition costs power) for a class that uses the system engine.
+                if (Window == null && ClassSession.IsRunning &&
+                    Setting.Lecture.Engine == RecognitionEngine.LiveCaptions)
                 {
                     Caption.DisplayTranslatedCaption = "[WARNING] 实时辅助字幕意外关闭，正在重启…";
                     Window = LiveCaptionsHandler.LaunchLiveCaptions();
@@ -440,7 +476,7 @@ namespace LiveCaptionsTranslator
                     }
                 }
 
-                Thread.Sleep(40);
+                Thread.Sleep(ClassSession.IsRunning || !pendingTextQueue.IsEmpty ? 40 : 300);
             }
         }
 
@@ -487,7 +523,8 @@ namespace LiveCaptionsTranslator
                 // If the original sentence is a complete sentence, choke for better visual experience.
                 if (isChoke)
                     Thread.Sleep(720);
-                Thread.Sleep(40);
+                // Translations still arrive for a moment after stopping; after that nothing changes here.
+                Thread.Sleep(ClassSession.IsRunning || translationTaskQueue.IsBusy ? 40 : 300);
             }
         }
 
@@ -588,6 +625,44 @@ namespace LiveCaptionsTranslator
 
             Caption?.OnPropertyChanged("DisplayLogCards");
             Caption?.OnPropertyChanged("OverlayPreviousTranslation");
+        }
+
+        // Closes LiveCaptions when it is not needed (cloud engine), to save the power its recognition uses.
+        public static void CloseLiveCaptions()
+        {
+            var current = Window;
+            if (current == null)
+                return;
+            Window = null;
+            try
+            {
+                LiveCaptionsHandler.KillLiveCaptions(current);
+            }
+            catch (Exception)
+            {
+            }
+        }
+
+        // Starts LiveCaptions if it is not running (e.g. to show it for its first-time setup).
+        public static AutomationElement EnsureLiveCaptions()
+        {
+            var current = Window;
+            if (current != null)
+            {
+                try
+                {
+                    _ = current.Current.Name;
+                    return current;
+                }
+                catch (ElementNotAvailableException)
+                {
+                }
+            }
+            current = LiveCaptionsHandler.LaunchLiveCaptions();
+            LiveCaptionsHandler.FixLiveCaptions(current);
+            LiveCaptionsHandler.HideLiveCaptions(current);
+            Window = current;
+            return current;
         }
 
         // Restarts LiveCaptions, e.g. after the default microphone changed. `TranslateLoop` relaunches it.

@@ -55,16 +55,7 @@ namespace LiveCaptionsTranslator
                 await StartLecture();
                 IsRunning = true;
                 if (cloud)
-                {
-                    try
-                    {
-                        if (Translator.Window != null)
-                            LiveCaptionsHandler.HideLiveCaptions(Translator.Window);
-                    }
-                    catch (Exception)
-                    {
-                    }
-                }
+                    Translator.CloseLiveCaptions();    // Not needed; its own recognition would only cost power.
                 if (cloud)
                     CloudAsr.Start(Translator.Setting.Lecture.InputSource == InputSource.Microphone);
                 SetHint(problem ?? "已开始，正在听……说话或播放课程声音后，原文会出现在这里。");
