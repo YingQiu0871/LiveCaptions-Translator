@@ -343,11 +343,9 @@ namespace LiveCaptionsTranslator
 
         private static async Task<string> Summarize(List<HistoryLine> lines, int? page, LectureState lecture)
         {
-            string targetLanguage = Translator.Setting.TargetLanguage;
-            string language = OpenAIConfig.SupportedLanguages.TryGetValue(targetLanguage, out var name)
-                ? name : targetLanguage;
-
-            string system = string.Format(lecture.SummaryPrompt, language) + LectureState.SubjectHint();
+            string language = LectureState.OutputLanguage();
+            string system = string.Format(lecture.SummaryPrompt, language) + LectureState.EnglishOnlyHint() +
+                            LectureState.SubjectHint();
             var slide = SlideDeck.GetPage(page);
             if (slide != null)
                 system += $"\n\nThis section corresponds to slide page {slide.Number}: {slide.Text}";

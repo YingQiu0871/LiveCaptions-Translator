@@ -89,7 +89,8 @@ namespace LiveCaptionsTranslator
         // original and loses sentences, so tell the user when the target is Chinese and so is everything we read.
         private static void CheckAlreadyTranslated(string sentence)
         {
-            if (!(Setting?.TargetLanguage ?? string.Empty).StartsWith("zh", StringComparison.OrdinalIgnoreCase))
+            if (Setting?.Lecture.EnglishOnly == true ||
+                !(Setting?.TargetLanguage ?? string.Empty).StartsWith("zh", StringComparison.OrdinalIgnoreCase))
             {
                 recentChinese.Clear();
                 Caption.SourceWarning = string.Empty;
@@ -463,7 +464,7 @@ namespace LiveCaptionsTranslator
                     }
                     else
                     {
-                        if (Setting.Lecture.CaptionsOnly)
+                        if (Setting.Lecture.SkipTranslation)
                         {
                             Caption.TranslatedCaption = string.Empty;
                             Caption.DisplayTranslatedCaption = string.Empty;
@@ -486,7 +487,7 @@ namespace LiveCaptionsTranslator
             {
                 var (translatedText, isChoke) = translationTaskQueue.Output;
 
-                if (Setting.Lecture.CaptionsOnly)
+                if (Setting.Lecture.SkipTranslation)
                 {
                     Caption.TranslatedCaption = string.Empty;
                     Caption.DisplayTranslatedCaption = string.Empty;

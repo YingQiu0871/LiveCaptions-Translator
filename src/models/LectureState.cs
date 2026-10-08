@@ -82,6 +82,7 @@ namespace LiveCaptionsTranslator.models
         private bool speechMuted = false;
         private bool showOriginal = true;
         private bool captionsOnly = false;
+        private bool englishOnly = false;
         private RecognitionEngine engine = RecognitionEngine.LiveCaptions;
         private string asrApiKey = "";
         private string asrModel = DEFAULT_ASR_MODEL;
@@ -314,8 +315,40 @@ namespace LiveCaptionsTranslator.models
             {
                 captionsOnly = value;
                 OnPropertyChanged("CaptionsOnly");
+                Translator.Caption?.OnPropertyChanged("OriginalVisibility");
             }
         }
+
+        // 纯英文模式: nothing is translated; summaries, refined paragraphs and notes are written in English.
+        public bool EnglishOnly
+        {
+            get => englishOnly;
+            set
+            {
+                englishOnly = value;
+                OnPropertyChanged("EnglishOnly");
+                Translator.Caption?.OnPropertyChanged("OriginalVisibility");
+            }
+        }
+
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool SkipTranslation => captionsOnly || englishOnly;
+
+        // The language summaries, refined paragraphs and notes are written in (a name the LLM understands).
+        public static string OutputLanguage()
+        {
+            var setting = Translator.Setting;
+            if (setting == null || setting.Lecture.EnglishOnly)
+                return "English";
+            return OpenAIConfig.SupportedLanguages.TryGetValue(setting.TargetLanguage, out var name)
+                ? name : setting.TargetLanguage;
+        }
+
+        // Added to the summary prompt in 纯英文模式, whose default asks for terms "after the translation".
+        public static string EnglishOnlyHint() => Translator.Setting?.Lecture.EnglishOnly == true
+            ? " The student follows the lecture in English: write in English, do not translate anything, and do " +
+              "not add terms in parentheses."
+            : string.Empty;
 
         // The subject of the class, e.g. "基因治疗 / 分子生物学". Used so the model keeps the field's terms.
         // Where each class's transcript (.md) is saved; empty = Documents\课堂同传助手.

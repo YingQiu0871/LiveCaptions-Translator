@@ -398,6 +398,12 @@
                     <StackPanel Grid.Column="2">
                         <ui:ToggleSwitch
                             Margin="0,34,0,0"
+                            Content="纯英文模式"
+                            IsChecked="{Binding EnglishOnly, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock Style="{StaticResource Hint}" Text="不翻译，只显示英文原文；小节总结、段落精修（只纠错不翻译）、笔记初稿和语音播报都用英文。适合想直接练英文听课的时候。" />
+
+                        <ui:ToggleSwitch
+                            Margin="0,12,0,0"
                             Content="只转录，不翻译"
                             IsChecked="{Binding CaptionsOnly, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                         <TextBlock Style="{StaticResource Hint}" Text="只显示听写出来的原文，不调用翻译接口（小节总结仍然会做）。" />

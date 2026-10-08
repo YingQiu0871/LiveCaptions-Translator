@@ -88,16 +88,19 @@ namespace LiveCaptionsTranslator.utils
             if (slides.Length == 0)
                 throw new InvalidOperationException("课件里没有识别到文字。");
 
-            string targetLanguage = Translator.Setting.TargetLanguage;
-            string language = OpenAIConfig.SupportedLanguages.TryGetValue(targetLanguage, out var name)
-                ? name : targetLanguage;
-            string system =
-                "You build a glossary for a student who follows this lecture with live speech recognition and " +
-                $"translation into {language}. From the slides, pick the technical terms, names, abbreviations and " +
-                "formulas' names that a speech recognizer is likely to get wrong or a translator to translate " +
-                "inconsistently (at most 80, most important first; skip everyday words). Answer with one term per " +
-                $"line in the form \"term = standard {language} translation\" (for names and abbreviations that are " +
-                "not translated, just the term). No numbering, no other text." + SubjectOnlyHint();
+            string language = LectureState.OutputLanguage();
+            // 纯英文模式: the terms only help the recognizer and keep the spelling consistent.
+            string system = Translator.Setting.Lecture.EnglishOnly
+                ? "You build a glossary for a student who follows this lecture with live speech recognition. " +
+                  "From the slides, pick the technical terms, names, abbreviations and formulas' names that a speech " +
+                  "recognizer is likely to get wrong (at most 80, most important first; skip everyday words). " +
+                  "Answer with one term per line, no translation, no numbering, no other text." + SubjectOnlyHint()
+                : "You build a glossary for a student who follows this lecture with live speech recognition and " +
+                  $"translation into {language}. From the slides, pick the technical terms, names, abbreviations and " +
+                  "formulas' names that a speech recognizer is likely to get wrong or a translator to translate " +
+                  "inconsistently (at most 80, most important first; skip everyday words). Answer with one term per " +
+                  $"line in the form \"term = standard {language} translation\" (for names and abbreviations that are " +
+                  "not translated, just the term). No numbering, no other text." + SubjectOnlyHint();
             string answer = await Summarizer.Chat(system, slides.ToString(), maxTokens: 2000, temperature: 0,
                 longRequest: true);
 

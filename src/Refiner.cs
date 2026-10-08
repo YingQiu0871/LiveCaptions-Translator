@@ -31,8 +31,10 @@ namespace LiveCaptionsTranslator
             get
             {
                 var lecture = Translator.Setting?.Lecture;
-                return lecture != null && lecture.RefineParagraphs && !lecture.CaptionsOnly &&
-                       Translator.Setting?.ApiName == Summarizer.SUMMARY_API;
+                // 纯英文模式 only cleans up the recognized text, so it does not depend on the translation API.
+                return lecture != null && lecture.RefineParagraphs &&
+                       (lecture.EnglishOnly ||
+                        (!lecture.CaptionsOnly && Translator.Setting?.ApiName == Summarizer.SUMMARY_API));
             }
         }
 
@@ -106,9 +108,8 @@ namespace LiveCaptionsTranslator
 
         private static async Task<(string Source, string Translation)> Refine(List<HistoryLine> batch)
         {
-            string targetLanguage = Translator.Setting.TargetLanguage;
-            string language = OpenAIConfig.SupportedLanguages.TryGetValue(targetLanguage, out var name)
-                ? name : targetLanguage;
+            bool englishOnly = Translator.Setting.Lecture.EnglishOnly;
+            string language = LectureState.OutputLanguage();
 
             var system = new StringBuilder();
             system.Append(
@@ -117,11 +118,15 @@ namespace LiveCaptionsTranslator
                 "Recognition makes mistakes: wrong words that sound alike, split or merged sentences, " +
                 "letters spelled out one by one (e.g. \"D N A\" means DNA). " +
                 "1) Rewrite them as one clean paragraph in the original language. Fix a word only when the context, " +
-                "the subject or the slide makes the intended word clear; never add content that was not said. " +
-                $"2) Translate that paragraph into {language}, faithfully and fluently, using the standard " +
-                "terminology of the field. For important technical terms, keep the original term in parentheses " +
-                "the first time it appears. " +
-                "Answer only with JSON: {\"source\": \"...\", \"translation\": \"...\"}.");
+                "the subject or the slide makes the intended word clear; never add content that was not said. ");
+            if (englishOnly)
+                system.Append("Answer only with JSON: {\"source\": \"...\"}.");
+            else
+                system.Append(
+                    $"2) Translate that paragraph into {language}, faithfully and fluently, using the standard " +
+                    "terminology of the field. For important technical terms, keep the original term in parentheses " +
+                    "the first time it appears. " +
+                    "Answer only with JSON: {\"source\": \"...\", \"translation\": \"...\"}.");
             system.Append(LectureState.SubjectHint());
             var slide = SlideDeck.GetPage(Summarizer.CurrentPage);
             if (slide != null && !string.IsNullOrWhiteSpace(slide.Text))
@@ -141,8 +146,10 @@ namespace LiveCaptionsTranslator
                 throw new FormatException("模型没有按格式回答。");
             using var doc = JsonDocument.Parse(output[start..(end + 1)]);
             string source = doc.RootElement.GetProperty("source").GetString() ?? string.Empty;
-            string translation = doc.RootElement.GetProperty("translation").GetString() ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(source) || string.IsNullOrWhiteSpace(translation))
+            // 纯英文模式 has no translation.
+            string translation = englishOnly ? string.Empty
+                : doc.RootElement.TryGetProperty("translation", out var t) ? t.GetString() ?? string.Empty : string.Empty;
+            if (string.IsNullOrWhiteSpace(source) || (!englishOnly && string.IsNullOrWhiteSpace(translation)))
                 throw new FormatException("模型返回了空内容。");
             return (source.Trim(), translation.Trim());
         }
