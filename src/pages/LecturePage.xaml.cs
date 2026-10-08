@@ -170,10 +170,36 @@ namespace LiveCaptionsTranslator
             }
             if (key != ApiConfig.ApiKey)
             {
+                bool firstKey = ApiConfig.ApiKey.Length == 0 && key.Length > 0;
                 ApiConfig.ApiKey = key;
+                if (firstKey)
+                    SwitchTranslateApiToSummary();
                 Translator.Setting?.Save();
             }
             ShowApiKeyStatus();
+        }
+
+        // Paragraph refinement and the glossary in translation only work when the translation API is the
+        // one configured in ①. Fresh installs start on Google so translation works without a key, so the
+        // first saved key moves a Google default over; a deliberately chosen API is left alone.
+        private void SwitchTranslateApiToSummary()
+        {
+            var setting = Translator.Setting;
+            if (setting == null || (setting.ApiName != "Google" && setting.ApiName != "Google2"))
+                return;
+            setting.ApiName = Summarizer.SUMMARY_API;
+            bool wasInitializing = initializing;
+            initializing = true;
+            try
+            {
+                if (TranslateApiBox.ItemsSource is IEnumerable<ApiChoice> choices)
+                    TranslateApiBox.SelectedItem = choices.FirstOrDefault(c => c.Key == setting.ApiName);
+                LoadTargetLanguages();
+            }
+            finally
+            {
+                initializing = wasInitializing;
+            }
         }
 
         // Shows that a key is stored without revealing it.
