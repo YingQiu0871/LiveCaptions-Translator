@@ -370,7 +370,7 @@
                                 VerticalAlignment="Center"
                                 TextWrapping="Wrap" />
                         </StackPanel>
-                        <TextBlock Style="{StaticResource Hint}" Text="用阿里云识别时，术语会作为热词提高识别率；翻译、精修、小结和笔记都会按这里的译法统一。换课时记得换成这门课的术语。" />
+                        <TextBlock Style="{StaticResource Hint}" Text="用阿里云识别时，术语会作为热词提高识别率。翻译接口选 DeepSeek / 通义千问时，翻译、精修、小结和笔记都会按这里的译法统一（选 Google 翻译时，实时翻译和精修用不上术语表，只有小结和笔记会用）。换课时记得换成这门课的术语。" />
 
                         <TextBlock Style="{StaticResource Label}" Text="翻译接口" />
                         <ComboBox

@@ -192,12 +192,11 @@ namespace LiveCaptionsTranslator.utils
             return id;
         }
 
-        // The hot word list did not work (e.g. it was deleted): sync again next time.
-        public static void ForgetAsrVocabulary()
+        // The hot word list did not work: update it next time. The id is kept, so that a list that still exists is
+        // reused (or deleted before a new one is made) instead of being left behind; an account may only have ten.
+        public static void RecheckAsrVocabulary()
         {
-            var lecture = Translator.Setting.Lecture;
-            lecture.AsrVocabularyId = string.Empty;
-            lecture.AsrVocabularyHash = string.Empty;
+            Translator.Setting.Lecture.AsrVocabularyHash = string.Empty;
         }
 
         // The customization API lives on the same host as the WebSocket endpoint.

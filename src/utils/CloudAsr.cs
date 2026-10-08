@@ -215,8 +215,13 @@ namespace LiveCaptionsTranslator.utils
                 if (pending.Count == 0)
                     // Silence keeps the task alive while nothing plays (loopback delivers no data then).
                     return new byte[chunkBytes];
-                var chunk = pending.ToArray();
-                pending.Clear();
+                // Audio buffered while connecting is sent at up to three times real time, not in one block.
+                int count = Math.Min(pending.Count, 3 * chunkBytes);
+                count -= count % 2;
+                if (count == 0)
+                    return new byte[chunkBytes];
+                var chunk = pending.GetRange(0, count).ToArray();
+                pending.RemoveRange(0, count);
                 return chunk;
             }
         }
@@ -226,12 +231,15 @@ namespace LiveCaptionsTranslator.utils
         {
             await SyncVocabulary(token);
             int failures = 0;
+            bool firstSession = true;
             while (!token.IsCancellationRequested)
             {
                 try
                 {
                     StatusChanged?.Invoke("正在连接阿里云语音识别……");
-                    await RunSession(token);
+                    bool keepBuffered = firstSession;
+                    firstSession = false;
+                    await RunSession(token, keepBuffered);
                     failures = 0;
                 }
                 catch (OperationCanceledException) when (token.IsCancellationRequested)
@@ -242,10 +250,10 @@ namespace LiveCaptionsTranslator.utils
                 {
                     failures++;
                     // A hot word list that was deleted or made for another model makes the task fail.
-                    if (vocabularyId != null && ex is InvalidOperationException)
+                    if (vocabularyId != null && ex.Message.Contains("vocabulary", StringComparison.OrdinalIgnoreCase))
                     {
                         vocabularyId = null;
-                        Glossary.ForgetAsrVocabulary();
+                        Glossary.RecheckAsrVocabulary();
                         SnackbarHost.Show("[WARNING] 术语表热词没有生效。", "这节课先不用热词继续识别，下次开始时会重新上传。",
                             SnackbarType.Warning, timeout: 5, closeButton: true);
                     }
@@ -283,7 +291,9 @@ namespace LiveCaptionsTranslator.utils
             }
         }
 
-        private static async Task RunSession(CancellationToken token)
+        // keepBuffered: send what was said while the hot words were uploaded and the connection was made (first
+        // connection of a class); after a reconnect the backlog is dropped instead.
+        private static async Task RunSession(CancellationToken token, bool keepBuffered)
         {
             using var ws = await Connect(token);
             string taskId = Guid.NewGuid().ToString("N");
@@ -318,9 +328,12 @@ namespace LiveCaptionsTranslator.utils
             if (first != started.Task)
                 throw new TimeoutException("连接超时。");
 
-            lock (audioLock)
+            if (!keepBuffered)
             {
-                pending.Clear();    // Do not send what was said while connecting twice after a reconnect.
+                lock (audioLock)
+                {
+                    pending.Clear();
+                }
             }
             while (!token.IsCancellationRequested && !receiver.IsCompleted)
             {
