@@ -394,6 +394,28 @@ namespace LiveCaptionsTranslator
             ShowLiveCaptionsState();
         }
 
+        private async void ExtractGlossary_click(object sender, RoutedEventArgs e)
+        {
+            GlossaryBox.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
+            ExtractGlossaryButton.IsEnabled = false;
+            GlossaryResult.Text = "正在从课件中提取术语……";
+            try
+            {
+                var (text, added) = await Glossary.ExtractFromSlides();
+                Translator.Setting.Lecture.Glossary = text;
+                GlossaryBox.Text = text;
+                GlossaryResult.Text = added > 0 ? $"✓ 新增 {added} 个术语，请检查一下译法" : "没有发现新的术语";
+            }
+            catch (Exception ex)
+            {
+                GlossaryResult.Text = $"✗ {ex.Message}";
+            }
+            finally
+            {
+                ExtractGlossaryButton.IsEnabled = true;
+            }
+        }
+
         private async void TestApi_click(object sender, RoutedEventArgs e)
         {
             // Commit fields that only update on lost focus.

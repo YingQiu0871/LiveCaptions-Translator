@@ -39,6 +39,8 @@ namespace LiveCaptionsTranslator.utils
         private static double gain = 1;
 
         private static CancellationTokenSource? cts;
+        // The hot word list made from the glossary, if any.
+        private static string? vocabularyId;
 
         public static bool IsRunning => cts != null;
 
@@ -222,6 +224,7 @@ namespace LiveCaptionsTranslator.utils
         // Keeps one recognition task running for as long as the class runs, reconnecting when it drops.
         private static async Task SessionLoop(CancellationToken token)
         {
+            await SyncVocabulary(token);
             int failures = 0;
             while (!token.IsCancellationRequested)
             {
@@ -238,6 +241,14 @@ namespace LiveCaptionsTranslator.utils
                 catch (Exception ex)
                 {
                     failures++;
+                    // A hot word list that was deleted or made for another model makes the task fail.
+                    if (vocabularyId != null && ex is InvalidOperationException)
+                    {
+                        vocabularyId = null;
+                        Glossary.ForgetAsrVocabulary();
+                        SnackbarHost.Show("[WARNING] 术语表热词没有生效。", "这节课先不用热词继续识别，下次开始时会重新上传。",
+                            SnackbarType.Warning, timeout: 5, closeButton: true);
+                    }
                     StatusChanged?.Invoke($"阿里云语音识别出错：{ex.Message}" +
                                           (failures > 1 ? $"（第 {failures} 次重试）" : "，正在重连……"));
                 }
@@ -249,6 +260,26 @@ namespace LiveCaptionsTranslator.utils
                 {
                     return;
                 }
+            }
+        }
+
+        private static async Task SyncVocabulary(CancellationToken token)
+        {
+            vocabularyId = null;
+            try
+            {
+                if (Glossary.Current.Count == 0)
+                    return;
+                StatusChanged?.Invoke("正在上传术语表热词……");
+                vocabularyId = await Glossary.SyncAsrVocabulary(token);
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+            }
+            catch (Exception ex)
+            {
+                SnackbarHost.Show("[WARNING] 术语表热词上传失败，这节课先不用热词。", ex.Message,
+                    SnackbarType.Warning, timeout: 5, closeButton: true);
             }
         }
 
@@ -357,6 +388,8 @@ namespace LiveCaptionsTranslator.utils
             };
             if (!string.IsNullOrWhiteSpace(lecture.AsrLanguage))
                 parameters["language_hints"] = new[] { lecture.AsrLanguage };
+            if (!string.IsNullOrEmpty(vocabularyId))
+                parameters["vocabulary_id"] = vocabularyId;
 
             return JsonSerializer.Serialize(new
             {

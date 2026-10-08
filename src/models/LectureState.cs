@@ -55,14 +55,15 @@ namespace LiveCaptionsTranslator.models
             "Output plain text only, no Markdown headings, no preamble. " +
             "If the section has no substantive content (small talk, silence, noise), output only the title line.";
 
-        // Added to the translation and summary prompts when the user named the subject of the class.
+        // Added to the translation and summary prompts: the subject of the class and the glossary, if given.
         public static string SubjectHint()
         {
             string subject = Translator.Setting?.Lecture.Subject?.Trim() ?? string.Empty;
-            if (subject.Length == 0)
-                return string.Empty;
-            return $" This is a university lecture on {subject}; use the standard terminology of that field, " +
-                   "and prefer its technical reading of a word over the everyday one.";
+            string hint = subject.Length == 0
+                ? string.Empty
+                : $" This is a university lecture on {subject}; use the standard terminology of that field, " +
+                  "and prefer its technical reading of a word over the everyday one.";
+            return hint + LiveCaptionsTranslator.utils.Glossary.PromptHint();
         }
 
         private bool summaryEnabled = true;
@@ -88,6 +89,9 @@ namespace LiveCaptionsTranslator.models
         private string asrEndpoint = DEFAULT_ASR_ENDPOINT;
         private bool refineParagraphs = true;
         private string subject = "";
+        private string glossary = "";
+        private string asrVocabularyId = "";
+        private string asrVocabularyHash = "";
         private string saveFolder = "";
         private string currentCourse = "";
         private bool notesDraft = true;
@@ -344,6 +348,38 @@ namespace LiveCaptionsTranslator.models
             {
                 currentCourse = value ?? string.Empty;
                 OnPropertyChanged("CurrentCourse");
+            }
+        }
+
+        // Terms of the current course, one per line, optionally "term = translation" (see Glossary).
+        public string Glossary
+        {
+            get => glossary;
+            set
+            {
+                glossary = value ?? string.Empty;
+                OnPropertyChanged("Glossary");
+            }
+        }
+
+        // The hot word list on Alibaba Cloud made from the glossary, and what it was made from.
+        public string AsrVocabularyId
+        {
+            get => asrVocabularyId;
+            set
+            {
+                asrVocabularyId = value ?? string.Empty;
+                OnPropertyChanged("AsrVocabularyId");
+            }
+        }
+
+        public string AsrVocabularyHash
+        {
+            get => asrVocabularyHash;
+            set
+            {
+                asrVocabularyHash = value ?? string.Empty;
+                OnPropertyChanged("AsrVocabularyHash");
             }
         }
 
