@@ -43,17 +43,17 @@ namespace LiveCaptionsTranslator
         // Called when a class starts: whatever LiveCaptions already shows belongs to before the class.
         public static void ResetSentences()
         {
-            lock (committedSentences)
+            lock (cloudLock)
             {
-                committedSentences.Clear();
-                sentencesSeeded = false;
-                lock (cloudLock)
+                lock (committedSentences)
                 {
+                    committedSentences.Clear();
+                    sentencesSeeded = false;
                     heldFragment = string.Empty;
+                    recentChinese.Clear();
+                    if (Caption != null)
+                        Caption.SourceWarning = string.Empty;
                 }
-                recentChinese.Clear();
-                if (Caption != null)
-                    Caption.SourceWarning = string.Empty;
             }
         }
 

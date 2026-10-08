@@ -139,7 +139,7 @@ namespace LiveCaptionsTranslator.utils
                         {
                             // DEPRECATED
                             await MigrateOldTimestampFormat();
-                            return await LoadHistoryAsync(page, maxRow, string.Empty);
+                            return await LoadHistoryAsync(page, maxRow, searchText, token);
                         }
                         history.Add(ReadEntry(reader, localTime, "yyyy-MM-dd HH:mm"));
                     }
