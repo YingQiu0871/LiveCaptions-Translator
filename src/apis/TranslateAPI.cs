@@ -113,7 +113,7 @@ namespace LiveCaptionsTranslator.apis
                     if (response.StatusCode != HttpStatusCode.BadRequest &&
                         response.StatusCode != HttpStatusCode.UnprocessableEntity)
                         break;
-                    await Task.Delay(15, token);
+                    await Task.Delay(15);
 
                     openai_fallback_index++;
                     if (openai_fallback_index >= LLMRequestDataFactory.FallbackCount)
