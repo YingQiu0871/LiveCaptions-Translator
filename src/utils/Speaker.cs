@@ -294,7 +294,9 @@ namespace LiveCaptionsTranslator.utils
             // No voice chosen: pick one that speaks the target language.
             try
             {
-                var culture = new CultureInfo(Translator.Setting?.TargetLanguage ?? "zh-CN");
+                var culture = new CultureInfo(Translator.Setting?.Lecture.EnglishOnly == true
+                    ? "en-US"
+                    : Translator.Setting?.TargetLanguage ?? "zh-CN");
                 if (!synth.Voice.Culture.Name.Equals(culture.Name, StringComparison.OrdinalIgnoreCase))
                     synth.SelectVoiceByHints(VoiceGender.NotSet, VoiceAge.NotSet, 0, culture);
             }

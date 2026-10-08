@@ -166,7 +166,8 @@ namespace LiveCaptionsTranslator.models
         }
 
         public System.Windows.Visibility OriginalVisibility =>
-            Translator.Setting?.Lecture.ShowOriginal == false
+            // Without translation the original is all there is.
+            Translator.Setting?.Lecture.ShowOriginal == false && Translator.Setting?.Lecture.SkipTranslation == false
                 ? System.Windows.Visibility.Collapsed
                 : System.Windows.Visibility.Visible;
 

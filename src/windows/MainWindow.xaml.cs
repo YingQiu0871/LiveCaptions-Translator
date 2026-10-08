@@ -271,7 +271,8 @@ namespace LiveCaptionsTranslator
                 return;
 
             RootNavigation.Navigate(typeof(LecturePage));
-            LiveCaptionsHandler.RestoreLiveCaptions(Translator.Window);
+            if (Translator.Window != null)
+                LiveCaptionsHandler.RestoreLiveCaptions(Translator.Window);
 
             Dispatcher.InvokeAsync(() =>
             {

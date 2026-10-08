@@ -55,14 +55,15 @@ namespace LiveCaptionsTranslator.models
             "Output plain text only, no Markdown headings, no preamble. " +
             "If the section has no substantive content (small talk, silence, noise), output only the title line.";
 
-        // Added to the translation and summary prompts when the user named the subject of the class.
+        // Added to the translation and summary prompts: the subject of the class and the glossary, if given.
         public static string SubjectHint()
         {
             string subject = Translator.Setting?.Lecture.Subject?.Trim() ?? string.Empty;
-            if (subject.Length == 0)
-                return string.Empty;
-            return $" This is a university lecture on {subject}; use the standard terminology of that field, " +
-                   "and prefer its technical reading of a word over the everyday one.";
+            string hint = subject.Length == 0
+                ? string.Empty
+                : $" This is a university lecture on {subject}; use the standard terminology of that field, " +
+                  "and prefer its technical reading of a word over the everyday one.";
+            return hint + LiveCaptionsTranslator.utils.Glossary.PromptHint();
         }
 
         private bool summaryEnabled = true;
@@ -81,6 +82,7 @@ namespace LiveCaptionsTranslator.models
         private bool speechMuted = false;
         private bool showOriginal = true;
         private bool captionsOnly = false;
+        private bool englishOnly = false;
         private RecognitionEngine engine = RecognitionEngine.LiveCaptions;
         private string asrApiKey = "";
         private string asrModel = DEFAULT_ASR_MODEL;
@@ -88,6 +90,9 @@ namespace LiveCaptionsTranslator.models
         private string asrEndpoint = DEFAULT_ASR_ENDPOINT;
         private bool refineParagraphs = true;
         private string subject = "";
+        private string glossary = "";
+        private string asrVocabularyId = "";
+        private string asrVocabularyHash = "";
         private string saveFolder = "";
         private string currentCourse = "";
         private bool notesDraft = true;
@@ -310,8 +315,40 @@ namespace LiveCaptionsTranslator.models
             {
                 captionsOnly = value;
                 OnPropertyChanged("CaptionsOnly");
+                Translator.Caption?.OnPropertyChanged("OriginalVisibility");
             }
         }
+
+        // 纯英文模式: nothing is translated; summaries, refined paragraphs and notes are written in English.
+        public bool EnglishOnly
+        {
+            get => englishOnly;
+            set
+            {
+                englishOnly = value;
+                OnPropertyChanged("EnglishOnly");
+                Translator.Caption?.OnPropertyChanged("OriginalVisibility");
+            }
+        }
+
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool SkipTranslation => captionsOnly || englishOnly;
+
+        // The language summaries, refined paragraphs and notes are written in (a name the LLM understands).
+        public static string OutputLanguage()
+        {
+            var setting = Translator.Setting;
+            if (setting == null || setting.Lecture.EnglishOnly)
+                return "English";
+            return OpenAIConfig.SupportedLanguages.TryGetValue(setting.TargetLanguage, out var name)
+                ? name : setting.TargetLanguage;
+        }
+
+        // Added to the summary prompt in 纯英文模式, whose default asks for terms "after the translation".
+        public static string EnglishOnlyHint() => Translator.Setting?.Lecture.EnglishOnly == true
+            ? " The student follows the lecture in English: write in English, do not translate anything, and do " +
+              "not add terms in parentheses."
+            : string.Empty;
 
         // The subject of the class, e.g. "基因治疗 / 分子生物学". Used so the model keeps the field's terms.
         // Where each class's transcript (.md) is saved; empty = Documents\课堂同传助手.
@@ -344,6 +381,38 @@ namespace LiveCaptionsTranslator.models
             {
                 currentCourse = value ?? string.Empty;
                 OnPropertyChanged("CurrentCourse");
+            }
+        }
+
+        // Terms of the current course, one per line, optionally "term = translation" (see Glossary).
+        public string Glossary
+        {
+            get => glossary;
+            set
+            {
+                glossary = value ?? string.Empty;
+                OnPropertyChanged("Glossary");
+            }
+        }
+
+        // The hot word list on Alibaba Cloud made from the glossary, and what it was made from.
+        public string AsrVocabularyId
+        {
+            get => asrVocabularyId;
+            set
+            {
+                asrVocabularyId = value ?? string.Empty;
+                OnPropertyChanged("AsrVocabularyId");
+            }
+        }
+
+        public string AsrVocabularyHash
+        {
+            get => asrVocabularyHash;
+            set
+            {
+                asrVocabularyHash = value ?? string.Empty;
+                OnPropertyChanged("AsrVocabularyHash");
             }
         }
 
