@@ -22,8 +22,6 @@ namespace LiveCaptionsTranslator.utils
 
         private static void InitializeDatabase()
         {
-            GetConnection();
-
             using (var command = new SqliteCommand(@"
                 CREATE TABLE IF NOT EXISTS TranslationHistory (
                     Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -63,6 +61,19 @@ namespace LiveCaptionsTranslator.utils
 
                 return _sharedConnection;
             }
+        }
+
+        private static TranslationHistoryEntry ReadEntry(System.Data.Common.DbDataReader reader, DateTime localTime, string timestampFormat)
+        {
+            return new TranslationHistoryEntry
+            {
+                Timestamp = localTime.ToString(timestampFormat),
+                TimestampFull = localTime.ToString("yyyy-MM-dd HH:mm:ss"),
+                SourceText = reader.GetString(reader.GetOrdinal("SourceText")),
+                TranslatedText = reader.GetString(reader.GetOrdinal("TranslatedText")),
+                TargetLanguage = reader.GetString(reader.GetOrdinal("TargetLanguage")),
+                ApiUsed = reader.GetString(reader.GetOrdinal("ApiUsed"))
+            };
         }
 
         public static async Task LogTranslation(string sourceText, string translatedText,
@@ -128,17 +139,9 @@ namespace LiveCaptionsTranslator.utils
                         {
                             // DEPRECATED
                             await MigrateOldTimestampFormat();
-                            return await LoadHistoryAsync(page, maxRow, string.Empty);
+                            return await LoadHistoryAsync(page, maxRow, searchText, token);
                         }
-                        history.Add(new TranslationHistoryEntry
-                        {
-                            Timestamp = localTime.ToString("yyyy-MM-dd HH:mm"),
-                            TimestampFull = localTime.ToString("yyyy-MM-dd HH:mm:ss"),
-                            SourceText = reader.GetString(reader.GetOrdinal("SourceText")),
-                            TranslatedText = reader.GetString(reader.GetOrdinal("TranslatedText")),
-                            TargetLanguage = reader.GetString(reader.GetOrdinal("TargetLanguage")),
-                            ApiUsed = reader.GetString(reader.GetOrdinal("ApiUsed"))
-                        });
+                        history.Add(ReadEntry(reader, localTime, "yyyy-MM-dd HH:mm"));
                     }
                 }
             }
@@ -151,24 +154,6 @@ namespace LiveCaptionsTranslator.utils
             using (var command = new SqliteCommand(selectQuery, GetConnection()))
             {
                 await command.ExecuteNonQueryAsync(token);
-            }
-        }
-
-        public static async Task<string> LoadLastSourceText(CancellationToken token = default)
-        {
-            string selectQuery = @"
-                SELECT SourceText
-                FROM TranslationHistory
-                ORDER BY Id DESC
-                LIMIT 1";
-
-            using (var command = new SqliteCommand(selectQuery, GetConnection()))
-            using (var reader = await command.ExecuteReaderAsync(token))
-            {
-                if (await reader.ReadAsync(token))
-                    return reader.GetString(reader.GetOrdinal("SourceText"));
-                else
-                    return string.Empty;
             }
         }
 
@@ -187,28 +172,9 @@ namespace LiveCaptionsTranslator.utils
                 {
                     string unixTime = reader.GetString(reader.GetOrdinal("Timestamp"));
                     DateTime localTime = DateTimeOffset.FromUnixTimeSeconds((long)Convert.ToDouble(unixTime)).LocalDateTime;
-                    return new TranslationHistoryEntry
-                    {
-                        Timestamp = localTime.ToString("yyyy-MM-dd HH:mm"),
-                        TimestampFull = localTime.ToString("yyyy-MM-dd HH:mm:ss"),
-                        SourceText = reader.GetString(reader.GetOrdinal("SourceText")),
-                        TranslatedText = reader.GetString(reader.GetOrdinal("TranslatedText")),
-                        TargetLanguage = reader.GetString(reader.GetOrdinal("TargetLanguage")),
-                        ApiUsed = reader.GetString(reader.GetOrdinal("ApiUsed"))
-                    };
+                    return ReadEntry(reader, localTime, "yyyy-MM-dd HH:mm");
                 }
                 return null;
-            }
-        }
-
-        public static async Task DeleteLastTranslation(CancellationToken token = default)
-        {
-            using (var command = new SqliteCommand(@"
-                DELETE FROM TranslationHistory
-                WHERE Id IN (SELECT Id FROM TranslationHistory ORDER BY Id DESC LIMIT 1)",
-                GetConnection()))
-            {
-                await command.ExecuteNonQueryAsync(token);
             }
         }
 
@@ -228,15 +194,7 @@ namespace LiveCaptionsTranslator.utils
                 {
                     string unixTime = reader.GetString(reader.GetOrdinal("Timestamp"));
                     DateTime localTime = DateTimeOffset.FromUnixTimeSeconds((long)Convert.ToDouble(unixTime)).LocalDateTime;
-                    history.Add(new TranslationHistoryEntry
-                    {
-                        Timestamp = localTime.ToString("yyyy-MM-dd HH:mm:ss"),
-                        TimestampFull = localTime.ToString("yyyy-MM-dd HH:mm:ss"),
-                        SourceText = reader.GetString(reader.GetOrdinal("SourceText")),
-                        TranslatedText = reader.GetString(reader.GetOrdinal("TranslatedText")),
-                        TargetLanguage = reader.GetString(reader.GetOrdinal("TargetLanguage")),
-                        ApiUsed = reader.GetString(reader.GetOrdinal("ApiUsed"))
-                    });
+                    history.Add(ReadEntry(reader, localTime, "yyyy-MM-dd HH:mm:ss"));
                 }
             }
 

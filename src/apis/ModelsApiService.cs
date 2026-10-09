@@ -15,15 +15,6 @@ namespace LiveCaptionsTranslator.apis
         };
 
         /// <summary>
-        /// APIs que soportan obtener modelos desde un endpoint.
-        /// </summary>
-        public static readonly List<string> APIs_WITH_MODELS_ENDPOINT = new()
-        {
-            "LMStudio",
-            "Ollama"
-        };
-
-        /// <summary>
         /// Obtiene la URL del endpoint de modelos para una API.
         /// </summary>
         public static string GetModelsEndpoint(string apiName, string baseUrl)

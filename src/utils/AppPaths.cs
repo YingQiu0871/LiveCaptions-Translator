@@ -1,5 +1,4 @@
 using System.IO;
-
 namespace LiveCaptionsTranslator.utils
 {
     // Absolute locations of the settings and history files. Never rely on the current directory:

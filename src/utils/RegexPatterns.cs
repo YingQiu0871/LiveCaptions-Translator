@@ -35,9 +35,6 @@ namespace LiveCaptionsTranslator.utils
         [GeneratedRegex(@"<think>.*?<\/think>")]
         public static partial Regex ModelThinking();
 
-        [GeneratedRegex(@"[^0-9.]")]
-        public static partial Regex VersionNumber();
-
         [GeneratedRegex(@"🔤\s*(.+?)\s*🔤")]
         public static partial Regex TargetSentence();
     }

@@ -11,14 +11,10 @@ namespace LiveCaptionsTranslator
 {
     public partial class CaptionPage : Page
     {
-        private static CaptionPage instance;
-        public static CaptionPage Instance => instance;
-
         public CaptionPage()
         {
             InitializeComponent();
             DataContext = Translator.Caption;
-            instance = this;
 
             SectionColumn.Width = new GridLength(Math.Max(Translator.Setting.MainWindow.SectionPanelWidth, 180));
             ScrollHelper.UseOwnScrollViewer(this, TranscriptScroll, SectionScroll);
@@ -163,20 +159,22 @@ namespace LiveCaptionsTranslator
 
         private void OriginalCard_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
         {
-            if (Keyboard.Modifiers != ModifierKeys.Control)
-                return;
-            Translator.Setting.MainWindow.OriginalFontSize =
-                AdjustFontSize(Translator.Setting.MainWindow.OriginalFontSize, e.Delta);
-            ApplyFontSizes();
-            e.Handled = true;
+            var window = Translator.Setting.MainWindow;
+            AdjustFontOnWheel(e, () => window.OriginalFontSize, size => window.OriginalFontSize = size);
         }
 
         private void TranslatedCard_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
         {
+            var window = Translator.Setting.MainWindow;
+            AdjustFontOnWheel(e, () => window.TranslatedFontSize, size => window.TranslatedFontSize = size);
+        }
+
+        // Ctrl + wheel changes a font size.
+        private void AdjustFontOnWheel(MouseWheelEventArgs e, Func<int> get, Action<int> set)
+        {
             if (Keyboard.Modifiers != ModifierKeys.Control)
                 return;
-            Translator.Setting.MainWindow.TranslatedFontSize =
-                AdjustFontSize(Translator.Setting.MainWindow.TranslatedFontSize, e.Delta);
+            set(AdjustFontSize(get(), e.Delta));
             ApplyFontSizes();
             e.Handled = true;
         }

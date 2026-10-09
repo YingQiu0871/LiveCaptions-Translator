@@ -198,8 +198,7 @@ namespace LiveCaptionsTranslator.utils
             return AutomationElement.RootElement.FindFirst(TreeScope.Children, condition);
         }
 
-        public static AutomationElement? FindElementByAId(
-            AutomationElement window, string automationId, CancellationToken token = default)
+        public static AutomationElement? FindElementByAId(AutomationElement window, string automationId)
         {
             try
             {
@@ -214,27 +213,6 @@ namespace LiveCaptionsTranslator.utils
             catch (NullReferenceException)
             {
                 return null;
-            }
-        }
-
-        public static void PrintAllElementsAId(AutomationElement window)
-        {
-            var treeWalker = TreeWalker.RawViewWalker;
-            var stack = new Stack<AutomationElement>();
-            stack.Push(window);
-
-            while (stack.Count > 0)
-            {
-                var element = stack.Pop();
-                if (!string.IsNullOrEmpty(element.Current.AutomationId))
-                    Console.WriteLine(element.Current.AutomationId);
-
-                var child = treeWalker.GetFirstChild(element);
-                while (child != null)
-                {
-                    stack.Push(child);
-                    child = treeWalker.GetNextSibling(child);
-                }
             }
         }
 

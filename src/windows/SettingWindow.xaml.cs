@@ -116,34 +116,20 @@ namespace LiveCaptionsTranslator
             }
         }
 
-        private void OpenAIAPIUrlInfo_MouseEnter(object sender, MouseEventArgs e)
+        // The info flyout is the sibling of the hovered button.
+        private static Flyout? InfoFlyout(object sender)
         {
-            OpenAIAPIUrlInfoFlyout.Show();
+            return ((sender as FrameworkElement)?.Parent as StackPanel)?.Children.OfType<Flyout>().FirstOrDefault();
         }
 
-        private void OpenAIAPIUrlInfo_MouseLeave(object sender, MouseEventArgs e)
+        private void APIUrlInfo_MouseEnter(object sender, MouseEventArgs e)
         {
-            OpenAIAPIUrlInfoFlyout.Hide();
+            InfoFlyout(sender)?.Show();
         }
 
-        private void OllamaAPIUrlInfo_MouseEnter(object sender, MouseEventArgs e)
+        private void APIUrlInfo_MouseLeave(object sender, MouseEventArgs e)
         {
-            OllamaAPIUrlInfoFlyout.Show();
-        }
-
-        private void OllamaAPIUrlInfo_MouseLeave(object sender, MouseEventArgs e)
-        {
-            OllamaAPIUrlInfoFlyout.Hide();
-        }
-
-        private void LMStudioAPIUrlInfo_MouseEnter(object sender, MouseEventArgs e)
-        {
-            LMStudioAPIUrlInfoFlyout.Show();
-        }
-
-        private void LMStudioAPIUrlInfo_MouseLeave(object sender, MouseEventArgs e)
-        {
-            LMStudioAPIUrlInfoFlyout.Hide();
+            InfoFlyout(sender)?.Hide();
         }
 
         private async void LoadModelsButton_Click(object sender, RoutedEventArgs e)
@@ -212,7 +198,7 @@ namespace LiveCaptionsTranslator
         private void SelectButton(System.Windows.Controls.Button button)
         {
             if (currentSelected != null)
-                currentSelected.Background = new SolidColorBrush(Colors.Transparent);
+                currentSelected.Background = Brushes.Transparent;
             button.Background = (Brush)FindResource("ControlFillColorSecondaryBrush");
             currentSelected = button;
         }

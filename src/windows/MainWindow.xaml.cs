@@ -1,6 +1,4 @@
-﻿using System.Diagnostics;
-using System.Reflection;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
 using Wpf.Ui.Appearance;
@@ -17,8 +15,6 @@ namespace LiveCaptionsTranslator
         public OverlayWindow? OverlayWindow { get; set; } = null;
         private const double DEFAULT_WIDTH = 900;
         private const double DEFAULT_HEIGHT = 560;
-
-        public bool IsAutoHeight { get; set; } = true;
 
         private const int WM_HOTKEY = 0x0312;
         private const uint MOD_ALT = 0x0001;
@@ -46,7 +42,6 @@ namespace LiveCaptionsTranslator
             {
                 SystemThemeWatcher.Watch(this, WindowBackdropType.Mica, true);
                 RootNavigation.Navigate(typeof(CaptionPage));
-                IsAutoHeight = true;
                 CheckForFirstUse();
                 // This fork adds lecture features; do not prompt to install upstream releases.
             };
@@ -188,7 +183,7 @@ namespace LiveCaptionsTranslator
             Speaker.Muted = SpeechSwitch.IsChecked != true;
         }
 
-        private static void EndSection()
+        public static void EndSection()
         {
             Summarizer.RequestEndSection();
             SnackbarHost.Show("正在总结本节……", "", SnackbarType.Info, timeout: 1);
@@ -253,7 +248,6 @@ namespace LiveCaptionsTranslator
         private void MainWindow_SizeChanged(object sender, SizeChangedEventArgs e)
         {
             MainWindow_LocationChanged(sender, e);
-            IsAutoHeight = false;
         }
 
         public void ToggleTopmost(bool enabled)
@@ -284,63 +278,6 @@ namespace LiveCaptionsTranslator
             }, System.Windows.Threading.DispatcherPriority.Background);
         }
 
-        private async Task CheckForUpdates()
-        {
-            if (Translator.FirstUseFlag)
-                return;
-
-            string latestVersion = string.Empty;
-            try
-            {
-                latestVersion = await UpdateUtil.GetLatestVersion();
-            }
-            catch (Exception ex)
-            {
-                SnackbarHost.Show("[ERROR] 检查更新失败。", ex.Message, SnackbarType.Error,
-                    timeout: 2, closeButton: true);
-
-                return;
-            }
-
-            var currentVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString();
-            var ignoredVersion = Translator.Setting.IgnoredUpdateVersion;
-            if (!string.IsNullOrEmpty(ignoredVersion) && ignoredVersion == latestVersion)
-                return;
-            if (!string.IsNullOrEmpty(latestVersion) && latestVersion != currentVersion)
-            {
-                var dialog = new Wpf.Ui.Controls.MessageBox
-                {
-                    Title = "发现新版本",
-                    Content = $"检测到新版本：{latestVersion}\n" +
-                              $"当前版本：{currentVersion}\n" +
-                              $"请到 GitHub 下载最新版本。",
-                    PrimaryButtonText = "去更新",
-                    CloseButtonText = "忽略此版本"
-                };
-                var result = await dialog.ShowDialogAsync();
-
-                if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
-                {
-                    var url = UpdateUtil.GitHubReleasesUrl;
-                    try
-                    {
-                        Process.Start(new ProcessStartInfo
-                        {
-                            FileName = url,
-                            UseShellExecute = true
-                        });
-                    }
-                    catch (Exception ex)
-                    {
-                        SnackbarHost.Show("[ERROR] 打开浏览器失败。", ex.Message, SnackbarType.Error,
-                            timeout: 2, closeButton: true);
-                    }
-                }
-                else
-                    Translator.Setting.IgnoredUpdateVersion = latestVersion;
-            }
-        }
-
         public void ShowLogCard(bool enabled)
         {
             if (CaptionLogButton.Icon is SymbolIcon icon)
@@ -354,12 +291,11 @@ namespace LiveCaptionsTranslator
 
         // Only grows the window when a page needs more room. Shrinking it to a thin caption strip
         // (upstream behaviour) hides most of the navigation; the overlay window serves that purpose.
-        public void AutoHeightAdjust(int minHeight = -1, int maxHeight = -1)
+        public void AutoHeightAdjust(int minHeight = -1)
         {
             if (minHeight > 0 && Height < minHeight)
             {
                 Height = minHeight;
-                IsAutoHeight = true;
                 KeepOnScreen();
             }
         }

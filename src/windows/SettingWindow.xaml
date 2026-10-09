@@ -338,8 +338,8 @@
                                                         Padding="0"
                                                         Background="Transparent"
                                                         BorderThickness="0"
-                                                        MouseEnter="OllamaAPIUrlInfo_MouseEnter"
-                                                        MouseLeave="OllamaAPIUrlInfo_MouseLeave">
+                                                        MouseEnter="APIUrlInfo_MouseEnter"
+                                                        MouseLeave="APIUrlInfo_MouseLeave">
                                                         <ui:SymbolIcon Symbol="Info16" />
                                                     </Button>
                                                 </StackPanel>
@@ -490,8 +490,8 @@
                                                         Padding="0"
                                                         Background="Transparent"
                                                         BorderThickness="0"
-                                                        MouseEnter="LMStudioAPIUrlInfo_MouseEnter"
-                                                        MouseLeave="LMStudioAPIUrlInfo_MouseLeave">
+                                                        MouseEnter="APIUrlInfo_MouseEnter"
+                                                        MouseLeave="APIUrlInfo_MouseLeave">
                                                         <ui:SymbolIcon Symbol="Info16" />
                                                     </Button>
                                                 </StackPanel>
@@ -625,8 +625,8 @@
                                                         Padding="0"
                                                         Background="Transparent"
                                                         BorderThickness="0"
-                                                        MouseEnter="OpenAIAPIUrlInfo_MouseEnter"
-                                                        MouseLeave="OpenAIAPIUrlInfo_MouseLeave">
+                                                        MouseEnter="APIUrlInfo_MouseEnter"
+                                                        MouseLeave="APIUrlInfo_MouseLeave">
                                                         <ui:SymbolIcon Symbol="Info16" />
                                                     </Button>
                                                 </StackPanel>

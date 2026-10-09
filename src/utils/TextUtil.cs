@@ -6,10 +6,10 @@ namespace LiveCaptionsTranslator.utils
     {
         public static readonly char[] PUNC_EOS = ".?!。？！".ToCharArray();
         public static readonly char[] PUNC_COMMA = ",，、—\n".ToCharArray();
+        private static readonly char[] PUNC_BREAK = PUNC_EOS.Concat(PUNC_COMMA).ToArray();
 
         public const int SHORT_THRESHOLD = 10;
         public const int MEDIUM_THRESHOLD = 40;
-        public const int LONG_THRESHOLD = 160;
         public const int VERYLONG_THRESHOLD = 220;
 
         public const double SIM_THRESHOLD = 0.6;
@@ -18,7 +18,7 @@ namespace LiveCaptionsTranslator.utils
         {
             while (Encoding.UTF8.GetByteCount(text) >= maxByteLength)
             {
-                int puncIndex = text.IndexOfAny(PUNC_EOS.Concat(PUNC_COMMA).ToArray());
+                int puncIndex = text.IndexOfAny(PUNC_BREAK);
                 if (puncIndex < 0 || puncIndex + 1 >= text.Length)
                     break;
                 text = text.Substring(puncIndex + 1);
@@ -32,7 +32,7 @@ namespace LiveCaptionsTranslator.utils
             for (int i = 0; i < splits.Length; i++)
             {
                 splits[i] = splits[i].Trim();
-                if (i == splits.Length - 1)
+                if (i == splits.Length - 1 || splits[i].Length == 0)
                     continue;
 
                 char lastChar = splits[i][^1];

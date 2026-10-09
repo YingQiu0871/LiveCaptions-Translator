@@ -43,17 +43,17 @@ namespace LiveCaptionsTranslator
         // Called when a class starts: whatever LiveCaptions already shows belongs to before the class.
         public static void ResetSentences()
         {
-            lock (committedSentences)
+            lock (cloudLock)
             {
-                committedSentences.Clear();
-                sentencesSeeded = false;
-                lock (cloudLock)
+                lock (committedSentences)
                 {
+                    committedSentences.Clear();
+                    sentencesSeeded = false;
                     heldFragment = string.Empty;
+                    recentChinese.Clear();
+                    if (Caption != null)
+                        Caption.SourceWarning = string.Empty;
                 }
-                recentChinese.Clear();
-                if (Caption != null)
-                    Caption.SourceWarning = string.Empty;
             }
         }
 
@@ -61,7 +61,7 @@ namespace LiveCaptionsTranslator
         {
             foreach (var committed in committedSentences)
             {
-                if (string.CompareOrdinal(committed, sentence) == 0 || committed.EndsWith(sentence, StringComparison.Ordinal))
+                if (committed.EndsWith(sentence, StringComparison.Ordinal))
                     return true;
             }
             // LiveCaptions keeps revising recent sentences; a revised one is not a new sentence. The text may
@@ -327,8 +327,7 @@ namespace LiveCaptionsTranslator
                 try
                 {
                     // Check LiveCaptions.exe still alive
-                    var info = Window.Current;
-                    var name = info.Name;
+                    _ = Window.Current.Name;
                     // Get the text recognized by LiveCaptions (10-20ms)
                     fullText = LiveCaptionsHandler.GetCaptions(Window);
                 }
@@ -477,7 +476,7 @@ namespace LiveCaptionsTranslator
                     }
                 }
 
-                Thread.Sleep(ClassSession.IsRunning || !pendingTextQueue.IsEmpty ? 40 : 300);
+                await Task.Delay(ClassSession.IsRunning || !pendingTextQueue.IsEmpty ? 40 : 300);
             }
         }
 
@@ -523,9 +522,9 @@ namespace LiveCaptionsTranslator
 
                 // If the original sentence is a complete sentence, choke for better visual experience.
                 if (isChoke)
-                    Thread.Sleep(720);
+                    await Task.Delay(720);
                 // Translations still arrive for a moment after stopping; after that nothing changes here.
-                Thread.Sleep(ClassSession.IsRunning || translationTaskQueue.IsBusy ? 40 : 300);
+                await Task.Delay(ClassSession.IsRunning || translationTaskQueue.IsBusy ? 40 : 300);
             }
         }
 
@@ -555,7 +554,7 @@ namespace LiveCaptionsTranslator
                     translatedText = $"[{sw.ElapsedMilliseconds,4} ms] " + translatedText;
                 }
             }
-            catch (OperationCanceledException ex)
+            catch (OperationCanceledException)
             {
                 throw;
             }
@@ -567,8 +566,7 @@ namespace LiveCaptionsTranslator
             return (translatedText, isChoke);
         }
 
-        public static async Task Log(string originalText, string translatedText,
-            CancellationToken token = default)
+        public static async Task Log(string originalText, string translatedText)
         {
             string targetLanguage, apiName;
             if (Setting != null)
@@ -597,7 +595,7 @@ namespace LiveCaptionsTranslator
             }
         }
 
-        public static async Task LogOnly(string originalText, CancellationToken token = default)
+        public static async Task LogOnly(string originalText)
         {
             try
             {

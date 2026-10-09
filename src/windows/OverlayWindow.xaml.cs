@@ -50,10 +50,7 @@ namespace LiveCaptionsTranslator
             Loaded += (s, e) => Translator.Caption.PropertyChanged += TranslatedChanged;
             Unloaded += (s, e) => Translator.Caption.PropertyChanged -= TranslatedChanged;
 
-            OriginalCaption.FontWeight = Translator.Setting.OverlayWindow.FontBold == Utils.FontBold.Both ?
-                FontWeights.Bold : FontWeights.Regular;
-            TranslatedCaption.FontWeight = Translator.Setting.OverlayWindow.FontBold >= Utils.FontBold.TranslationOnly ?
-                FontWeights.Bold : FontWeights.Regular;
+            ApplyFontBold();
 
             OriginalCaptionDecorator.StrokeThickness = Translator.Setting.OverlayWindow.FontStroke;
             TranslatedCaptionDecorator.StrokeThickness = Translator.Setting.OverlayWindow.FontStroke;
@@ -178,6 +175,11 @@ namespace LiveCaptionsTranslator
             Translator.Setting.OverlayWindow.FontBold++;
             if (Translator.Setting.OverlayWindow.FontBold > Utils.FontBold.Both)
                 Translator.Setting.OverlayWindow.FontBold = Utils.FontBold.None;
+            ApplyFontBold();
+        }
+
+        private void ApplyFontBold()
+        {
             switch (Translator.Setting.OverlayWindow.FontBold)
             {
                 case Utils.FontBold.None:

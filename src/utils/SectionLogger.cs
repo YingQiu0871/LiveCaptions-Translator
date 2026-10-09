@@ -120,6 +120,20 @@ namespace LiveCaptionsTranslator.utils
             };
         }
 
+        private static SectionEntry ReadSection(System.Data.Common.DbDataReader reader)
+        {
+            return new SectionEntry
+            {
+                Id = reader.GetInt64(0),
+                StartTime = ToLocal(reader.GetValue(1)),
+                EndTime = ToLocal(reader.GetValue(2)),
+                FirstHistoryId = reader.GetInt64(3),
+                LastHistoryId = reader.GetInt64(4),
+                Summary = reader.IsDBNull(5) ? string.Empty : reader.GetString(5),
+                PageNumber = reader.IsDBNull(6) ? null : reader.GetInt32(6),
+            };
+        }
+
         // The sections that start within the history rows (afterId, upToId].
         public static async Task<List<SectionEntry>> LoadSectionsInRange(long afterId, long upToId,
             CancellationToken token = default)
@@ -137,16 +151,7 @@ namespace LiveCaptionsTranslator.utils
             await using var reader = await command.ExecuteReaderAsync(token);
             while (await reader.ReadAsync(token))
             {
-                sections.Add(new SectionEntry
-                {
-                    Id = reader.GetInt64(0),
-                    StartTime = ToLocal(reader.GetValue(1)),
-                    EndTime = ToLocal(reader.GetValue(2)),
-                    FirstHistoryId = reader.GetInt64(3),
-                    LastHistoryId = reader.GetInt64(4),
-                    Summary = reader.IsDBNull(5) ? string.Empty : reader.GetString(5),
-                    PageNumber = reader.IsDBNull(6) ? null : reader.GetInt32(6),
-                });
+                sections.Add(ReadSection(reader));
             }
             return sections;
         }
@@ -169,16 +174,7 @@ namespace LiveCaptionsTranslator.utils
             await using var reader = await command.ExecuteReaderAsync(token);
             while (await reader.ReadAsync(token))
             {
-                sections.Add(new SectionEntry
-                {
-                    Id = reader.GetInt64(0),
-                    StartTime = ToLocal(reader.GetValue(1)),
-                    EndTime = ToLocal(reader.GetValue(2)),
-                    FirstHistoryId = reader.GetInt64(3),
-                    LastHistoryId = reader.GetInt64(4),
-                    Summary = reader.IsDBNull(5) ? string.Empty : reader.GetString(5),
-                    PageNumber = reader.IsDBNull(6) ? null : reader.GetInt32(6),
-                });
+                sections.Add(ReadSection(reader));
             }
             return sections;
         }
