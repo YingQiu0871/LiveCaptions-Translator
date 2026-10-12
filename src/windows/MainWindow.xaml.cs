@@ -42,7 +42,6 @@ namespace LiveCaptionsTranslator
                 SystemThemeWatcher.Watch(this, WindowBackdropType.Mica, true);
                 RootNavigation.Navigate(typeof(CaptionPage));
                 CheckForFirstUse();
-                // Update checks point to upstream releases, so they are off.
             };
 
             double screenWidth = SystemParameters.PrimaryScreenWidth;
