@@ -31,7 +31,7 @@
                 <Button x:Name="ClearSlides" Background="Transparent" ToolTip.Tip="移除课件" IsVisible="False"
                         Click="ClearSlides_Click">
                     <!-- Drawn, not a "✕" character: not every Linux font has that glyph. -->
-                    <Path Data="M0,0 L8,8 M8,0 L0,8" Stroke="{Binding $parent[Button].Foreground}" StrokeThickness="1.5"
+                    <Path Data="M0,0 L8,8 M8,0 L0,8" Stroke="{Binding $parent[ContentPresenter].Foreground}" StrokeThickness="1.5"
                           StrokeLineCap="Round" Margin="2" />
                 </Button>
             </StackPanel>

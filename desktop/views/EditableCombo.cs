@@ -42,9 +42,15 @@ namespace LiveCaptionsTranslator
         public EditableCombo()
         {
             ColumnDefinitions = new ColumnDefinitions("*,Auto");
-            // The chevron follows the button's text color (light and dark theme).
+            // The chevron follows the button's content color (hover, disabled) (light and dark theme).
             ((Avalonia.Controls.Shapes.Path)arrow.Content!).Bind(Avalonia.Controls.Shapes.Shape.StrokeProperty,
-                arrow.GetObservable(Avalonia.Controls.Primitives.TemplatedControl.ForegroundProperty));
+                new Avalonia.Data.Binding(nameof(Avalonia.Controls.Presenters.ContentPresenter.Foreground))
+                {
+                    RelativeSource = new Avalonia.Data.RelativeSource(Avalonia.Data.RelativeSourceMode.FindAncestor)
+                    {
+                        AncestorType = typeof(Avalonia.Controls.Presenters.ContentPresenter),
+                    },
+                });
             SetColumn(arrow, 1);
             Children.Add(box);
             Children.Add(arrow);

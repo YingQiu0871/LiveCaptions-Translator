@@ -44,7 +44,7 @@
             <StackPanel Grid.Row="0" Grid.Column="0">
                 <Border Classes="card">
                     <StackPanel>
-                        <TextBlock Classes="title" Text="⓪ 输入源" />
+                        <TextBlock Classes="title" Text="〇 输入源" />
 
                         <TextBlock Classes="label" Text="语音识别方式" />
                         <TextBlock Text="阿里云实时语音识别（更准，按时长收费）" TextWrapping="Wrap" />

@@ -1,12 +1,13 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 
 namespace LiveCaptionsTranslator.utils
 {
-    // Avalonia on X11 (and XWayland) often reports a scale of 1.0 on a HiDPI screen, which makes everything tiny.
-    // Before the UI starts, the scale is worked out from the user's choice or the desktop's settings and handed to
-    // Avalonia through AVALONIA_GLOBAL_SCALE_FACTOR.
+    // Avalonia on X11 scales by Xft.dpi / 96 but finds nothing on some HiDPI setups (GDK_SCALE, GNOME integer scaling),
+    // which makes everything tiny. Before the UI starts, the scale is worked out from the user's choice or the desktop's
+    // settings and handed to Avalonia through AVALONIA_GLOBAL_SCALE_FACTOR, which multiplies Avalonia's own factor.
     internal static class LinuxScale
     {
         // The choices of the settings page; the first one means "follow the system".
@@ -19,15 +20,22 @@ namespace LiveCaptionsTranslator.utils
         {
             try
             {
-                if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AVALONIA_GLOBAL_SCALE_FACTOR"))
-                    || !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AVALONIA_SCREEN_SCALE_FACTORS")))
+                if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AVALONIA_GLOBAL_SCALE_FACTOR")))
                     return;
                 string choice = DesktopSettings.UiScale;
-                double scale = Detect(choice);
-                // An explicit choice (even 100%) is passed on; "auto" only when something bigger than 1.0 was found.
-                if (scale > 1.0 || choice != "auto")
+                if (choice != "auto" && double.TryParse(choice, NumberStyles.Float, CultureInfo.InvariantCulture, out double chosen))
+                {
+                    // Avalonia's final scale is its own base factor times AVALONIA_GLOBAL_SCALE_FACTOR, so the
+                    // factor handed over is target / base and the result is exactly what the user picked.
+                    double target = Normalize(chosen);
+                    Environment.SetEnvironmentVariable("AVALONIA_GLOBAL_SCALE_FACTOR",
+                        (target / AvaloniaBase()).ToString("0.####", CultureInfo.InvariantCulture));
+                }
+                else if (AutoScale() is double scale)
+                {
                     Environment.SetEnvironmentVariable("AVALONIA_GLOBAL_SCALE_FACTOR",
                         scale.ToString("0.##", CultureInfo.InvariantCulture));
+                }
             }
             catch (Exception)
             {
@@ -35,14 +43,48 @@ namespace LiveCaptionsTranslator.utils
             }
         }
 
-        // The scale for a settings choice ("auto" or a number); 1.0 means leave Avalonia alone.
-        public static double Detect(string choice)
+        // The scale Avalonia's X11 backend applies by itself (before AVALONIA_GLOBAL_SCALE_FACTOR): the per-screen
+        // variables if set, otherwise Xft.dpi / 96 from the root window's RESOURCE_MANAGER, otherwise 1.
+        private static double AvaloniaBase()
         {
-            if (choice != "auto" && double.TryParse(choice, NumberStyles.Float, CultureInfo.InvariantCulture, out double chosen))
-                return Normalize(chosen);
+            try
+            {
+                foreach (string name in new[] { "AVALONIA_SCREEN_SCALE_FACTORS", "QT_SCREEN_SCALE_FACTORS" })
+                {
+                    string? list = Environment.GetEnvironmentVariable(name);
+                    if (string.IsNullOrWhiteSpace(list))
+                        continue;
+                    // "name=1.5;name2=2" or "1.5;2": which screen the window lands on is not known here,
+                    // so the first entry is the best guess.
+                    string first = list.Split(';', StringSplitOptions.RemoveEmptyEntries)[0];
+                    if (Number(first[(first.IndexOf('=') + 1)..]) is double perScreen)
+                        return perScreen;
+                    return 1.0;
+                }
+                return XftDpi() is double dpi ? dpi / 96 : 1.0;
+            }
+            catch (Exception)
+            {
+                return 1.0;
+            }
+        }
 
-            var sources = new Func<double?>[] { FromXftDpi, FromGdkEnvironment, FromQtEnvironment, FromGnome, FromKde };
-            foreach (var source in sources)
+        // Without an explicit choice nothing is changed when the desktop already scales (Avalonia's own base above 1,
+        // or any scale variable set) or on Wayland, where the compositor may be scaling XWayland windows itself.
+        private static double? AutoScale()
+        {
+            foreach (string name in new[] { "QT_SCALE_FACTOR", "QT_SCREEN_SCALE_FACTORS", "AVALONIA_SCREEN_SCALE_FACTORS" })
+            {
+                if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(name)))
+                    return null;
+            }
+            if (AvaloniaBase() > 1.0)
+                return null;
+            if (Environment.GetEnvironmentVariable("XDG_SESSION_TYPE") == "wayland"
+                || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WAYLAND_DISPLAY")))
+                return null;
+
+            foreach (var source in new Func<double?>[] { FromGdkEnvironment, FromGnome })
             {
                 try
                 {
@@ -54,7 +96,7 @@ namespace LiveCaptionsTranslator.utils
                     // Try the next source.
                 }
             }
-            return 1.0;
+            return null;
         }
 
         private static double Normalize(double value)
@@ -64,38 +106,41 @@ namespace LiveCaptionsTranslator.utils
             return Math.Round(Math.Clamp(value, 1.0, 4.0) * 20) / 20;
         }
 
-        private static double? FromXftDpi()
+        [DllImport("libX11.so.6")]
+        private static extern IntPtr XOpenDisplay(IntPtr name);
+
+        [DllImport("libX11.so.6")]
+        private static extern IntPtr XResourceManagerString(IntPtr display);
+
+        [DllImport("libX11.so.6")]
+        private static extern int XCloseDisplay(IntPtr display);
+
+        // Xft.dpi from the X server's resource database, read the way Avalonia reads it.
+        private static double? XftDpi()
         {
-            var match = Regex.Match(Run("xrdb", "-query") ?? string.Empty, @"^Xft\.dpi:\s*([0-9.]+)", RegexOptions.Multiline);
-            return match.Success ? Number(match.Groups[1].Value) / 96 : null;
+            if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DISPLAY")))
+                return null;
+            IntPtr display = XOpenDisplay(IntPtr.Zero);
+            if (display == IntPtr.Zero)
+                return null;
+            try
+            {
+                string? resources = Marshal.PtrToStringUTF8(XResourceManagerString(display));
+                var match = Regex.Match(resources ?? string.Empty, @"^Xft\.dpi:\s*([0-9.]+)", RegexOptions.Multiline);
+                return match.Success ? Number(match.Groups[1].Value) : null;
+            }
+            finally
+            {
+                XCloseDisplay(display);
+            }
         }
 
-        private static double? FromGdkEnvironment()
-        {
-            double? scale = Number(Environment.GetEnvironmentVariable("GDK_SCALE"));
-            double? dpi = Number(Environment.GetEnvironmentVariable("GDK_DPI_SCALE"));
-            return scale == null && dpi == null ? null : (scale ?? 1) * (dpi ?? 1);
-        }
-
-        private static double? FromQtEnvironment() => Number(Environment.GetEnvironmentVariable("QT_SCALE_FACTOR"));
+        private static double? FromGdkEnvironment() => Number(Environment.GetEnvironmentVariable("GDK_SCALE"));
 
         private static double? FromGnome()
         {
-            string schema = "org.gnome.desktop.interface";
-            double integer = Number(Run("gsettings", "get", schema, "scaling-factor")?.Replace("uint32", "")) ?? 0;
-            double text = Number(Run("gsettings", "get", schema, "text-scaling-factor")) ?? 1;
-            double scale = Math.Max(integer, 1) * text;
-            return integer > 0 || text > 1 ? scale : null;
-        }
-
-        private static double? FromKde()
-        {
-            foreach (string tool in new[] { "kreadconfig6", "kreadconfig5" })
-            {
-                if (Number(Run(tool, "--group", "KScreen", "--key", "ScaleFactor")) is double value)
-                    return value;
-            }
-            return null;
+            double integer = Number(Run("gsettings", "get", "org.gnome.desktop.interface", "scaling-factor")?.Replace("uint32", "")) ?? 0;
+            return integer > 0 ? integer : null;
         }
 
         private static double? Number(string? text) =>
