@@ -594,12 +594,19 @@ namespace LiveCaptionsTranslator
                                           ?? microphones.FirstOrDefault(device => device.IsDefault);
                     MicBox.IsEnabled = Lecture.InputSource == InputSource.Microphone;
 
-                    var outputs = new List<object> { DEFAULT_OUTPUT };
-                    outputs.AddRange(renderDevices);
-                    SpeechDeviceBox.ItemsSource = outputs;
-                    string speechDeviceId = Lecture.SpeechDeviceId;
-                    SpeechDeviceBox.SelectedItem = renderDevices.FirstOrDefault(device => device.Id == speechDeviceId)
-                                                   ?? (object)DEFAULT_OUTPUT;
+                    // On Linux the speaker always plays on the system default output, so no picker.
+                    bool pickable = !OperatingSystem.IsLinux();
+                    SpeechDeviceLabel.IsVisible = pickable;
+                    SpeechDeviceBox.IsVisible = pickable;
+                    if (pickable)
+                    {
+                        var outputs = new List<object> { DEFAULT_OUTPUT };
+                        outputs.AddRange(renderDevices);
+                        SpeechDeviceBox.ItemsSource = outputs;
+                        string speechDeviceId = Lecture.SpeechDeviceId;
+                        SpeechDeviceBox.SelectedItem = renderDevices.FirstOrDefault(device => device.Id == speechDeviceId)
+                                                       ?? (object)DEFAULT_OUTPUT;
+                    }
                     ShowSpeechDeviceHint();
                 });
             }
@@ -647,6 +654,11 @@ namespace LiveCaptionsTranslator
 
         private void ShowSpeechDeviceHint()
         {
+            if (OperatingSystem.IsLinux())
+            {
+                SpeechDeviceHint.Text = "Linux 上播报总是从系统默认输出设备播出，播报时会暂停识别。";
+                return;
+            }
             string speechDeviceId = Lecture.SpeechDeviceId;
             bool onDefault = string.IsNullOrEmpty(speechDeviceId) ||
                              speechDeviceId == renderDefaultId;
