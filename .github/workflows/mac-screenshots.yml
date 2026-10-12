@@ -2,21 +2,32 @@ name: mac-screenshots
 on:
   pull_request:
     paths: ['.github/workflows/mac-screenshots.yml', '.github/screenshots/**']
+concurrency:
+  group: mac-shots
+  cancel-in-progress: true
 jobs:
   shots:
     runs-on: macos-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
-      - name: Get app
+      - uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: "8.0.x"
+      - name: Build app
+        timeout-minutes: 15
         run: |
           mkdir -p /tmp/app /tmp/shots
-          curl -fL -o /tmp/app.dmg https://github.com/YingQiu0871/LiveCaptions-Translator/releases/download/v1.7-lecture.120/LiveCaptionsTranslator-macos-arm64.dmg
-          hdiutil attach /tmp/app.dmg -mountpoint /tmp/vol -nobrowse
-          ls /tmp/vol
-          cp -R /tmp/vol/*.app /tmp/app/
-          hdiutil detach /tmp/vol || true
-          xattr -cr /tmp/app/*.app
+          dotnet publish desktop/LiveCaptionsTranslator.Desktop.csproj -c Release -r osx-arm64 \
+            --self-contained true -o publish/osx-arm64
+          app="/tmp/app/课堂同传助手.app"
+          mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+          cp -R publish/osx-arm64/. "$app/Contents/MacOS/"
+          sed "s/__VERSION__/1.7.0/g" desktop/macos/Info.plist > "$app/Contents/Info.plist"
+          chmod +x "$app/Contents/MacOS/LiveCaptionsTranslator"
+          codesign --force --deep -s - "$app"
       - name: Screenshots
+        timeout-minutes: 6
         run: |
           set +e
           brew install cliclick
