@@ -22,6 +22,10 @@ namespace LiveCaptionsTranslator.utils
             string programDir = AppContext.BaseDirectory;
             string userDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LiveCaptionsTranslator");
+            // For tests (e.g. the desktop self-test): keep everything in a folder of their own.
+            string? overrideDir = Environment.GetEnvironmentVariable("LCT_DATA_DIR");
+            if (!string.IsNullOrWhiteSpace(overrideDir))
+                userDir = Path.GetFullPath(overrideDir);
             try
             {
                 Directory.CreateDirectory(userDir);

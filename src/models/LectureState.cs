@@ -316,6 +316,7 @@ namespace LiveCaptionsTranslator.models
                 captionsOnly = value;
                 OnPropertyChanged("CaptionsOnly");
                 Translator.Caption?.OnPropertyChanged("OriginalVisibility");
+                Translator.Caption?.OnPropertyChanged("IsOriginalVisible");
             }
         }
 
@@ -328,6 +329,7 @@ namespace LiveCaptionsTranslator.models
                 englishOnly = value;
                 OnPropertyChanged("EnglishOnly");
                 Translator.Caption?.OnPropertyChanged("OriginalVisibility");
+                Translator.Caption?.OnPropertyChanged("IsOriginalVisible");
             }
         }
 
@@ -435,6 +437,7 @@ namespace LiveCaptionsTranslator.models
                 showOriginal = value;
                 OnPropertyChanged("ShowOriginal");
                 Translator.Caption?.OnPropertyChanged("OriginalVisibility");
+                Translator.Caption?.OnPropertyChanged("IsOriginalVisible");
             }
         }
 

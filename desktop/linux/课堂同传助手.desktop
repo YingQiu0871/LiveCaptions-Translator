@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=课堂同传助手
+Name[zh_CN]=课堂同传助手
+Comment=课堂实时字幕、翻译与分节小结
+Exec=@INSTALL_DIR@/LiveCaptionsTranslator
+Icon=@INSTALL_DIR@/icon.png
+Terminal=false
+Categories=Education;AudioVideo;
+StartupWMClass=LiveCaptionsTranslator

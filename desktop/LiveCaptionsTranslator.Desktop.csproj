@@ -1,0 +1,56 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<!-- Linux / macOS build: Avalonia UI around the platform-neutral core in ../src. The Windows app is the
+	     root LiveCaptionsTranslator.csproj; this project is deliberately not part of LiveCaptionsTranslator.sln. -->
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net8.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<RootNamespace>LiveCaptionsTranslator</RootNamespace>
+		<AssemblyName>LiveCaptionsTranslator</AssemblyName>
+		<GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+		<BuiltInComInteropSupport>false</BuiltInComInteropSupport>
+		<InvariantGlobalization>false</InvariantGlobalization>
+		<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+		<!-- The shared core has the same nullable warnings in the Windows build. -->
+		<NoWarn>$(NoWarn);CS8600;CS8601;CS8602;CS8603;CS8604;CS8618;CS8625</NoWarn>
+
+		<Title>LiveCaptions Translator</Title>
+		<Description>Class interpretation assistant for Linux and macOS.</Description>
+		<Copyright>Copyright (c) 2024 SakiRinn and other contributors</Copyright>
+		<Authors>SakiRinn</Authors>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Avalonia" Version="11.2.8" />
+		<PackageReference Include="Avalonia.Desktop" Version="11.2.8" />
+		<PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.8" />
+
+		<PackageReference Include="CsvHelper" Version="33.0.1" />
+		<PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.1" />
+		<PackageReference Include="PdfPig" Version="0.1.16" />
+		<PackageReference Include="System.Text.Json" Version="8.0.5" />
+	</ItemGroup>
+
+	<!-- Everything platform-neutral in ../src. The WPF UI, the Windows APIs and the Windows implementations of
+	     audio / speech / OCR stay out; desktop/platform has the counterparts for Linux and macOS. -->
+	<ItemGroup>
+		<AvaloniaResource Include="assets/icon.png" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Compile Include="../src/**/*.cs"
+		         Exclude="../src/App.xaml.cs;../src/AssemblyInfo.cs;
+		                  ../src/controls/**;../src/pages/**;../src/windows/**;
+		                  ../src/apis/WindowsAPI.cs;
+		                  ../src/utils/LiveCaptionsHandler.cs;../src/utils/LiveCaptionsMicrophone.cs;
+		                  ../src/utils/ScrollHelper.cs;../src/utils/WindowHandler.cs;
+		                  ../src/utils/Speaker.cs;../src/utils/AudioDevices.cs;../src/utils/SlideOcr.cs;
+		                  ../src/utils/CloudAsr.Capture.Windows.cs">
+			<Link>shared/%(RecursiveDir)%(Filename)%(Extension)</Link>
+		</Compile>
+	</ItemGroup>
+
+</Project>

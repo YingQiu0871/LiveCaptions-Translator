@@ -48,7 +48,10 @@ namespace LiveCaptionsTranslator.models
         public string Summary { get; set; } = string.Empty;
         public List<HistoryLine> Lines { get; set; } = new();
 
+#if WINDOWS
         public System.Windows.Visibility SummaryVisibility => string.IsNullOrWhiteSpace(Summary)
             ? System.Windows.Visibility.Collapsed : System.Windows.Visibility.Visible;
+#endif
+        public bool IsSummaryVisible => !string.IsNullOrWhiteSpace(Summary);
     }
 }

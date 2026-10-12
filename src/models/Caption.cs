@@ -52,10 +52,14 @@ namespace LiveCaptionsTranslator.models
                 sourceWarning = value;
                 OnPropertyChanged("SourceWarning");
                 OnPropertyChanged("SourceWarningVisibility");
+                OnPropertyChanged("IsSourceWarningVisible");
             }
         }
+#if WINDOWS
         public System.Windows.Visibility SourceWarningVisibility =>
             string.IsNullOrEmpty(sourceWarning) ? System.Windows.Visibility.Collapsed : System.Windows.Visibility.Visible;
+#endif
+        public bool IsSourceWarningVisible => !string.IsNullOrEmpty(sourceWarning);
 
         // Shown on the caption page while there is no caption yet.
         public string StatusHint
@@ -165,11 +169,17 @@ namespace LiveCaptionsTranslator.models
                 .Where(IsUsableContext);
         }
 
+#if WINDOWS
         public System.Windows.Visibility OriginalVisibility =>
             // Without translation the original is all there is.
             Translator.Setting?.Lecture.ShowOriginal == false && Translator.Setting?.Lecture.SkipTranslation == false
                 ? System.Windows.Visibility.Collapsed
                 : System.Windows.Visibility.Visible;
+#endif
+
+        // Without translation the original is all there is.
+        public bool IsOriginalVisible =>
+            !(Translator.Setting?.Lecture.ShowOriginal == false && Translator.Setting?.Lecture.SkipTranslation == false);
 
         public void OnPropertyChanged([CallerMemberName] string propName = "")
         {

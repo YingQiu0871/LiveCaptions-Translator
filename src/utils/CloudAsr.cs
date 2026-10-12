@@ -2,8 +2,6 @@ using System.IO;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
-using NAudio.CoreAudioApi;
-using NAudio.Wave;
 
 using LiveCaptionsTranslator.models;
 
@@ -15,14 +13,17 @@ namespace LiveCaptionsTranslator.utils
     // Audio comes from the computer's output (loopback) or the default microphone, is turned into 16 kHz mono
     // 16-bit PCM and streamed over the DashScope WebSocket API:
     //   run-task -> task-started -> binary audio ... -> result-generated (partial / sentence_end) -> finish-task.
-    public static class CloudAsr
+    //
+    // This file is the protocol and the signal processing, shared by every platform. Capturing the audio is the
+    // platform part (CloudAsr.Capture.Windows.cs with WASAPI; desktop/platform/CloudAsr.Capture.cs elsewhere):
+    // it implements `BeginCapture` / `EndCapture` and feeds `OnAudio`.
+    public static partial class CloudAsr
     {
         private const int SAMPLE_RATE = 16000;
         private const int CHUNK_MS = 100;
 
         private static readonly object audioLock = new();
         private static readonly List<byte> pending = new();
-        private static IWaveIn? capture;
         private static bool isMicrophone = false;
 
         // Box-filter resampler state.
@@ -59,15 +60,7 @@ namespace LiveCaptionsTranslator.utils
         {
             cts?.Cancel();
             cts = null;
-            try
-            {
-                capture?.StopRecording();
-                capture?.Dispose();
-            }
-            catch (Exception)
-            {
-            }
-            capture = null;
+            EndCapture();
             lock (audioLock)
             {
                 pending.Clear();
@@ -120,22 +113,19 @@ namespace LiveCaptionsTranslator.utils
             envelope = 0;
             gain = 1;
             isMicrophone = useMicrophone;
-            capture = useMicrophone ? new WasapiCapture() : new WasapiLoopbackCapture();
-            var format = capture.WaveFormat;
-            capture.DataAvailable += (s, e) => OnAudio(e.Buffer, e.BytesRecorded, format);
-            capture.StartRecording();
+            BeginCapture(useMicrophone);
         }
 
         // Mixes to mono, resamples to 16 kHz and stores 16-bit samples for the sender.
-        private static void OnAudio(byte[] buffer, int count, WaveFormat format)
+        // `buffer` holds interleaved samples of the given format, `count` bytes of it.
+        private static void OnAudio(byte[] buffer, int count, int sampleRate, int channels, int bits, bool isFloat)
         {
-            int channels = Math.Max(format.Channels, 1);
-            int bytesPerSample = format.BitsPerSample / 8;
+            channels = Math.Max(channels, 1);
+            int bytesPerSample = bits / 8;
             int blockAlign = bytesPerSample * channels;
-            if (bytesPerSample == 0 || blockAlign == 0)
+            if (bytesPerSample == 0 || blockAlign == 0 || sampleRate <= 0)
                 return;
-            bool isFloat = format.BitsPerSample == 32 && format.Encoding != WaveFormatEncoding.Pcm;
-            double step = (double)format.SampleRate / SAMPLE_RATE;
+            double step = (double)sampleRate / SAMPLE_RATE;
 
             // Our own speech on the computer's output would be recognized again as the lecture: send silence then.
             bool mute = !isMicrophone && Speaker.SuppressCaptions;
@@ -144,7 +134,7 @@ namespace LiveCaptionsTranslator.utils
             {
                 double sum = 0;
                 for (int ch = 0; ch < channels; ch++)
-                    sum += ReadSample(buffer, offset + ch * bytesPerSample, format.BitsPerSample, isFloat);
+                    sum += ReadSample(buffer, offset + ch * bytesPerSample, bits, isFloat);
                 accumulated += sum / channels;
                 accumulatedCount++;
                 phase += 1;

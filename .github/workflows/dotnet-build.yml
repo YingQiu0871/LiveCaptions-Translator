@@ -8,6 +8,7 @@ on:
       - "v*"
     paths:
       - "src/**"
+      - "desktop/**"
       - "Properties/**"
       - ".github/workflows/**"
       - "installer/**"
@@ -80,9 +81,122 @@ jobs:
           name: LiveCaptionsTranslator
           path: ./publish
 
+  build-linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore Dependencies
+        run: dotnet restore desktop/LiveCaptionsTranslator.Desktop.csproj
+
+      - name: Check code formatting
+        run: dotnet format desktop/LiveCaptionsTranslator.Desktop.csproj --verify-no-changes --verbosity diagnostic
+
+      - name: Build
+        run: >
+          dotnet publish desktop/LiveCaptionsTranslator.Desktop.csproj -c Release -r linux-x64
+          --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+          -o ./publish/linux-x64
+
+      - name: Self-test
+        run: ./publish/linux-x64/LiveCaptionsTranslator --selftest
+
+      - name: Package
+        run: |
+          mkdir -p dist/LiveCaptionsTranslator
+          cp publish/linux-x64/LiveCaptionsTranslator dist/LiveCaptionsTranslator/
+          cp desktop/assets/icon.png dist/LiveCaptionsTranslator/icon.png
+          cp "desktop/linux/课堂同传助手.desktop" desktop/linux/install.sh dist/LiveCaptionsTranslator/
+          chmod +x dist/LiveCaptionsTranslator/LiveCaptionsTranslator dist/LiveCaptionsTranslator/install.sh
+          mkdir -p out
+          tar -czf out/LiveCaptionsTranslator-linux-x64.tar.gz -C dist LiveCaptionsTranslator
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: LiveCaptionsTranslator-linux
+          path: ./out
+
+  build-macos:
+    name: Build macOS
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Build audio capture helper
+        run: |
+          mkdir -p build/helper
+          swiftc -O -swift-version 5 -target arm64-apple-macos13 desktop/macos/lct-audio.swift -o build/helper/lct-audio-arm64
+          swiftc -O -swift-version 5 -target x86_64-apple-macos13 desktop/macos/lct-audio.swift -o build/helper/lct-audio-x64
+
+      - name: Make icon
+        run: |
+          iconset=build/AppIcon.iconset
+          mkdir -p "$iconset"
+          src=desktop/assets/icon.png
+          for size in 16 32 128 256 512; do
+            sips -z $size $size "$src" --out "$iconset/icon_${size}x${size}.png" >/dev/null
+          done
+          cp "$iconset/icon_32x32.png" "$iconset/icon_16x16@2x.png"
+          cp "$iconset/icon_256x256.png" "$iconset/icon_128x128@2x.png"
+          cp "$iconset/icon_512x512.png" "$iconset/icon_256x256@2x.png"
+          iconutil -c icns "$iconset" -o build/AppIcon.icns
+
+      - name: Build apps and disk images
+        run: |
+          version="1.7.${{ github.run_number }}"
+          mkdir -p out
+          for arch in arm64 x64; do
+            dotnet publish desktop/LiveCaptionsTranslator.Desktop.csproj -c Release -r osx-$arch \
+              --self-contained true -o publish/osx-$arch
+
+            app="build/$arch/课堂同传助手.app"
+            mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+            cp -R publish/osx-$arch/. "$app/Contents/MacOS/"
+            rm -f "$app/Contents/MacOS/"*.pdb
+            cp build/helper/lct-audio-$arch "$app/Contents/MacOS/lct-audio"
+            chmod +x "$app/Contents/MacOS/LiveCaptionsTranslator" "$app/Contents/MacOS/lct-audio"
+            cp build/AppIcon.icns "$app/Contents/Resources/AppIcon.icns"
+            sed "s/__VERSION__/$version/g" desktop/macos/Info.plist > "$app/Contents/Info.plist"
+            codesign --force --deep -s - "$app"
+
+            # The self-test needs a binary of this machine's architecture.
+            if [ "$arch" = "$(uname -m | sed 's/x86_64/x64/')" ]; then
+              "$app/Contents/MacOS/LiveCaptionsTranslator" --selftest
+            fi
+
+            staging="build/$arch/dmg"
+            mkdir -p "$staging"
+            cp -R "$app" "$staging/"
+            ln -s /Applications "$staging/Applications"
+            hdiutil create -srcfolder "$staging" -volname 课堂同传助手 -format UDZO \
+              "out/LiveCaptionsTranslator-macos-$arch.dmg"
+          done
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: LiveCaptionsTranslator-macos
+          path: ./out
+
   release:
     name: Create GitHub Release
-    needs: build
+    needs: [build, build-linux, build-macos]
     # Same runner type as the build: hosted Ubuntu runners were repeatedly not available here.
     runs-on: windows-latest
     if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || (github.event_name == 'workflow_dispatch' && inputs.release)
@@ -95,6 +209,18 @@ jobs:
         with:
           name: LiveCaptionsTranslator
           path: ./release
+
+      - name: Download Linux Build
+        uses: actions/download-artifact@v4
+        with:
+          name: LiveCaptionsTranslator-linux
+          path: ./release/desktop
+
+      - name: Download macOS Build
+        uses: actions/download-artifact@v4
+        with:
+          name: LiveCaptionsTranslator-macos
+          path: ./release/desktop
 
       - name: Create ZIP Files and rename EXE
         shell: bash
@@ -118,6 +244,8 @@ jobs:
             - 推荐下载安装包 `LiveCaptionsTranslator-win-x64-setup.msi`：双击安装，可以自选安装位置，装好后开始菜单和桌面都有快捷方式，卸载在“设置 > 应用”里。
             - 免安装版：`LiveCaptionsTranslator-win-x64-withruntime.exe`（自带运行库，直接运行）；`LiveCaptionsTranslator-win-x64.exe` 体积小，需要先装 .NET 8 桌面运行时。
             - ARM 电脑选 arm64 版本。
+            - Linux：下载 `LiveCaptionsTranslator-linux-x64.tar.gz`，解压后运行 `install.sh`。
+            - macOS（13 及以上）：下载对应芯片的 `.dmg`（Apple 芯片选 arm64，Intel 选 x64），把应用拖进“应用程序”。首次打开请右键选择“打开”。
 
             使用说明见仓库首页 README。
           files: |
@@ -127,5 +255,8 @@ jobs:
             release/LiveCaptionsTranslator-win-x64-withruntime.exe
             release/LiveCaptionsTranslator-win-arm64.exe
             release/LiveCaptionsTranslator-win-arm64-withruntime.exe
+            release/desktop/LiveCaptionsTranslator-linux-x64.tar.gz
+            release/desktop/LiveCaptionsTranslator-macos-arm64.dmg
+            release/desktop/LiveCaptionsTranslator-macos-x64.dmg
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

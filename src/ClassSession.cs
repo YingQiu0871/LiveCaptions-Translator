@@ -1,4 +1,6 @@
-﻿using System.Windows.Automation;
+﻿#if WINDOWS
+using System.Windows.Automation;
+#endif
 
 using LiveCaptionsTranslator.models;
 using LiveCaptionsTranslator.utils;
@@ -38,7 +40,11 @@ namespace LiveCaptionsTranslator
                     return;
                 }
                 SetHint(cloud ? "正在连接阿里云语音识别……" : "正在启动实时辅助字幕……");
+#if WINDOWS
                 string? problem = cloud ? null : await Task.Run(Prepare);
+#else
+                string? problem = null;
+#endif
                 try
                 {
                     FirstHistoryId = await SectionLogger.GetMaxHistoryId();
@@ -131,6 +137,7 @@ namespace LiveCaptionsTranslator
             StateChanged?.Invoke();
         }
 
+#if WINDOWS
         // Makes sure LiveCaptions runs and listens to the chosen input. Returns a warning to show, if any.
         private static string? Prepare()
         {
@@ -169,6 +176,7 @@ namespace LiveCaptionsTranslator
             }
             return null;
         }
+#endif
 
         private static async Task WatchForSilence(int session, string? problem)
         {
@@ -180,8 +188,13 @@ namespace LiveCaptionsTranslator
             if (Translator.Setting.Lecture.Engine == RecognitionEngine.Aliyun)
             {
                 SetHint($"已经 {NO_CAPTION_WARNING_SECONDS} 秒没有识别到文字。" + (useMicrophone
+#if WINDOWS
                     ? "现在听的是 Windows 默认麦克风，请确认它没有静音，并在“设置 ⓪”里选对了麦克风。"
                     : "现在听的是电脑正在播放的声音（Windows 默认输出设备），请确认课程声音正在播放、没有静音。"));
+#else
+                    ? "现在听的是系统默认麦克风，请确认它没有静音，并在系统设置里允许本程序使用麦克风。"
+                    : "现在听的是电脑正在播放的声音，请确认课程声音正在播放、没有静音。"));
+#endif
                 return;
             }
             string advice = useMicrophone
@@ -193,6 +206,7 @@ namespace LiveCaptionsTranslator
                     (problem == null ? string.Empty : $"\n{problem}"));
         }
 
+#if WINDOWS
         private static bool IsAlive(AutomationElement? window)
         {
             if (window == null)
@@ -207,6 +221,7 @@ namespace LiveCaptionsTranslator
                 return false;
             }
         }
+#endif
 
         static ClassSession()
         {
