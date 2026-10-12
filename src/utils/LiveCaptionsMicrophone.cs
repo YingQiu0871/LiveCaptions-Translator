@@ -58,6 +58,7 @@ namespace LiveCaptionsTranslator.utils
                         }
                         catch (Exception)
                         {
+                            // Best effort: a submenu that cannot be expanded is skipped.
                         }
                     }
                 }
@@ -96,11 +97,13 @@ namespace LiveCaptionsTranslator.utils
                     }
                     catch (Exception)
                     {
+                        // Best effort: a window that cannot be searched is skipped.
                     }
                 }
             }
             catch (Exception)
             {
+                // Best effort: fall back to searching the whole desktop below.
             }
             if (items.Count > 0)
                 return items;

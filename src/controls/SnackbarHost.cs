@@ -7,8 +7,8 @@ namespace LiveCaptionsTranslator
         public static Snackbar? mainSnackbar;
         public static MainWindow? mainWindow => App.Current.MainWindow as MainWindow;
 
-        // Safe to call from any thread: background loops (summaries, refinement) report errors here, and touching
-        // the snackbar off the UI thread used to throw inside their error handling and stop those loops for good.
+        // Safe to call from any thread: background loops (summaries, refinement) report errors here, and the
+        // snackbar must only be touched on the UI thread, so off-thread calls are marshalled to the dispatcher.
         public static void Show(string title = "", string message = "", SnackbarType type = SnackbarType.Info,
                                 int width = 500, int timeout = 1, bool closeButton = false)
         {

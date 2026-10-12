@@ -152,6 +152,7 @@ namespace LiveCaptionsTranslator
                     }
                     catch (Exception)
                     {
+                        // Best effort: reporting the error must not end the loop.
                     }
                 }
                 finally

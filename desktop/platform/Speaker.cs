@@ -8,11 +8,13 @@ namespace LiveCaptionsTranslator.utils
 {
     // Reads summaries (and optionally translations) aloud. macOS: the `say` command, optionally to a chosen output
     // device. Linux: speech-dispatcher (`spd-say`), or `espeak-ng` if that is missing; they play on the default output.
-    // Same public API and queue rules as the Windows version in src/utils/Speaker.cs.
+    // The public API and the queue rules match the Windows implementation in src/utils/Speaker.cs.
     public static class Speaker
     {
         // Translations older than this backlog are dropped, so that speech never lags far behind the lecture.
         private const int MAX_TRANSLATION_BACKLOG = 2;
+
+        private const string SPEECH_FAILED = "[ERROR] 语音播报失败。";
 
         private static readonly object queueLock = new();
         private static readonly LinkedList<(string Text, bool IsSummary)> queue = new();
@@ -31,6 +33,7 @@ namespace LiveCaptionsTranslator.utils
         private static string lastSpokenSource = string.Empty;
         private static string? missingToolReported;
         private static string? failureReported;
+        private static List<(string Name, string Locale)> macVoices = new();
         public static event Action<bool>? MutedChanged;
 
         public static bool Muted
@@ -181,8 +184,7 @@ namespace LiveCaptionsTranslator.utils
             }
         }
 
-        // `Alex                en_US    # Most people recognize me by my voice.`
-        private static List<(string Name, string Locale)> macVoices = new();
+        // `say -v '?'` prints one voice per line: name, locale, then "# sample sentence".
         private static List<(string Name, string Locale)> MacVoices()
         {
             if (macVoices.Count > 0)
@@ -232,6 +234,7 @@ namespace LiveCaptionsTranslator.utils
                     }
                     catch (Exception)
                     {
+                        // The cancel only needs to finish before the next speech starts; its failure changes nothing.
                     }
                     stopRequested = false;
                     try
@@ -245,7 +248,7 @@ namespace LiveCaptionsTranslator.utils
                     }
                     catch (Exception ex)
                     {
-                        SnackbarHost.Show("[ERROR] 语音播报失败。", ex.Message, SnackbarType.Error,
+                        SnackbarHost.Show(SPEECH_FAILED, ex.Message, SnackbarType.Error,
                             timeout: 3, closeButton: true);
                     }
                     finally
@@ -300,6 +303,9 @@ namespace LiveCaptionsTranslator.utils
                 current = null;
         }
 
+        // The rate setting is -10..10 around normal speech; `say` and espeak-ng take words per minute (normal: 175).
+        private static int WordsPerMinute(int rate, int max) => Math.Clamp(175 + rate * 15, 80, max);
+
         private static ProcessStartInfo? MacCommand(string text, string deviceId, string voice, string language,
                                                     int rate, int volume)
         {
@@ -316,8 +322,7 @@ namespace LiveCaptionsTranslator.utils
             }
             if (!string.IsNullOrEmpty(chosenVoice))
                 arguments.AddRange(new[] { "-v", chosenVoice });
-            // The Windows rate is -10..10 around normal speech; `say` takes words per minute (default about 175).
-            arguments.AddRange(new[] { "-r", Math.Clamp(175 + rate * 15, 80, 400).ToString(CultureInfo.InvariantCulture) });
+            arguments.AddRange(new[] { "-r", WordsPerMinute(rate, 400).ToString(CultureInfo.InvariantCulture) });
             if (!string.IsNullOrEmpty(deviceId))
                 arguments.AddRange(new[] { "-a", deviceId });
             // `say` has no volume option, but embedded commands do.
@@ -351,8 +356,8 @@ namespace LiveCaptionsTranslator.utils
             var espeakArguments = new List<string>
             {
                 "-v", string.IsNullOrEmpty(voice) ? shortLanguage : voice,
-                // Words per minute (default 175); amplitude 0..200.
-                "-s", Math.Clamp(175 + rate * 15, 80, 450).ToString(CultureInfo.InvariantCulture),
+                // Words per minute; amplitude 0..200.
+                "-s", WordsPerMinute(rate, 450).ToString(CultureInfo.InvariantCulture),
                 "-a", Math.Clamp(volume * 2, 0, 200).ToString(CultureInfo.InvariantCulture),
                 "--", text,
             };
@@ -366,7 +371,7 @@ namespace LiveCaptionsTranslator.utils
             if (failureReported == tool)
                 return;
             failureReported = tool;
-            SnackbarHost.Show("[ERROR] 语音播报失败。", $"{tool} 异常退出（代码 {exitCode}）。请检查所选的语音和输出设备。",
+            SnackbarHost.Show(SPEECH_FAILED, $"{tool} 异常退出（代码 {exitCode}）。请检查所选的语音和输出设备。",
                 SnackbarType.Error, timeout: 5, closeButton: true);
         }
 

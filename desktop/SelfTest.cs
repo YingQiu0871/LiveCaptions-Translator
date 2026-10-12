@@ -97,6 +97,7 @@ namespace LiveCaptionsTranslator
             }
             catch (Exception)
             {
+                // Removing the temporary folder is best effort.
             }
             Console.WriteLine(failures == 0 ? "SELFTEST OK" : $"SELFTEST FAILED ({failures})");
             return failures == 0 ? 0 : 1;

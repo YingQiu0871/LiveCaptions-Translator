@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text.RegularExpressions;
 
 namespace LiveCaptionsTranslator.utils
@@ -8,12 +7,11 @@ namespace LiveCaptionsTranslator.utils
         public override string ToString() => IsDefault ? $"{Name}（当前默认）" : Name;
     }
 
-    // Same names as NAudio's DataFlow, which the Windows version of this class takes.
+    // The members of NAudio's DataFlow that shared code uses, so it compiles against both implementations.
     public enum DataFlow
     {
         Render,
         Capture,
-        All,
     }
 
     // Linux: PulseAudio / PipeWire through `pactl`. macOS: the output devices known to `say`.
@@ -36,7 +34,7 @@ namespace LiveCaptionsTranslator.utils
         // The id of the default device; null if it cannot be told (macOS: `say` does not mark it).
         public static async Task<string?> DefaultIdAsync(DataFlow flow)
         {
-            if (!OperatingSystem.IsLinux() || flow == DataFlow.All)
+            if (!OperatingSystem.IsLinux())
                 return null;
             string command = flow == DataFlow.Capture ? "get-default-source" : "get-default-sink";
             return (await Exec.Run("pactl", new[] { command }).ConfigureAwait(false))?.Trim();
@@ -64,19 +62,6 @@ namespace LiveCaptionsTranslator.utils
                 result.Add(new AudioDevice(name, name, name == defaultId));
             }
             return result;
-        }
-
-        // The sources that carry the sound the computer plays, one per output (`pactl ... sources` *.monitor).
-        public static async Task<List<AudioDevice>> ListMonitors()
-        {
-            string? text = await Exec.Run("pactl", new[] { "list", "short", "sources" }).ConfigureAwait(false);
-            if (text == null)
-                return new List<AudioDevice>();
-            return text.Split('\n', StringSplitOptions.RemoveEmptyEntries)
-                .Select(line => line.Split('\t'))
-                .Where(fields => fields.Length >= 2 && fields[1].EndsWith(".monitor", StringComparison.Ordinal))
-                .Select(fields => new AudioDevice(fields[1], fields[1], false))
-                .ToList();
         }
 
         // `say -a '?'` prints "  73 MacBook Pro Speakers": a CoreAudio id that changes between sessions, then the

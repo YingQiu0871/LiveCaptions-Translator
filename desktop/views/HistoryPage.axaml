@@ -5,30 +5,30 @@
     <Grid Margin="15" RowDefinitions="Auto,*">
         <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
             <!-- Breadcrumb: 课程 › course › lecture -->
-            <StackPanel x:Name="Breadcrumb" Orientation="Horizontal" HorizontalAlignment="Left" Spacing="2">
-                <Button x:Name="CrumbHome" Content="课程" Background="Transparent" FontSize="15" Click="CrumbHome_click" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Spacing="2">
+                <Button Content="课程" Background="Transparent" FontSize="15" Click="CrumbHome_Click" />
                 <TextBlock x:Name="CrumbSep1" VerticalAlignment="Center" Opacity="0.6" Text="›" />
                 <Button x:Name="CrumbCourse" MaxWidth="220" Background="Transparent" FontSize="15"
-                        Click="CrumbCourse_click" />
+                        Click="CrumbCourse_Click" />
                 <TextBlock x:Name="CrumbSep2" VerticalAlignment="Center" Opacity="0.6" Text="›" />
                 <TextBlock x:Name="CrumbLecture" MaxWidth="280" Margin="6,0,0,0" VerticalAlignment="Center"
                            FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" Margin="3,0">
-                <Button x:Name="NewCourse" Content="新建课程" Background="Transparent" Click="NewCourse_click" />
+                <Button x:Name="NewCourse" Content="新建课程" Background="Transparent" Click="NewCourse_Click" />
                 <Button x:Name="AllSentences" Content="全部句子" Background="Transparent"
-                        ToolTip.Tip="不分课程，按时间列出所有句子" Click="AllSentences_click" />
-                <Button x:Name="RenameLecture" Content="重命名" Background="Transparent" Click="RenameLecture_click" />
+                        ToolTip.Tip="不分课程，按时间列出所有句子" Click="AllSentences_Click" />
+                <Button x:Name="RenameLecture" Content="重命名" Background="Transparent" Click="RenameLecture_Click" />
                 <Button x:Name="NotesDraft" Content="生成笔记初稿" Background="Transparent"
                         ToolTip.Tip="结合小节总结、转录和课件（若已上传）生成笔记初稿，保存在转录文件旁边"
-                        Click="NotesDraft_click" />
+                        Click="NotesDraft_Click" />
                 <Button x:Name="OpenFile" Content="打开文件位置" Background="Transparent"
-                        ToolTip.Tip="重新生成本节课的 Markdown 文件，并在文件管理器中显示" Click="OpenFile_click" />
-                <Button x:Name="Export" Content="导出" Background="Transparent" ToolTip.Tip="导出全部句子 (CSV)"
-                        Click="Export_click" />
+                        ToolTip.Tip="重新生成本节课的 Markdown 文件，并在文件管理器中显示" Click="OpenFile_Click" />
+                <Button x:Name="Export" Content="导出" Background="Transparent" ToolTip.Tip="导出全部句子（CSV）"
+                        Click="Export_Click" />
                 <Button x:Name="Delete" Content="全部删除" Background="Transparent" ToolTip.Tip="全部删除"
-                        Click="Delete_click" />
-                <Button x:Name="Refresh" Content="刷新" Background="Transparent" ToolTip.Tip="刷新" Click="Refresh_click" />
+                        Click="Delete_Click" />
+                <Button x:Name="Refresh" Content="刷新" Background="Transparent" ToolTip.Tip="刷新" Click="Refresh_Click" />
             </StackPanel>
         </Grid>
 
@@ -100,9 +100,9 @@
         <!-- All sentences -->
         <Grid x:Name="AllView" Grid.Row="1" IsVisible="False" RowDefinitions="Auto,Auto,*">
             <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="5" Margin="0,10,3,0" HorizontalAlignment="Left">
-                <Button x:Name="PageDown" Content="‹" Background="Transparent" ToolTip.Tip="上一页" Click="PageDown_click" />
+                <Button Content="‹" Background="Transparent" ToolTip.Tip="上一页" Click="PageDown_Click" />
                 <TextBlock x:Name="PageNumber" Margin="5,0" VerticalAlignment="Center" FontSize="15" Text="1/1" />
-                <Button x:Name="PageUp" Content="›" Background="Transparent" ToolTip.Tip="下一页" Click="PageUp_click" />
+                <Button Content="›" Background="Transparent" ToolTip.Tip="下一页" Click="PageUp_Click" />
                 <ComboBox x:Name="HistoryMaxRow" SelectedIndex="1" VerticalAlignment="Center">
                     <ComboBoxItem Content="20 条/页" Tag="20" />
                     <ComboBoxItem Content="30 条/页" Tag="30" />

@@ -101,6 +101,7 @@ namespace LiveCaptionsTranslator
                 }
                 catch (Exception)
                 {
+                    // No lectures are listed for this course.
                 }
             }
             selecting = true;
@@ -140,7 +141,7 @@ namespace LiveCaptionsTranslator
             ClearSlides.IsVisible = true;
         }
 
-        private async void LoadSlides_click(object? sender, RoutedEventArgs e)
+        private async void LoadSlides_Click(object? sender, RoutedEventArgs e)
         {
             string? path = await Shell.PickFile("选择课件", Shell.SlideFiles);
             if (path == null)
@@ -160,7 +161,7 @@ namespace LiveCaptionsTranslator
             ShowSlidesInfo();
         }
 
-        private void ClearSlides_click(object? sender, RoutedEventArgs e)
+        private void ClearSlides_Click(object? sender, RoutedEventArgs e)
         {
             SlideDeck.Clear();
             ShowSlidesInfo();
@@ -190,19 +191,19 @@ namespace LiveCaptionsTranslator
                 Dispatcher.UIThread.Post(() => SectionScroll.ScrollToEnd(), DispatcherPriority.Background);
         }
 
-        private void EndSection_click(object? sender, RoutedEventArgs e)
+        private void EndSection_Click(object? sender, RoutedEventArgs e)
         {
             MainWindow.EndSection();
         }
 
-        private async void Refresh_click(object? sender, RoutedEventArgs e)
+        private async void Refresh_Click(object? sender, RoutedEventArgs e)
         {
             long? selected = SelectedLecture?.Id;
             await LoadLectures(selected);
         }
 
         // Writes the transcript as Markdown to the save folder (the same file the history opens) and shows it.
-        private async void Export_click(object? sender, RoutedEventArgs e)
+        private async void Export_Click(object? sender, RoutedEventArgs e)
         {
             if (SelectedLecture is not LectureRecord selected)
             {

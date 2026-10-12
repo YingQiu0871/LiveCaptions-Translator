@@ -26,16 +26,16 @@
                     </ComboBox.ItemTemplate>
                 </ComboBox>
                 <Button x:Name="EndSection" Margin="2,0,0,0" Content="结束本节并总结" ToolTip.Tip="Ctrl+Alt+S"
-                        Click="EndSection_click" />
-                <Button x:Name="LoadSlides" Content="上传课件" ToolTip.Tip="载入后按课件页码分节" Click="LoadSlides_click" />
+                        Click="EndSection_Click" />
+                <Button Content="上传课件" ToolTip.Tip="载入后按课件页码分节" Click="LoadSlides_Click" />
                 <Button x:Name="ClearSlides" Content="✕" Background="Transparent" ToolTip.Tip="移除课件" IsVisible="False"
-                        Click="ClearSlides_click" />
+                        Click="ClearSlides_Click" />
             </StackPanel>
 
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" Margin="3,0">
                 <Button x:Name="Export" Content="导出" Background="Transparent"
-                        ToolTip.Tip="导出这节课的转录 (Markdown)" Click="Export_click" />
-                <Button x:Name="Refresh" Content="刷新" Background="Transparent" ToolTip.Tip="刷新" Click="Refresh_click" />
+                        ToolTip.Tip="导出这节课的转录（Markdown）" Click="Export_Click" />
+                <Button x:Name="Refresh" Content="刷新" Background="Transparent" ToolTip.Tip="刷新" Click="Refresh_Click" />
             </StackPanel>
         </Grid>
 

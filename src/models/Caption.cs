@@ -169,17 +169,14 @@ namespace LiveCaptionsTranslator.models
                 .Where(IsUsableContext);
         }
 
-#if WINDOWS
-        public System.Windows.Visibility OriginalVisibility =>
-            // Without translation the original is all there is.
-            Translator.Setting?.Lecture.ShowOriginal == false && Translator.Setting?.Lecture.SkipTranslation == false
-                ? System.Windows.Visibility.Collapsed
-                : System.Windows.Visibility.Visible;
-#endif
-
         // Without translation the original is all there is.
         public bool IsOriginalVisible =>
             !(Translator.Setting?.Lecture.ShowOriginal == false && Translator.Setting?.Lecture.SkipTranslation == false);
+
+#if WINDOWS
+        public System.Windows.Visibility OriginalVisibility =>
+            IsOriginalVisible ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+#endif
 
         public void OnPropertyChanged([CallerMemberName] string propName = "")
         {

@@ -63,7 +63,7 @@ namespace LiveCaptionsTranslator
             };
 
             WindowBounds.Restore(this, "MainWindow", new Size(DEFAULT_WIDTH, DEFAULT_HEIGHT));
-            // Older versions saved a thin caption strip.
+            // A height below the minimum falls back to the default.
             if (Height < MinHeight)
                 Height = DEFAULT_HEIGHT;
             WindowBounds.Track(this, "MainWindow");
@@ -125,12 +125,12 @@ namespace LiveCaptionsTranslator
             {
                 switch (OverlayWindow.OnlyMode)
                 {
-                    case Utils.CaptionVisible.TranslationOnly:
-                        OverlayWindow.OnlyMode = Utils.CaptionVisible.SubtitleOnly;
-                        OverlayWindow.OnlyMode = Utils.CaptionVisible.Both;
+                    case utils.CaptionVisible.TranslationOnly:
+                        OverlayWindow.OnlyMode = utils.CaptionVisible.SubtitleOnly;
+                        OverlayWindow.OnlyMode = utils.CaptionVisible.Both;
                         break;
-                    case Utils.CaptionVisible.SubtitleOnly:
-                        OverlayWindow.OnlyMode = Utils.CaptionVisible.Both;
+                    case utils.CaptionVisible.SubtitleOnly:
+                        OverlayWindow.OnlyMode = utils.CaptionVisible.Both;
                         break;
                 }
 
@@ -158,7 +158,7 @@ namespace LiveCaptionsTranslator
             {
                 long lectureId = ClassSession.CurrentLectureId;
                 ClassSession.Stop();
-                await LectureDialogs.SaveAfterStop(lectureId);
+                await LectureSaving.SaveAfterStop(lectureId);
             }
             else
             {
@@ -171,7 +171,6 @@ namespace LiveCaptionsTranslator
         {
             StartButton.IsEnabled = !ClassSession.IsStarting;
             StartButton.Content = ClassSession.IsStarting ? "启动中…" : ClassSession.IsRunning ? "停止" : "开始";
-            // Primary while idle, plain while running.
             StartButton.Classes.Set("accent", !ClassSession.IsRunning);
         }
 
@@ -223,8 +222,8 @@ namespace LiveCaptionsTranslator
                 SnackbarType.Success => ("#FF1B4D2B", "#FF30A46C"),
                 _ => ("#FF2B3A4E", "#FF5B8DEF"),
             };
-            Toast.Background = new SolidColorBrush(Color.Parse(background));
-            Toast.BorderBrush = new SolidColorBrush(Color.Parse(border));
+            Toast.Background = new SolidColorBrush(Avalonia.Media.Color.Parse(background));
+            Toast.BorderBrush = new SolidColorBrush(Avalonia.Media.Color.Parse(border));
             ToastTitle.Text = title;
             ToastTitle.IsVisible = !string.IsNullOrEmpty(title);
             ToastMessage.Text = message;

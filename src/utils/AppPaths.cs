@@ -35,7 +35,7 @@ namespace LiveCaptionsTranslator.utils
                 return programDir;
             }
 
-            // Older versions kept the files next to the program: bring them over once.
+            // Files from installs that kept them next to the program: copy them over once.
             foreach (string name in new[] { SETTING_FILE, HISTORY_FILE })
             {
                 string target = Path.Combine(userDir, name);
@@ -48,6 +48,7 @@ namespace LiveCaptionsTranslator.utils
                 }
                 catch (Exception)
                 {
+                    // Best effort: a file that cannot be copied is simply not migrated.
                 }
             }
             return userDir;

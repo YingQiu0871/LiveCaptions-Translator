@@ -5,7 +5,6 @@ using System.Windows.Input;
 
 using LiveCaptionsTranslator.models;
 using LiveCaptionsTranslator.utils;
-using LiveCaptionsTranslator.Utils;
 
 namespace LiveCaptionsTranslator
 {

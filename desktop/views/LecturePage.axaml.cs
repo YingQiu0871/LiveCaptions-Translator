@@ -59,6 +59,11 @@ namespace LiveCaptionsTranslator
         private bool fillingKeyBox = false;
         private bool fillingAsrKeyBox = false;
         private readonly List<Action> pendingCommits = new();
+        private readonly List<Action> sliderShown = new();
+        // Set while the devices are being listed: a second refresh would only repeat the work.
+        private bool loadingDevices;
+        // The default output device, read when the devices are listed (asking costs a call to `pactl`).
+        private string? renderDefaultId;
 
         private static OpenAIConfig? ApiConfig => Translator.Setting[Summarizer.SUMMARY_API] as OpenAIConfig;
         private static LectureState Lecture => Translator.Setting.Lecture;
@@ -163,6 +168,7 @@ namespace LiveCaptionsTranslator
                 }
                 catch (Exception)
                 {
+                    // Reported nowhere: the other loaders still run and the control keeps its default.
                 }
             }
             // Edits made from here on are saved: the loaders below fill their own controls under a short guard.
@@ -174,6 +180,7 @@ namespace LiveCaptionsTranslator
             }
             catch (Exception)
             {
+                // No OCR languages are offered; the control stays empty.
             }
             try
             {
@@ -181,6 +188,7 @@ namespace LiveCaptionsTranslator
             }
             catch (Exception)
             {
+                // No voices are offered; the control keeps the default voice.
             }
             try
             {
@@ -188,6 +196,7 @@ namespace LiveCaptionsTranslator
             }
             catch (Exception)
             {
+                // No devices are offered; the control keeps the system default.
             }
         }
 
@@ -253,8 +262,6 @@ namespace LiveCaptionsTranslator
                 label.Text = text(get());
             });
         }
-
-        private readonly List<Action> sliderShown = new();
 
         private void LoadSettings()
         {
@@ -341,9 +348,7 @@ namespace LiveCaptionsTranslator
             var provider = PROVIDERS[ProviderBox.SelectedIndex];
             ModelBox.ItemsSource = provider.Models;
             ApplyProvider(provider, ApiConfig);
-            initializing = true;
-            ShowApiFields();
-            initializing = false;
+            Fill(ShowApiFields);
             TestApiResult.Text = string.Empty;
         }
 
@@ -380,18 +385,12 @@ namespace LiveCaptionsTranslator
             if (setting == null || (setting.ApiName != "Google" && setting.ApiName != "Google2"))
                 return;
             setting.ApiName = Summarizer.SUMMARY_API;
-            bool wasInitializing = initializing;
-            initializing = true;
-            try
+            Fill(() =>
             {
                 if (TranslateApiBox.ItemsSource is IEnumerable<ApiChoice> choices)
                     TranslateApiBox.SelectedItem = choices.FirstOrDefault(c => c.Key == setting.ApiName);
                 LoadTargetLanguages();
-            }
-            finally
-            {
-                initializing = wasInitializing;
-            }
+            });
         }
 
         // Shows that a key is stored without revealing it.
@@ -420,7 +419,7 @@ namespace LiveCaptionsTranslator
             SaveFolderBox.Text = LectureDocument.SaveFolder;
         }
 
-        private async void ChooseSaveFolder_click(object? sender, RoutedEventArgs e)
+        private async void ChooseSaveFolder_Click(object? sender, RoutedEventArgs e)
         {
             string? folder = await Shell.PickFolder("选择转录文件的保存位置", LectureDocument.SaveFolder);
             if (folder == null)
@@ -429,12 +428,12 @@ namespace LiveCaptionsTranslator
             ShowSaveFolder();
         }
 
-        private void OpenSaveFolder_click(object? sender, RoutedEventArgs e)
+        private void OpenSaveFolder_Click(object? sender, RoutedEventArgs e)
         {
             LectureDialogs.ShowInFolder(LectureDocument.SaveFolder);
         }
 
-        private void ResetSaveFolder_click(object? sender, RoutedEventArgs e)
+        private void ResetSaveFolder_Click(object? sender, RoutedEventArgs e)
         {
             Lecture.SaveFolder = string.Empty;
             ShowSaveFolder();
@@ -473,23 +472,13 @@ namespace LiveCaptionsTranslator
                 : $"✓ 已保存：{MaskKey(key)}";
         }
 
-        private async void TestAsr_click(object? sender, RoutedEventArgs e)
+        private async void TestAsr_Click(object? sender, RoutedEventArgs e)
         {
-            TestAsrButton.IsEnabled = false;
-            TestAsrResult.Text = "测试中……";
-            try
+            await RunBusy(TestAsrButton, TestAsrResult, "测试中……", async () =>
             {
                 await CloudAsr.Test();
-                TestAsrResult.Text = "✓ 连接成功";
-            }
-            catch (Exception ex)
-            {
-                TestAsrResult.Text = $"✗ {ex.Message}";
-            }
-            finally
-            {
-                TestAsrButton.IsEnabled = true;
-            }
+                return "✓ 连接成功";
+            });
         }
 
         private void LoadTranslateSetting()
@@ -509,22 +498,13 @@ namespace LiveCaptionsTranslator
             if (initializing || TranslateApiBox.SelectedItem is not ApiChoice choice)
                 return;
             Translator.Setting.ApiName = choice.Key;
-            initializing = true;
-            try
-            {
-                LoadTargetLanguages();
-            }
-            finally
-            {
-                initializing = false;
-            }
+            Fill(LoadTargetLanguages);
         }
 
         private void LoadTargetLanguages()
         {
             var configType = Translator.Setting[Translator.Setting.ApiName].GetType();
             PropertyInfo? languagesProp = null;
-            // Traverse base classes to find `SupportedLanguages`
             for (var type = configType; type != null && languagesProp == null; type = type.BaseType)
                 languagesProp = type.GetProperty("SupportedLanguages", BindingFlags.Public | BindingFlags.Static);
             languagesProp ??= typeof(TranslateAPIConfig).GetProperty(
@@ -533,63 +513,59 @@ namespace LiveCaptionsTranslator
             var supportedLanguages = (Dictionary<string, string>)languagesProp!.GetValue(null)!;
             string targetLang = Translator.Setting.TargetLanguage;
             if (!supportedLanguages.ContainsKey(targetLang))
-                supportedLanguages[targetLang] = targetLang;    // add custom language to supported languages
+                supportedLanguages[targetLang] = targetLang;
             TargetLangBox.ItemsSource = supportedLanguages.Keys.ToList();
             TargetLangBox.Text = targetLang;
         }
 
-        private void APISettingButton_click(object? sender, RoutedEventArgs e)
+        private void ApiSettingButton_Click(object? sender, RoutedEventArgs e)
         {
-            ApiSettingWindow.ShowSingle(Shell.Main);
+            ApiSettingWindow.ShowSingle();
         }
 
-        private async void ExtractGlossary_click(object? sender, RoutedEventArgs e)
+        private async void ExtractGlossary_Click(object? sender, RoutedEventArgs e)
         {
             Lecture.Glossary = GlossaryBox.Text ?? string.Empty;
-            ExtractGlossaryButton.IsEnabled = false;
-            GlossaryResult.Text = "正在从课件中提取术语……";
-            try
+            await RunBusy(ExtractGlossaryButton, GlossaryResult, "正在从课件中提取术语……", async () =>
             {
                 var (text, added) = await Glossary.ExtractFromSlides();
                 Lecture.Glossary = text;
                 GlossaryBox.Text = text;
-                GlossaryResult.Text = added > 0 ? $"✓ 新增 {added} 个术语，请检查一下译法" : "没有发现新的术语";
-            }
-            catch (Exception ex)
-            {
-                GlossaryResult.Text = $"✗ {ex.Message}";
-            }
-            finally
-            {
-                ExtractGlossaryButton.IsEnabled = true;
-            }
+                return added > 0 ? $"✓ 新增 {added} 个术语，请检查一下译法" : "没有发现新的术语";
+            });
         }
 
-        private async void TestApi_click(object? sender, RoutedEventArgs e)
+        private async void TestApi_Click(object? sender, RoutedEventArgs e)
         {
             // Commit fields that only update on lost focus.
             foreach (var commit in pendingCommits)
                 commit();
 
-            TestApiButton.IsEnabled = false;
-            TestApiResult.Text = "测试中……";
-            try
+            await RunBusy(TestApiButton, TestApiResult, "测试中……", async () =>
             {
                 await Summarizer.TestConnection();
-                TestApiResult.Text = "✓ 连接成功";
+                return "✓ 连接成功";
+            });
+        }
+
+        // Disables `button` while `work` runs, showing `busyText` and then the text it returns (or the error).
+        private static async Task RunBusy(Button button, TextBlock result, string busyText, Func<Task<string>> work)
+        {
+            button.IsEnabled = false;
+            result.Text = busyText;
+            try
+            {
+                result.Text = await work();
             }
             catch (Exception ex)
             {
-                TestApiResult.Text = $"✗ {ex.Message}";
+                result.Text = $"✗ {ex.Message}";
             }
             finally
             {
-                TestApiButton.IsEnabled = true;
+                button.IsEnabled = true;
             }
         }
-
-        // Set while the devices are being listed: a second refresh would only repeat the work.
-        private bool loadingDevices;
 
         private async Task LoadDevices()
         {
@@ -634,7 +610,7 @@ namespace LiveCaptionsTranslator
             }
         }
 
-        private async void RefreshDevices_click(object? sender, RoutedEventArgs e)
+        private async void RefreshDevices_Click(object? sender, RoutedEventArgs e)
         {
             await LoadDevices();
         }
@@ -668,9 +644,6 @@ namespace LiveCaptionsTranslator
             Lecture.SpeechDeviceId = SpeechDeviceBox.SelectedItem is AudioDevice device ? device.Id : string.Empty;
             ShowSpeechDeviceHint();
         }
-
-        // The default output device, read when the devices are listed (asking costs a call to `pactl`).
-        private string? renderDefaultId;
 
         private void ShowSpeechDeviceHint()
         {
@@ -726,7 +699,7 @@ namespace LiveCaptionsTranslator
             ClearSlidesButton.IsVisible = true;
         }
 
-        private async void LoadSlides_click(object? sender, RoutedEventArgs e)
+        private async void LoadSlides_Click(object? sender, RoutedEventArgs e)
         {
             string? path = await Shell.PickFile("选择课件", Shell.SlideFiles);
             if (path == null)
@@ -750,7 +723,7 @@ namespace LiveCaptionsTranslator
             ShowSlidesInfo();
         }
 
-        private void ClearSlides_click(object? sender, RoutedEventArgs e)
+        private void ClearSlides_Click(object? sender, RoutedEventArgs e)
         {
             SlideDeck.Clear();
             ShowSlidesInfo();
@@ -775,12 +748,12 @@ namespace LiveCaptionsTranslator
             Lecture.VoiceName = voice == AUTO_VOICE ? string.Empty : voice;
         }
 
-        private void TestSpeech_click(object? sender, RoutedEventArgs e)
+        private void TestSpeech_Click(object? sender, RoutedEventArgs e)
         {
             Speaker.Speak("这是一段试听。老师每讲完一节，你会在耳机里听到这一节的小结。");
         }
 
-        private void SoundSettings_click(object? sender, RoutedEventArgs e)
+        private void SoundSettings_Click(object? sender, RoutedEventArgs e)
         {
             try
             {
@@ -793,7 +766,7 @@ namespace LiveCaptionsTranslator
             }
         }
 
-        private void ResetPrompt_click(object? sender, RoutedEventArgs e)
+        private void ResetPrompt_Click(object? sender, RoutedEventArgs e)
         {
             Lecture.SummaryPrompt = LectureState.DEFAULT_SUMMARY_PROMPT;
             SummaryPromptBox.Text = Lecture.SummaryPrompt;

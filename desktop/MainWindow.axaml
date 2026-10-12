@@ -18,7 +18,7 @@
                 </StackPanel.Styles>
                 <Button x:Name="StartButton" Classes="accent" Content="开始" MinWidth="76"
                         ToolTip.Tip="开始 / 停止上课" Click="StartButton_Click" />
-                <Button x:Name="EndSectionButton" Content="结束本节"
+                <Button Content="结束本节"
                         ToolTip.Tip="结束本节并总结 (Ctrl+Alt+S)" Click="EndSectionButton_Click" />
                 <StackPanel Orientation="Horizontal" Margin="4,0,6,0" VerticalAlignment="Center" Spacing="4"
                             ToolTip.Tip="打开 / 关闭耳机播报 (Ctrl+Alt+M)">

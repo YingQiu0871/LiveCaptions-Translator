@@ -255,6 +255,7 @@ namespace LiveCaptionsTranslator.models
                 }
                 catch (Exception)
                 {
+                    // Best effort: without a backup the unreadable file is simply replaced.
                 }
                 return Load(jsonPath);
             }
