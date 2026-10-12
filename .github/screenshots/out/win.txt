@@ -1,0 +1,2 @@
+100, 100, 900, 588
+Finder, LiveCaptionsTranslator
