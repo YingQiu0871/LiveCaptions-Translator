@@ -44,16 +44,15 @@ namespace LiveCaptionsTranslator.utils
         }
 
         // The scale Avalonia's X11 backend applies by itself (before AVALONIA_GLOBAL_SCALE_FACTOR): the per-screen
-        // variables if set, otherwise Xft.dpi / 96 from the root window's RESOURCE_MANAGER, otherwise 1.
+        // variable if set, otherwise Xft.dpi / 96 from the root window's RESOURCE_MANAGER, otherwise 1. Once
+        // AVALONIA_GLOBAL_SCALE_FACTOR is set Avalonia ignores every QT_* variable, so those do not count here.
         private static double AvaloniaBase()
         {
             try
             {
-                foreach (string name in new[] { "AVALONIA_SCREEN_SCALE_FACTORS", "QT_SCREEN_SCALE_FACTORS" })
+                string? list = Environment.GetEnvironmentVariable("AVALONIA_SCREEN_SCALE_FACTORS");
+                if (!string.IsNullOrWhiteSpace(list))
                 {
-                    string? list = Environment.GetEnvironmentVariable(name);
-                    if (string.IsNullOrWhiteSpace(list))
-                        continue;
                     // "name=1.5;name2=2" or "1.5;2": which screen the window lands on is not known here,
                     // so the first entry is the best guess.
                     string first = list.Split(';', StringSplitOptions.RemoveEmptyEntries)[0];
