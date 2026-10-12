@@ -19,8 +19,6 @@ namespace LiveCaptionsTranslator.utils
     // Linux: PulseAudio / PipeWire through `pactl`. macOS: the output devices known to `say`.
     public static class AudioDevices
     {
-        public static List<AudioDevice> List(DataFlow flow) => ListAsync(flow).GetAwaiter().GetResult();
-
         public static async Task<List<AudioDevice>> ListAsync(DataFlow flow)
         {
             try
@@ -36,25 +34,12 @@ namespace LiveCaptionsTranslator.utils
         }
 
         // The id of the default device; null if it cannot be told (macOS: `say` does not mark it).
-        public static string? DefaultId(DataFlow flow) => DefaultIdAsync(flow).GetAwaiter().GetResult();
-
         public static async Task<string?> DefaultIdAsync(DataFlow flow)
         {
             if (!OperatingSystem.IsLinux() || flow == DataFlow.All)
                 return null;
             string command = flow == DataFlow.Capture ? "get-default-source" : "get-default-sink";
             return (await Exec.Run("pactl", new[] { command }).ConfigureAwait(false))?.Trim();
-        }
-
-        // Makes the device the default one for the whole system (Linux only).
-        public static void SetDefault(string id)
-        {
-            if (!OperatingSystem.IsLinux())
-                throw new PlatformNotSupportedException("请在系统设置的“声音”里更换默认设备。");
-            var sources = Exec.Run("pactl", new[] { "list", "short", "sources" }).GetAwaiter().GetResult() ?? string.Empty;
-            bool isSource = sources.Split('\n').Any(line => line.Split('\t').ElementAtOrDefault(1) == id);
-            var process = Process.Start(Exec.Create("pactl", new[] { isSource ? "set-default-source" : "set-default-sink", id }));
-            process?.WaitForExit(5000);
         }
 
         // `pactl list short sources`: index, name, driver, sample spec, state. Monitors of the outputs are the

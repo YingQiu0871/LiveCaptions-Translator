@@ -186,7 +186,7 @@ jobs:
             ln -s /Applications "$staging/Applications"
             # hdiutil sometimes fails with "Resource busy" on a CI runner: try again.
             for attempt in 1 2 3; do
-              hdiutil create -srcfolder "$staging" -volname 课堂同传助手 -format UDZO \
+              hdiutil create -ov -srcfolder "$staging" -volname 课堂同传助手 -format UDZO \
                 "out/LiveCaptionsTranslator-macos-$arch.dmg" && break
               if [ "$attempt" = 3 ]; then
                 exit 1

@@ -85,7 +85,7 @@
                             <TextBlock Classes="label" Text="麦克风" />
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <ComboBox x:Name="MicBox" MinWidth="230" SelectionChanged="MicBox_SelectionChanged" />
-                                <Button Content="刷新" ToolTip.Tip="刷新设备列表" Click="RefreshDevices_click" />
+                                <Button x:Name="RefreshDevicesButton" Content="刷新" ToolTip.Tip="刷新设备列表" Click="RefreshDevices_click" />
                             </StackPanel>
                         </StackPanel>
                         <TextBlock x:Name="SourceStatus" Classes="hint" />

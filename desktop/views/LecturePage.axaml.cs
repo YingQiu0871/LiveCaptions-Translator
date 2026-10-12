@@ -165,6 +165,8 @@ namespace LiveCaptionsTranslator
                 {
                 }
             }
+            // Edits made from here on are saved: the loaders below fill their own controls under a short guard.
+            initializing = false;
             // These run external tools (tesseract, spd-say, say): off the UI thread, then the controls are filled.
             try
             {
@@ -187,7 +189,22 @@ namespace LiveCaptionsTranslator
             catch (Exception)
             {
             }
-            initializing = false;
+        }
+
+        // Fills controls from the settings without the change handlers saving them back. Runs on the UI thread
+        // without awaiting, so no user edit can come in between.
+        private void Fill(Action fill)
+        {
+            bool wasInitializing = initializing;
+            initializing = true;
+            try
+            {
+                fill();
+            }
+            finally
+            {
+                initializing = wasInitializing;
+            }
         }
 
         // A text field whose value is written when it loses the focus (and when the page is left), not on every key.
@@ -571,37 +588,50 @@ namespace LiveCaptionsTranslator
             }
         }
 
+        // Set while the devices are being listed: a second refresh would only repeat the work.
+        private bool loadingDevices;
+
         private async Task LoadDevices()
         {
-            bool wasInitializing = initializing;
-            initializing = true;
+            if (loadingDevices)
+                return;
+            loadingDevices = true;
+            RefreshDevicesButton.IsEnabled = false;
+            try
+            {
+                var microphones = await Task.Run(() => AudioDevices.ListAsync(DataFlow.Capture));
+                var renderDevices = await Task.Run(() => AudioDevices.ListAsync(DataFlow.Render));
+                renderDefaultId = await Task.Run(() => AudioDevices.DefaultIdAsync(DataFlow.Render));
+                Fill(() =>
+                {
+                    SourceBox.SelectedIndex = (int)Lecture.InputSource;
+                    bool mac = OperatingSystem.IsMacOS();
+                    // macOS has no list of microphones: the system default one is used.
+                    MicPanel.IsVisible = !mac;
+                    MicHint.Text = mac
+                        ? "用的是系统默认麦克风，可在系统设置的“声音”里更换。第一次使用时 macOS 会请求麦克风权限。"
+                        : "这里选的麦克风只供本程序录音，不会更改系统的默认录音设备。不要选蓝牙耳机自带的麦克风，否则耳机会切换到通话模式，音质变差。";
 
-            SourceBox.SelectedIndex = (int)Lecture.InputSource;
-            bool mac = OperatingSystem.IsMacOS();
-            // macOS has no list of microphones: the system default one is used.
-            MicPanel.IsVisible = !mac;
-            MicHint.Text = mac
-                ? "用的是系统默认麦克风，可在系统设置的“声音”里更换。第一次使用时 macOS 会请求麦克风权限。"
-                : "这里选的麦克风只供本程序录音，不会更改系统的默认录音设备。不要选蓝牙耳机自带的麦克风，否则耳机会切换到通话模式，音质变差。";
+                    MicBox.ItemsSource = microphones;
+                    string chosen = DesktopSettings.MicrophoneId;
+                    MicBox.SelectedItem = microphones.FirstOrDefault(device => device.Id == chosen && chosen.Length > 0)
+                                          ?? microphones.FirstOrDefault(device => device.IsDefault);
+                    MicBox.IsEnabled = Lecture.InputSource == InputSource.Microphone;
 
-            var microphones = await Task.Run(() => AudioDevices.ListAsync(DataFlow.Capture));
-            MicBox.ItemsSource = microphones;
-            string chosen = DesktopSettings.MicrophoneId;
-            MicBox.SelectedItem = microphones.FirstOrDefault(device => device.Id == chosen && chosen.Length > 0)
-                                  ?? microphones.FirstOrDefault(device => device.IsDefault);
-            MicBox.IsEnabled = Lecture.InputSource == InputSource.Microphone;
-
-            var outputs = new List<object> { DEFAULT_OUTPUT };
-            var renderDevices = await Task.Run(() => AudioDevices.ListAsync(DataFlow.Render));
-            renderDefaultId = await Task.Run(() => AudioDevices.DefaultIdAsync(DataFlow.Render));
-            outputs.AddRange(renderDevices);
-            SpeechDeviceBox.ItemsSource = outputs;
-            string speechDeviceId = Lecture.SpeechDeviceId;
-            SpeechDeviceBox.SelectedItem = renderDevices.FirstOrDefault(device => device.Id == speechDeviceId)
-                                           ?? (object)DEFAULT_OUTPUT;
-            ShowSpeechDeviceHint();
-
-            initializing = wasInitializing;
+                    var outputs = new List<object> { DEFAULT_OUTPUT };
+                    outputs.AddRange(renderDevices);
+                    SpeechDeviceBox.ItemsSource = outputs;
+                    string speechDeviceId = Lecture.SpeechDeviceId;
+                    SpeechDeviceBox.SelectedItem = renderDevices.FirstOrDefault(device => device.Id == speechDeviceId)
+                                                   ?? (object)DEFAULT_OUTPUT;
+                    ShowSpeechDeviceHint();
+                });
+            }
+            finally
+            {
+                loadingDevices = false;
+                RefreshDevicesButton.IsEnabled = true;
+            }
         }
 
         private async void RefreshDevices_click(object? sender, RoutedEventArgs e)
@@ -658,9 +688,12 @@ namespace LiveCaptionsTranslator
             var languages = new List<object> { AUTO_OCR };
             var available = await Task.Run(SlideOcr.AvailableLanguages);
             languages.AddRange(available);
-            OcrLanguageBox.ItemsSource = languages;
-            string current = Lecture.OcrLanguage;
-            OcrLanguageBox.SelectedItem = available.FirstOrDefault(l => l.Tag == current) ?? (object)AUTO_OCR;
+            Fill(() =>
+            {
+                OcrLanguageBox.ItemsSource = languages;
+                string current = Lecture.OcrLanguage;
+                OcrLanguageBox.SelectedItem = available.FirstOrDefault(l => l.Tag == current) ?? (object)AUTO_OCR;
+            });
             OcrHint.Text = "上传后按老师讲到的页码分节，小结也会参考这一页的文字纠正术语。没有文字的页面（扫描件、图片）会自动用 Tesseract OCR 识别；" +
                            "OCR 语言来自已安装的 Tesseract 语言包。也支持 .pptx。" +
                            (SlideOcr.IsAvailable ? string.Empty : "\n还没有找到 OCR 工具：请安装 poppler-utils（pdftoppm）和 tesseract。");
@@ -727,10 +760,12 @@ namespace LiveCaptionsTranslator
         {
             var voices = new List<string> { AUTO_VOICE };
             voices.AddRange(await Task.Run(Speaker.GetVoices));
-            VoiceBox.ItemsSource = voices;
-
-            string current = Lecture.VoiceName;
-            VoiceBox.SelectedItem = voices.Contains(current) ? current : AUTO_VOICE;
+            Fill(() =>
+            {
+                VoiceBox.ItemsSource = voices;
+                string current = Lecture.VoiceName;
+                VoiceBox.SelectedItem = voices.Contains(current) ? current : AUTO_VOICE;
+            });
         }
 
         private void VoiceBox_SelectionChanged(object? sender, SelectionChangedEventArgs e)

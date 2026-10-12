@@ -130,6 +130,11 @@ namespace LiveCaptionsTranslator.utils
             catch (Exception)
             {
             }
+            lock (captureLock)
+            {
+                if (!ReferenceEquals(helper, process))
+                    return;    // Stopped on purpose while waiting.
+            }
             string message;
             lock (errors)
                 message = errors.ToString().Trim();

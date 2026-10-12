@@ -24,6 +24,8 @@ namespace LiveCaptionsTranslator.utils
         private static readonly object processLock = new();
         private static Process? current;
         private static volatile bool stopRequested = false;
+        // The `spd-say -C` started by the last stop: the worker waits for it, or it would cancel the next speech.
+        private static volatile Task? pendingCancel;
         private static volatile bool speakingOnDefaultOutput = false;
         private static DateTime suppressUntil = DateTime.MinValue;
         private static string lastSpokenSource = string.Empty;
@@ -157,13 +159,7 @@ namespace LiveCaptionsTranslator.utils
             if (dispatcher)
             {
                 // Killing the client does not stop speech-dispatcher: it keeps talking until told to cancel.
-                try
-                {
-                    Exec.Launch("spd-say", new[] { "-C" });
-                }
-                catch (Exception)
-                {
-                }
+                pendingCancel = Exec.Run("spd-say", new[] { "-C" }, 2000);
             }
             // The audio may still be draining after the cancel: keep ignoring captions for a while longer.
             if (wasSpeaking)
@@ -230,6 +226,13 @@ namespace LiveCaptionsTranslator.utils
                         queue.RemoveFirst();
                     }
 
+                    try
+                    {
+                        pendingCancel?.Wait(2000);
+                    }
+                    catch (Exception)
+                    {
+                    }
                     stopRequested = false;
                     try
                     {
