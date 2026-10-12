@@ -5,6 +5,8 @@ on:
 concurrency:
   group: mac-shots
   cancel-in-progress: true
+permissions:
+  contents: write
 jobs:
   shots:
     runs-on: macos-latest
@@ -57,3 +59,14 @@ jobs:
         with:
           name: shots
           path: /tmp/shots
+      - name: Commit shots back
+        if: always()
+        run: |
+          mkdir -p .github/screenshots/out
+          cp /tmp/shots/* .github/screenshots/out/ || true
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add .github/screenshots/out
+          git commit -m "mac screenshots output" || exit 0
+          git pull --rebase origin ${{ github.head_ref }} || true
+          git push origin HEAD:${{ github.head_ref }}
