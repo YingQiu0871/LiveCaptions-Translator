@@ -26,7 +26,8 @@ namespace LiveCaptionsTranslator
             }
         }
 
-        // Applies the saved bounds; the window is centered if it was never placed or would be off every screen.
+        // Applies the saved bounds. The whole window must fit a screen's working area: it is shrunk and moved to fit,
+        // and centered if it was never placed or its top left corner is on no screen (e.g. a monitor was unplugged).
         public static void Restore(Window window, string name, Size fallback)
         {
             var saved = Load(name);
@@ -34,16 +35,25 @@ namespace LiveCaptionsTranslator
             window.Width = Math.Max(size.Width, window.MinWidth);
             window.Height = Math.Max(size.Height, window.MinHeight);
             window.WindowStartupLocation = WindowStartupLocation.CenterScreen;
-            if (saved is not Rect position)
-                return;
             try
             {
-                var topLeft = new PixelPoint((int)position.X, (int)position.Y);
-                if (window.Screens.All.Any(screen => screen.WorkingArea.Contains(topLeft)))
-                {
-                    window.WindowStartupLocation = WindowStartupLocation.Manual;
-                    window.Position = topLeft;
-                }
+                var screens = window.Screens;
+                var topLeft = saved is Rect position ? new PixelPoint((int)position.X, (int)position.Y) : default;
+                var screen = saved == null ? null : screens.All.FirstOrDefault(s => s.WorkingArea.Contains(topLeft));
+                var area = (screen ?? screens.Primary ?? screens.All.FirstOrDefault())?.WorkingArea;
+                if (area is not PixelRect working)
+                    return;
+                double scaling = (screen ?? screens.Primary)?.Scaling ?? 1;
+                window.Width = Math.Max(Math.Min(window.Width, working.Width / scaling), window.MinWidth);
+                window.Height = Math.Max(Math.Min(window.Height, working.Height / scaling), window.MinHeight);
+                if (screen == null)
+                    return;
+                int width = (int)Math.Ceiling(window.Width * scaling);
+                int height = (int)Math.Ceiling(window.Height * scaling);
+                window.WindowStartupLocation = WindowStartupLocation.Manual;
+                window.Position = new PixelPoint(
+                    Math.Max(working.X, Math.Min(topLeft.X, working.Right - width)),
+                    Math.Max(working.Y, Math.Min(topLeft.Y, working.Bottom - height)));
             }
             catch (Exception)
             {

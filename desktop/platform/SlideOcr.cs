@@ -77,10 +77,10 @@ namespace LiveCaptionsTranslator.utils
                     {
                         "-r", RENDER_DPI.ToString(), "-f", number.ToString(), "-l", number.ToString(),
                         "-png", "-singlefile", full, prefix,
-                    }, 60000);
+                    }, 60000).ConfigureAwait(false);
                     if (!File.Exists(png))
                         continue;
-                    string? text = await Exec.Run("tesseract", new[] { png, "stdout", "-l", code }, 120000);
+                    string? text = await Exec.Run("tesseract", new[] { png, "stdout", "-l", code }, 120000).ConfigureAwait(false);
                     if (text == null)
                         continue;
                     result[number] = text.Split('\n')

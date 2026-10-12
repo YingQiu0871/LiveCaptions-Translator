@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text.Json;
 using Avalonia;
 using Avalonia.Controls;
@@ -100,7 +99,7 @@ namespace LiveCaptionsTranslator
             string folder = isFile ? Path.GetDirectoryName(path)! : path;
             if (OperatingSystem.IsMacOS())
             {
-                Process.Start(Exec.Create("open", isFile ? new[] { "-R", path } : new[] { folder }));
+                Exec.Launch("open", isFile ? new[] { "-R", path } : new[] { folder });
                 return;
             }
             ShellUtil.Open(folder);
@@ -111,7 +110,7 @@ namespace LiveCaptionsTranslator
         {
             if (OperatingSystem.IsMacOS())
             {
-                Process.Start(Exec.Create("open", new[] { "x-apple.systempreferences:com.apple.Sound-Settings.extension" }));
+                Exec.Launch("open", new[] { "x-apple.systempreferences:com.apple.Sound-Settings.extension" });
                 return true;
             }
             foreach (var (tool, arguments) in new (string, string[])[]
@@ -124,7 +123,7 @@ namespace LiveCaptionsTranslator
             {
                 if (!Exec.Exists(tool))
                     continue;
-                Process.Start(Exec.Create(tool, arguments));
+                Exec.Launch(tool, arguments);
                 return true;
             }
             return false;

@@ -53,6 +53,18 @@ namespace LiveCaptionsTranslator.utils
             return info;
         }
 
+        // Starts a GUI tool (a settings page, the file manager) and leaves it alone: nothing is redirected, so it
+        // cannot block on an output pipe nobody reads.
+        public static void Launch(string fileName, IEnumerable<string> arguments)
+        {
+            var info = new ProcessStartInfo(Find(fileName) ?? fileName) { UseShellExecute = false };
+            foreach (string argument in arguments)
+                info.ArgumentList.Add(argument);
+            string path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+            info.Environment["PATH"] = string.Join(Path.PathSeparator, ExtraDirectories.Prepend(path));
+            using var process = Process.Start(info);
+        }
+
         // Runs a tool to the end and returns its standard output; null if it is missing, fails or times out.
         public static async Task<string?> Run(string fileName, IEnumerable<string> arguments, int timeoutMs = 10000)
         {
@@ -68,15 +80,15 @@ namespace LiveCaptionsTranslator.utils
                 using var timeout = new CancellationTokenSource(timeoutMs);
                 try
                 {
-                    await process.WaitForExitAsync(timeout.Token);
+                    await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
                     Kill(process);
                     return null;
                 }
-                string text = await output;
-                await error;
+                string text = await output.ConfigureAwait(false);
+                await error.ConfigureAwait(false);
                 return process.ExitCode == 0 ? text : null;
             }
             catch (Exception)

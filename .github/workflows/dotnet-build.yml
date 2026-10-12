@@ -184,8 +184,15 @@ jobs:
             mkdir -p "$staging"
             cp -R "$app" "$staging/"
             ln -s /Applications "$staging/Applications"
-            hdiutil create -srcfolder "$staging" -volname 课堂同传助手 -format UDZO \
-              "out/LiveCaptionsTranslator-macos-$arch.dmg"
+            # hdiutil sometimes fails with "Resource busy" on a CI runner: try again.
+            for attempt in 1 2 3; do
+              hdiutil create -srcfolder "$staging" -volname 课堂同传助手 -format UDZO \
+                "out/LiveCaptionsTranslator-macos-$arch.dmg" && break
+              if [ "$attempt" = 3 ]; then
+                exit 1
+              fi
+              sleep 5
+            done
           done
 
       - name: Upload Build Artifacts
@@ -245,7 +252,9 @@ jobs:
             - 免安装版：`LiveCaptionsTranslator-win-x64-withruntime.exe`（自带运行库，直接运行）；`LiveCaptionsTranslator-win-x64.exe` 体积小，需要先装 .NET 8 桌面运行时。
             - ARM 电脑选 arm64 版本。
             - Linux：下载 `LiveCaptionsTranslator-linux-x64.tar.gz`，解压后运行 `install.sh`。
-            - macOS（13 及以上）：下载对应芯片的 `.dmg`（Apple 芯片选 arm64，Intel 选 x64），把应用拖进“应用程序”。首次打开请右键选择“打开”。
+            - macOS（13 及以上）：下载对应芯片的 `.dmg`（Apple 芯片选 arm64，Intel 选 x64），把应用拖进“应用程序”。
+            - macOS 首次打开：应用没有苹果的公证签名，macOS 15 及以上不能再靠右键“打开”放行。请先双击打开一次（会被拦下），再到“系统设置 > 隐私与安全性”，点“仍要打开”；也可以在终端运行 `xattr -dr com.apple.quarantine /Applications/课堂同传助手.app`。
+            - macOS 每次更新后，麦克风、屏幕录制权限可能需要重新授权。
 
             使用说明见仓库首页 README。
           files: |

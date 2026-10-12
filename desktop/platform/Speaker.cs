@@ -28,6 +28,7 @@ namespace LiveCaptionsTranslator.utils
         private static DateTime suppressUntil = DateTime.MinValue;
         private static string lastSpokenSource = string.Empty;
         private static string? missingToolReported;
+        private static string? failureReported;
         public static event Action<bool>? MutedChanged;
 
         public static bool Muted
@@ -146,8 +147,27 @@ namespace LiveCaptionsTranslator.utils
             lock (queueLock)
                 queue.Clear();
             stopRequested = true;
+            bool wasSpeaking = speakingOnDefaultOutput;
+            bool dispatcher = false;
             lock (processLock)
+            {
+                dispatcher = current != null && Path.GetFileName(current.StartInfo.FileName) == "spd-say";
                 Exec.Kill(current);
+            }
+            if (dispatcher)
+            {
+                // Killing the client does not stop speech-dispatcher: it keeps talking until told to cancel.
+                try
+                {
+                    Exec.Launch("spd-say", new[] { "-C" });
+                }
+                catch (Exception)
+                {
+                }
+            }
+            // The audio may still be draining after the cancel: keep ignoring captions for a while longer.
+            if (wasSpeaking)
+                suppressUntil = DateTime.Now + SUPPRESS_TAIL;
         }
 
         // The voices to choose from. macOS: `say -v '?'`; Linux: the voices of speech-dispatcher.
@@ -270,6 +290,8 @@ namespace LiveCaptionsTranslator.utils
                 process.BeginOutputReadLine();
                 process.BeginErrorReadLine();
                 process.WaitForExit();
+                if (process.ExitCode != 0 && !stopRequested)
+                    ReportFailed(process.StartInfo.FileName, process.ExitCode);
             }
             lock (processLock)
                 current = null;
@@ -332,6 +354,17 @@ namespace LiveCaptionsTranslator.utils
                 "--", text,
             };
             return Exec.Create(espeak, espeakArguments);
+        }
+
+        // Once per session and tool: a speech tool that ran but failed (e.g. `say -a` with an unknown device).
+        private static void ReportFailed(string fileName, int exitCode)
+        {
+            string tool = Path.GetFileName(fileName);
+            if (failureReported == tool)
+                return;
+            failureReported = tool;
+            SnackbarHost.Show("[ERROR] 语音播报失败。", $"{tool} 异常退出（代码 {exitCode}）。请检查所选的语音和输出设备。",
+                SnackbarType.Error, timeout: 5, closeButton: true);
         }
 
         private static ProcessStartInfo? ReportMissing(string tool)

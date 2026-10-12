@@ -26,8 +26,8 @@ namespace LiveCaptionsTranslator.utils
             try
             {
                 if (OperatingSystem.IsMacOS())
-                    return flow == DataFlow.Capture ? new List<AudioDevice>() : await ListMacOutputs();
-                return await ListPulse(flow);
+                    return flow == DataFlow.Capture ? new List<AudioDevice>() : await ListMacOutputs().ConfigureAwait(false);
+                return await ListPulse(flow).ConfigureAwait(false);
             }
             catch (Exception)
             {
@@ -36,12 +36,14 @@ namespace LiveCaptionsTranslator.utils
         }
 
         // The id of the default device; null if it cannot be told (macOS: `say` does not mark it).
-        public static string? DefaultId(DataFlow flow)
+        public static string? DefaultId(DataFlow flow) => DefaultIdAsync(flow).GetAwaiter().GetResult();
+
+        public static async Task<string?> DefaultIdAsync(DataFlow flow)
         {
             if (!OperatingSystem.IsLinux() || flow == DataFlow.All)
                 return null;
             string command = flow == DataFlow.Capture ? "get-default-source" : "get-default-sink";
-            return Exec.Run("pactl", new[] { command }).GetAwaiter().GetResult()?.Trim();
+            return (await Exec.Run("pactl", new[] { command }).ConfigureAwait(false))?.Trim();
         }
 
         // Makes the device the default one for the whole system (Linux only).
@@ -60,10 +62,10 @@ namespace LiveCaptionsTranslator.utils
         private static async Task<List<AudioDevice>> ListPulse(DataFlow flow)
         {
             bool capture = flow == DataFlow.Capture;
-            string? text = await Exec.Run("pactl", new[] { "list", "short", capture ? "sources" : "sinks" });
+            string? text = await Exec.Run("pactl", new[] { "list", "short", capture ? "sources" : "sinks" }).ConfigureAwait(false);
             if (text == null)
                 return new List<AudioDevice>();
-            string? defaultId = DefaultId(flow);
+            string? defaultId = await DefaultIdAsync(flow).ConfigureAwait(false);
 
             var result = new List<AudioDevice>();
             foreach (string line in text.Split('\n', StringSplitOptions.RemoveEmptyEntries))
@@ -82,7 +84,7 @@ namespace LiveCaptionsTranslator.utils
         // The sources that carry the sound the computer plays, one per output (`pactl ... sources` *.monitor).
         public static async Task<List<AudioDevice>> ListMonitors()
         {
-            string? text = await Exec.Run("pactl", new[] { "list", "short", "sources" });
+            string? text = await Exec.Run("pactl", new[] { "list", "short", "sources" }).ConfigureAwait(false);
             if (text == null)
                 return new List<AudioDevice>();
             return text.Split('\n', StringSplitOptions.RemoveEmptyEntries)
@@ -92,10 +94,11 @@ namespace LiveCaptionsTranslator.utils
                 .ToList();
         }
 
-        // `say -a '?'` prints "  73 MacBook Pro Speakers": the id for `say -a`, then the name.
+        // `say -a '?'` prints "  73 MacBook Pro Speakers": a CoreAudio id that changes between sessions, then the
+        // name. `say -a` also takes the name, so that is what is stored and passed.
         private static async Task<List<AudioDevice>> ListMacOutputs()
         {
-            string? text = await Exec.Run("say", new[] { "-a", "?" });
+            string? text = await Exec.Run("say", new[] { "-a", "?" }).ConfigureAwait(false);
             var result = new List<AudioDevice>();
             if (text == null)
                 return result;
@@ -103,7 +106,7 @@ namespace LiveCaptionsTranslator.utils
             {
                 var match = Regex.Match(line, @"^\s*(\d+)\s+(.+?)\s*$");
                 if (match.Success)
-                    result.Add(new AudioDevice(match.Groups[1].Value, match.Groups[2].Value, false));
+                    result.Add(new AudioDevice(match.Groups[2].Value, match.Groups[2].Value, false));
             }
             return result;
         }

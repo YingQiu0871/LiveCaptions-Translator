@@ -153,7 +153,7 @@ namespace LiveCaptionsTranslator
             // One failing loader (e.g. an audio device that can't be read) must not leave the page read-only.
             foreach (Action load in new Action[]
                      {
-                         LoadEngine, LoadSettings, LoadApiSetting, LoadTranslateSetting, LoadOcrLanguages, LoadVoices,
+                         LoadEngine, LoadSettings, LoadApiSetting, LoadTranslateSetting,
                          ShowSlidesInfo, ShowSaveFolder
                      })
             {
@@ -164,6 +164,21 @@ namespace LiveCaptionsTranslator
                 catch (Exception)
                 {
                 }
+            }
+            // These run external tools (tesseract, spd-say, say): off the UI thread, then the controls are filled.
+            try
+            {
+                await LoadOcrLanguages();
+            }
+            catch (Exception)
+            {
+            }
+            try
+            {
+                await LoadVoices();
+            }
+            catch (Exception)
+            {
             }
             try
             {
@@ -569,7 +584,7 @@ namespace LiveCaptionsTranslator
                 ? "用的是系统默认麦克风，可在系统设置的“声音”里更换。第一次使用时 macOS 会请求麦克风权限。"
                 : "这里选的麦克风只供本程序录音，不会更改系统的默认录音设备。不要选蓝牙耳机自带的麦克风，否则耳机会切换到通话模式，音质变差。";
 
-            var microphones = await AudioDevices.ListAsync(DataFlow.Capture);
+            var microphones = await Task.Run(() => AudioDevices.ListAsync(DataFlow.Capture));
             MicBox.ItemsSource = microphones;
             string chosen = DesktopSettings.MicrophoneId;
             MicBox.SelectedItem = microphones.FirstOrDefault(device => device.Id == chosen && chosen.Length > 0)
@@ -577,7 +592,8 @@ namespace LiveCaptionsTranslator
             MicBox.IsEnabled = Lecture.InputSource == InputSource.Microphone;
 
             var outputs = new List<object> { DEFAULT_OUTPUT };
-            var renderDevices = await AudioDevices.ListAsync(DataFlow.Render);
+            var renderDevices = await Task.Run(() => AudioDevices.ListAsync(DataFlow.Render));
+            renderDefaultId = await Task.Run(() => AudioDevices.DefaultIdAsync(DataFlow.Render));
             outputs.AddRange(renderDevices);
             SpeechDeviceBox.ItemsSource = outputs;
             string speechDeviceId = Lecture.SpeechDeviceId;
@@ -623,21 +639,24 @@ namespace LiveCaptionsTranslator
             ShowSpeechDeviceHint();
         }
 
+        // The default output device, read when the devices are listed (asking costs a call to `pactl`).
+        private string? renderDefaultId;
+
         private void ShowSpeechDeviceHint()
         {
             string speechDeviceId = Lecture.SpeechDeviceId;
             bool onDefault = string.IsNullOrEmpty(speechDeviceId) ||
-                             speechDeviceId == AudioDevices.DefaultId(DataFlow.Render);
+                             speechDeviceId == renderDefaultId;
             SpeechDeviceHint.Text = onDefault
                 ? "播报和电脑声音走同一个设备，识别会听到播报，所以播报时会暂停接收字幕。" +
                   "线下课建议在这里直接选蓝牙耳机，并把系统默认输出设为电脑扬声器。"
                 : "播报只从这个设备播出，不会被识别听到。";
         }
 
-        private void LoadOcrLanguages()
+        private async Task LoadOcrLanguages()
         {
             var languages = new List<object> { AUTO_OCR };
-            var available = SlideOcr.AvailableLanguages();
+            var available = await Task.Run(SlideOcr.AvailableLanguages);
             languages.AddRange(available);
             OcrLanguageBox.ItemsSource = languages;
             string current = Lecture.OcrLanguage;
@@ -704,10 +723,10 @@ namespace LiveCaptionsTranslator
             ShowSlidesInfo();
         }
 
-        private void LoadVoices()
+        private async Task LoadVoices()
         {
             var voices = new List<string> { AUTO_VOICE };
-            voices.AddRange(Speaker.GetVoices());
+            voices.AddRange(await Task.Run(Speaker.GetVoices));
             VoiceBox.ItemsSource = voices;
 
             string current = Lecture.VoiceName;

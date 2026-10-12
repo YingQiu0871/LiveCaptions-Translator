@@ -122,6 +122,14 @@ namespace LiveCaptionsTranslator.utils
                 if (!ReferenceEquals(helper, process))
                     return;    // Stopped on purpose.
             }
+            // The error text arrives asynchronously: wait for the helper to end and the pipes to drain.
+            try
+            {
+                process.WaitForExit();
+            }
+            catch (Exception)
+            {
+            }
             string message;
             lock (errors)
                 message = errors.ToString().Trim();
@@ -148,7 +156,7 @@ namespace LiveCaptionsTranslator.utils
                 {
                     for (int i = 0; i < 15; i++)
                     {
-                        await Task.Delay(2000, cts.Token);
+                        await Task.Delay(2000, cts.Token).ConfigureAwait(false);
                         StatusChanged?.Invoke(message);
                     }
                 }
