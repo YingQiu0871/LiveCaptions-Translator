@@ -1,0 +1,48 @@
+name: mac-screenshots
+on:
+  pull_request:
+    paths: ['.github/workflows/mac-screenshots.yml', '.github/screenshots/**']
+jobs:
+  shots:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get app
+        run: |
+          mkdir -p /tmp/app /tmp/shots
+          curl -fL -o /tmp/app.dmg https://github.com/YingQiu0871/LiveCaptions-Translator/releases/download/v1.7-lecture.120/LiveCaptionsTranslator-macos-arm64.dmg
+          hdiutil attach /tmp/app.dmg -mountpoint /tmp/vol -nobrowse
+          ls /tmp/vol
+          cp -R /tmp/vol/*.app /tmp/app/
+          hdiutil detach /tmp/vol || true
+          xattr -cr /tmp/app/*.app
+      - name: Screenshots
+        run: |
+          set +e
+          brew install cliclick
+          python3 .github/screenshots/seed.py /tmp/lctdata
+          export LCT_DATA_DIR=/tmp/lctdata
+          system_profiler SPDisplaysDataType | grep -i resolution | tee /tmp/shots/res.txt
+          nohup "/tmp/app/课堂同传助手.app/Contents/MacOS/LiveCaptionsTranslator" > /tmp/shots/app.log 2>&1 &
+          sleep 12
+          screencapture -x /tmp/shots/00-full.png
+          osascript -e 'tell application "System Events" to tell (first process whose unix id is '$!') to get {position, size} of window 1' | tee /tmp/shots/win.txt
+          osascript -e 'tell application "System Events" to get name of every process whose background only is false' | tee -a /tmp/shots/win.txt
+          cat /tmp/shots/app.log | tail -20
+          ls -la /tmp/lctdata
+          # window at (100,100) pt incl. title bar; client origin ~ (100,128)
+          OX=${OX:-100}; OY=${OY:-128}
+          click() { cliclick c:$((OX+$1)),$((OY+$2)); sleep 2; }
+          click 44 115; screencapture -x /tmp/shots/01-settings.png
+          click 44 157; screencapture -x /tmp/shots/03-timeline.png
+          click 44 199; screencapture -x /tmp/shots/04-history.png
+          click 300 130; screencapture -x /tmp/shots/04b-history-click1.png
+          click 300 130; screencapture -x /tmp/shots/04c-history-click2.png
+          click 44 73; screencapture -x /tmp/shots/02-captions.png
+          click 44 241; screencapture -x /tmp/shots/05-about.png
+          screencapture -x /tmp/shots/99-end.png
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shots
+          path: /tmp/shots
