@@ -181,7 +181,7 @@
                         <TextBlock Classes="hint"
                                    Text="实时同传会把每句译文一出来就读给你听，读不过来时跳过积压的旧句子，保证跟得上老师。" />
 
-                        <TextBlock Classes="label" Text="输出设备" />
+                        <TextBlock x:Name="SpeechDeviceLabel" Classes="label" Text="输出设备" />
                         <ComboBox x:Name="SpeechDeviceBox" SelectionChanged="SpeechDeviceBox_SelectionChanged" />
                         <TextBlock x:Name="SpeechDeviceHint" Classes="hint" />
 
