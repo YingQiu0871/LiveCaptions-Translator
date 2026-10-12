@@ -25,6 +25,7 @@ namespace LiveCaptionsTranslator
                     new FontFallback { FontFamily = new FontFamily("Noto Sans CJK SC") },
                     new FontFallback { FontFamily = new FontFamily("PingFang SC") },
                     new FontFallback { FontFamily = new FontFamily("Microsoft YaHei") },
+                    new FontFallback { FontFamily = new FontFamily("WenQuanYi Zen Hei") },
                     new FontFallback { FontFamily = new FontFamily("WenQuanYi Micro Hei") },
                 },
             })

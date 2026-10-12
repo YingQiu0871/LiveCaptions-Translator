@@ -1,0 +1,70 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:m="using:LiveCaptionsTranslator.models"
+             x:Class="LiveCaptionsTranslator.TimelinePage">
+    <Grid Margin="15" RowDefinitions="Auto,Auto,*">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <ComboBox x:Name="CourseBox" MinWidth="140" MaxWidth="220" VerticalAlignment="Center"
+                          ToolTip.Tip="课程" SelectionChanged="CourseBox_SelectionChanged">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="m:CourseEntry">
+                            <TextBlock Text="{Binding Name}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <TextBlock VerticalAlignment="Center" Opacity="0.6" Text="›" />
+                <ComboBox x:Name="LectureBox" MinWidth="180" MaxWidth="280" VerticalAlignment="Center"
+                          ToolTip.Tip="本节课" SelectionChanged="LectureBox_SelectionChanged">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="m:LectureRecord">
+                            <StackPanel>
+                                <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                <TextBlock FontSize="11" Opacity="0.65" Text="{Binding Info}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <Button x:Name="EndSection" Margin="2,0,0,0" Content="结束本节并总结" ToolTip.Tip="Ctrl+Alt+S"
+                        Click="EndSection_click" />
+                <Button x:Name="LoadSlides" Content="上传课件" ToolTip.Tip="载入后按课件页码分节" Click="LoadSlides_click" />
+                <Button x:Name="ClearSlides" Content="✕" Background="Transparent" ToolTip.Tip="移除课件" IsVisible="False"
+                        Click="ClearSlides_click" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" Margin="3,0">
+                <Button x:Name="Export" Content="导出" Background="Transparent"
+                        ToolTip.Tip="导出这节课的转录 (Markdown)" Click="Export_click" />
+                <Button x:Name="Refresh" Content="刷新" Background="Transparent" ToolTip.Tip="刷新" Click="Refresh_click" />
+            </StackPanel>
+        </Grid>
+
+        <TextBlock x:Name="SlidesInfo" Grid.Row="1" Margin="4,8,0,0" Opacity="0.75" TextWrapping="Wrap" />
+
+        <TextBlock x:Name="EmptyHint" Grid.Row="2" Margin="5,15,5,0" Opacity="0.7" IsVisible="False"
+                   Text="这节课还没有小节总结。上课时每隔几分钟会自动生成一节，也可以随时按 Ctrl+Alt+S 手动结束本节。"
+                   TextWrapping="Wrap" />
+
+        <ScrollViewer x:Name="SectionScroll" Grid.Row="2" Margin="0,8,0,0" VerticalScrollBarVisibility="Auto">
+            <ItemsControl x:Name="SectionList">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="m:SectionEntry">
+                        <Border Margin="0,0,10,8" Padding="12,8,12,10" CornerRadius="6" BorderThickness="1"
+                                Background="{DynamicResource SystemControlBackgroundListLowBrush}"
+                                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource SystemControlHighlightAccentBrush}"
+                                               Text="{Binding TimeRange}" />
+                                    <TextBlock Margin="10,0,0,0" FontWeight="SemiBold" Text="{Binding Title}"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+                                <TextBlock Margin="0,4,0,0" Text="{Binding Body}" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

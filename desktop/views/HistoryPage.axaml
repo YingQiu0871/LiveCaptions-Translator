@@ -1,0 +1,142 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:m="using:LiveCaptionsTranslator.models"
+             x:Class="LiveCaptionsTranslator.HistoryPage">
+    <Grid Margin="15" RowDefinitions="Auto,*">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+            <!-- Breadcrumb: 课程 › course › lecture -->
+            <StackPanel x:Name="Breadcrumb" Orientation="Horizontal" HorizontalAlignment="Left" Spacing="2">
+                <Button x:Name="CrumbHome" Content="课程" Background="Transparent" FontSize="15" Click="CrumbHome_click" />
+                <TextBlock x:Name="CrumbSep1" VerticalAlignment="Center" Opacity="0.6" Text="›" />
+                <Button x:Name="CrumbCourse" MaxWidth="220" Background="Transparent" FontSize="15"
+                        Click="CrumbCourse_click" />
+                <TextBlock x:Name="CrumbSep2" VerticalAlignment="Center" Opacity="0.6" Text="›" />
+                <TextBlock x:Name="CrumbLecture" MaxWidth="280" Margin="6,0,0,0" VerticalAlignment="Center"
+                           FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" Margin="3,0">
+                <Button x:Name="NewCourse" Content="新建课程" Background="Transparent" Click="NewCourse_click" />
+                <Button x:Name="AllSentences" Content="全部句子" Background="Transparent"
+                        ToolTip.Tip="不分课程，按时间列出所有句子" Click="AllSentences_click" />
+                <Button x:Name="RenameLecture" Content="重命名" Background="Transparent" Click="RenameLecture_click" />
+                <Button x:Name="NotesDraft" Content="生成笔记初稿" Background="Transparent"
+                        ToolTip.Tip="结合小节总结、转录和课件（若已上传）生成笔记初稿，保存在转录文件旁边"
+                        Click="NotesDraft_click" />
+                <Button x:Name="OpenFile" Content="打开文件位置" Background="Transparent"
+                        ToolTip.Tip="重新生成本节课的 Markdown 文件，并在文件管理器中显示" Click="OpenFile_click" />
+                <Button x:Name="Export" Content="导出" Background="Transparent" ToolTip.Tip="导出全部句子 (CSV)"
+                        Click="Export_click" />
+                <Button x:Name="Delete" Content="全部删除" Background="Transparent" ToolTip.Tip="全部删除"
+                        Click="Delete_click" />
+                <Button x:Name="Refresh" Content="刷新" Background="Transparent" ToolTip.Tip="刷新" Click="Refresh_click" />
+            </StackPanel>
+        </Grid>
+
+        <!-- Level 1: course folders -->
+        <ScrollViewer x:Name="CourseScroll" Grid.Row="1" Margin="0,10,0,0" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <TextBlock x:Name="CourseEmptyHint" Margin="5,5,5,0" Opacity="0.7" IsVisible="False"
+                           Text="还没有课程。上完一节课点“停止”后，会让你给这节课命名并选择课程，它就会出现在这里。"
+                           TextWrapping="Wrap" />
+                <WrapPanel x:Name="CourseList" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Level 2: the recordings of a course -->
+        <ScrollViewer x:Name="LectureScroll" Grid.Row="1" Margin="0,10,0,0" VerticalScrollBarVisibility="Auto"
+                      IsVisible="False">
+            <StackPanel>
+                <TextBlock x:Name="LectureEmptyHint" Margin="5,5,5,0" Opacity="0.7" IsVisible="False"
+                           Text="这个课程还没有录音。" />
+                <StackPanel x:Name="LectureList" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Level 3: one recording: section summaries with the original and the translation -->
+        <ScrollViewer x:Name="DetailScroll" Grid.Row="1" Margin="0,10,0,0" VerticalScrollBarVisibility="Auto"
+                      IsVisible="False">
+            <StackPanel>
+                <TextBlock x:Name="DetailInfo" Margin="2,0,0,8" Opacity="0.7" TextWrapping="Wrap" />
+                <TextBlock x:Name="DetailEmptyHint" Margin="2,0,0,0" Opacity="0.7" IsVisible="False"
+                           Text="这节课没有识别到内容。" />
+                <ItemsControl x:Name="DetailList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="m:LectureSectionView">
+                            <StackPanel Margin="0,0,10,16">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource SystemControlHighlightAccentBrush}"
+                                               Text="{Binding Header}" />
+                                    <TextBlock Margin="10,0,0,0" FontWeight="SemiBold" Text="{Binding Title}"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+                                <Border Margin="0,6" Padding="10,6,10,8" CornerRadius="6" BorderThickness="1"
+                                        IsVisible="{Binding IsSummaryVisible}"
+                                        Background="{DynamicResource SystemControlBackgroundListLowBrush}"
+                                        BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+                                    <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" />
+                                </Border>
+                                <ItemsControl ItemsSource="{Binding Lines}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="m:HistoryLine">
+                                            <StackPanel Margin="4,4,0,6">
+                                                <TextBlock FontSize="13" Opacity="0.75" TextWrapping="Wrap">
+                                                    <Run FontFamily="Consolas,monospace" Text="{Binding Time, StringFormat=HH:mm:ss, Mode=OneWay}" />
+                                                    <Run Text="  " />
+                                                    <Run Text="{Binding SourceText, Mode=OneWay}" />
+                                                </TextBlock>
+                                                <TextBlock Margin="0,2,0,0" Text="{Binding TranslatedText}"
+                                                           TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- All sentences -->
+        <Grid x:Name="AllView" Grid.Row="1" IsVisible="False" RowDefinitions="Auto,Auto,*">
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="5" Margin="0,10,3,0" HorizontalAlignment="Left">
+                <Button x:Name="PageDown" Content="‹" Background="Transparent" ToolTip.Tip="上一页" Click="PageDown_click" />
+                <TextBlock x:Name="PageNumber" Margin="5,0" VerticalAlignment="Center" FontSize="15" Text="1/1" />
+                <Button x:Name="PageUp" Content="›" Background="Transparent" ToolTip.Tip="下一页" Click="PageUp_click" />
+                <ComboBox x:Name="HistoryMaxRow" SelectedIndex="1" VerticalAlignment="Center">
+                    <ComboBoxItem Content="20 条/页" Tag="20" />
+                    <ComboBoxItem Content="30 条/页" Tag="30" />
+                    <ComboBoxItem Content="50 条/页" Tag="50" />
+                    <ComboBoxItem Content="100 条/页" Tag="100" />
+                </ComboBox>
+                <TextBox x:Name="HistorySearchBox" Width="200" Watermark="搜索" VerticalAlignment="Center" />
+            </StackPanel>
+            <Grid Grid.Row="1" Margin="4,10,20,2" ColumnDefinitions="0.4*,*,*,0.3*">
+                <TextBlock Grid.Column="0" FontWeight="SemiBold" Text="时间" />
+                <TextBlock Grid.Column="1" FontWeight="SemiBold" Text="原文" />
+                <TextBlock Grid.Column="2" FontWeight="SemiBold" Text="译文" />
+                <TextBlock Grid.Column="3" FontWeight="SemiBold" Text="接口" />
+            </Grid>
+            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                <ItemsControl x:Name="HistoryList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="m:TranslationHistoryEntry">
+                            <Border Padding="4,6" BorderThickness="0,0,0,1"
+                                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+                                <Grid Margin="0,0,16,0" ColumnDefinitions="0.4*,*,*,0.3*">
+                                    <TextBlock Grid.Column="0" Text="{Binding Timestamp}" TextWrapping="Wrap"
+                                               ToolTip.Tip="{Binding TimestampFull}" />
+                                    <TextBlock Grid.Column="1" Margin="0,0,8,0" Text="{Binding SourceText}"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Grid.Column="2" Margin="0,0,8,0" Text="{Binding TranslatedText}"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Grid.Column="3" Text="{Binding ApiUsed}" TextWrapping="Wrap" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>

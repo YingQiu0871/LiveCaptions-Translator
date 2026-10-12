@@ -5,7 +5,7 @@
     <Application.Styles>
         <FluentTheme />
         <Style Selector="Window">
-            <Setter Property="FontFamily" Value="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" />
+            <Setter Property="FontFamily" Value="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, WenQuanYi Zen Hei, WenQuanYi Micro Hei, sans-serif" />
         </Style>
     </Application.Styles>
 </Application>
