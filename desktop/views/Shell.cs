@@ -15,7 +15,7 @@ namespace LiveCaptionsTranslator
         public static MainWindow? Main =>
             (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow as MainWindow;
 
-        public static FilePickerFileType SlideFiles { get; } = new("课件 (PDF, PowerPoint)")
+        public static FilePickerFileType SlideFiles { get; } = new("课件（PDF, PowerPoint）")
         {
             Patterns = new[] { "*.pdf", "*.PDF", "*.pptx", "*.PPTX" },
         };
@@ -168,6 +168,7 @@ namespace LiveCaptionsTranslator
                     }
                     catch (Exception)
                     {
+                        // A choice that cannot be saved is simply not remembered.
                     }
                 }
             }
@@ -184,6 +185,7 @@ namespace LiveCaptionsTranslator
                 }
                 catch (Exception)
                 {
+                    // A missing or damaged file means the defaults.
                 }
             }
             return new Data();

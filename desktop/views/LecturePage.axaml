@@ -37,7 +37,7 @@
         </Style>
     </UserControl.Styles>
 
-    <ScrollViewer x:Name="PageScroll" VerticalScrollBarVisibility="Auto">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
         <Grid Margin="15,12,5,12" ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto">
 
             <!-- Left column: input, model / API -->
@@ -70,7 +70,7 @@
                         </Expander>
 
                         <StackPanel Margin="0,10,0,0" Orientation="Horizontal">
-                            <Button x:Name="TestAsrButton" Content="测试连接" Click="TestAsr_click" />
+                            <Button x:Name="TestAsrButton" Content="测试连接" Click="TestAsr_Click" />
                             <TextBlock x:Name="TestAsrResult" Margin="10,0,0,0" VerticalAlignment="Center"
                                        TextWrapping="Wrap" />
                         </StackPanel>
@@ -85,7 +85,7 @@
                             <TextBlock Classes="label" Text="麦克风" />
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <ComboBox x:Name="MicBox" MinWidth="230" SelectionChanged="MicBox_SelectionChanged" />
-                                <Button x:Name="RefreshDevicesButton" Content="刷新" ToolTip.Tip="刷新设备列表" Click="RefreshDevices_click" />
+                                <Button x:Name="RefreshDevicesButton" Content="刷新" ToolTip.Tip="刷新设备列表" Click="RefreshDevices_Click" />
                             </StackPanel>
                         </StackPanel>
                         <TextBlock x:Name="SourceStatus" Classes="hint" />
@@ -93,7 +93,7 @@
                     </StackPanel>
                 </Border>
 
-                <Border x:Name="ApiCard" Classes="card" x:DataType="m:OpenAIConfig">
+                <Border Classes="card" x:DataType="m:OpenAIConfig">
                     <StackPanel>
                         <TextBlock Classes="title" Text="① 模型与 API" />
 
@@ -117,7 +117,7 @@
                         <TextBlock Classes="hint" Text="小节总结始终用这里的模型；翻译用哪个接口在“⑤ 翻译”里选。" />
 
                         <StackPanel Margin="0,10,0,0" Orientation="Horizontal">
-                            <Button x:Name="TestApiButton" Content="测试连接" Click="TestApi_click" />
+                            <Button x:Name="TestApiButton" Content="测试连接" Click="TestApi_Click" />
                             <TextBlock x:Name="TestApiResult" Margin="10,0,0,0" VerticalAlignment="Center"
                                        TextWrapping="Wrap" />
                         </StackPanel>
@@ -131,8 +131,8 @@
                     <StackPanel>
                         <TextBlock Classes="title" Text="② 课件（可选）" />
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Button x:Name="LoadSlidesButton" Content="上传课件 PDF" Click="LoadSlides_click" />
-                            <Button x:Name="ClearSlidesButton" Content="移除" IsVisible="False" Click="ClearSlides_click" />
+                            <Button x:Name="LoadSlidesButton" Content="上传课件 PDF" Click="LoadSlides_Click" />
+                            <Button x:Name="ClearSlidesButton" Content="移除" IsVisible="False" Click="ClearSlides_Click" />
                         </StackPanel>
                         <TextBlock x:Name="SlidesInfo" Margin="2,8,0,0" TextWrapping="Wrap" />
                         <TextBlock Classes="label" Text="扫描版课件的 OCR 语言" />
@@ -196,8 +196,8 @@
                                 IsSnapToTickEnabled="True" />
 
                         <StackPanel Margin="0,10,0,0" Orientation="Horizontal" Spacing="6">
-                            <Button Content="试听" Click="TestSpeech_click" />
-                            <Button Content="选择输出设备…" Click="SoundSettings_click" />
+                            <Button Content="试听" Click="TestSpeech_Click" />
+                            <Button Content="选择输出设备…" Click="SoundSettings_Click" />
                         </StackPanel>
                         <TextBlock Classes="hint" Text="标题栏的“耳机播报”开关或 Ctrl+Alt+M 可以随时打开 / 关闭。" />
                     </StackPanel>
@@ -220,7 +220,7 @@
                                  TextWrapping="Wrap"
                                  Watermark="例如：&#x0a;adeno-associated virus = 腺相关病毒&#x0a;CRISPR&#x0a;vector = 载体" />
                         <StackPanel Margin="0,6,0,0" Orientation="Horizontal">
-                            <Button x:Name="ExtractGlossaryButton" Content="从课件提取术语" Click="ExtractGlossary_click" />
+                            <Button x:Name="ExtractGlossaryButton" Content="从课件提取术语" Click="ExtractGlossary_Click" />
                             <TextBlock x:Name="GlossaryResult" Margin="10,0,0,0" VerticalAlignment="Center"
                                        TextWrapping="Wrap" />
                         </StackPanel>
@@ -235,7 +235,7 @@
                         <local:EditableCombo x:Name="TargetLangBox" />
                         <TextBlock Classes="hint" Text="可以直接输入语言代码，例如 zh-CN、en-US。" />
 
-                        <Button Margin="0,10,0,0" Content="其他接口的配置…" Click="APISettingButton_click" />
+                        <Button Margin="0,10,0,0" Content="其他接口的配置…" Click="ApiSettingButton_Click" />
                     </StackPanel>
 
                     <StackPanel Grid.Column="2">
@@ -273,9 +273,9 @@
                     <TextBlock Classes="label" Text="保存位置" />
                     <Grid ColumnDefinitions="*,Auto,Auto,Auto">
                         <TextBox x:Name="SaveFolderBox" Grid.Column="0" IsReadOnly="True" />
-                        <Button Grid.Column="1" Margin="6,0,0,0" Content="选择…" Click="ChooseSaveFolder_click" />
-                        <Button Grid.Column="2" Margin="6,0,0,0" Content="打开" Click="OpenSaveFolder_click" />
-                        <Button Grid.Column="3" Margin="6,0,0,0" Content="恢复默认" Click="ResetSaveFolder_click" />
+                        <Button Grid.Column="1" Margin="6,0,0,0" Content="选择…" Click="ChooseSaveFolder_Click" />
+                        <Button Grid.Column="2" Margin="6,0,0,0" Content="打开" Click="OpenSaveFolder_Click" />
+                        <Button Grid.Column="3" Margin="6,0,0,0" Content="恢复默认" Click="ResetSaveFolder_Click" />
                     </Grid>
                     <TextBlock Classes="hint"
                                Text="每节课点“停止”后，会让你给这节课命名并选择课程，然后保存为“保存位置/课程名/本节课名称.md”，里面有小节总结、原文和译文。历史页里也能按课程查看。改位置只影响之后保存的文件。" />
@@ -293,7 +293,7 @@
                         <TextBlock Classes="hint" Text="{}{0} 会被替换为目标语言。" />
                         <TextBox x:Name="SummaryPromptBox" MinHeight="90" Margin="0,6,0,0" AcceptsReturn="True"
                                  TextWrapping="Wrap" />
-                        <Button Margin="0,6,0,0" Content="恢复默认" Click="ResetPrompt_click" />
+                        <Button Margin="0,6,0,0" Content="恢复默认" Click="ResetPrompt_Click" />
                     </StackPanel>
                 </Expander>
             </Border>

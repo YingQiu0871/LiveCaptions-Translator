@@ -1,13 +1,13 @@
 namespace LiveCaptionsTranslator
 {
-    // Notifications of the core ("settings not saved", "speech failed", ...). The WPF app shows them in a snackbar;
-    // here the window subscribes to `Shown` and draws them however it likes.
+    // Notifications of the core ("settings not saved", "speech failed", ...), with the same Show signature as the
+    // WPF snackbar host. The window subscribes to `Shown` and draws them; without a subscriber they go to stderr.
     public class SnackbarHost
     {
         // (title, message, type, timeout in seconds, closeButton). Raised on the UI thread.
         public static event Action<string, string, SnackbarType, int, bool>? Shown;
 
-        // Safe to call from any thread.
+        // Safe to call from any thread. `width` is unused here; it keeps the signature of the WPF host.
         public static void Show(string title = "", string message = "", SnackbarType type = SnackbarType.Info,
                                 int width = 500, int timeout = 1, bool closeButton = false)
         {

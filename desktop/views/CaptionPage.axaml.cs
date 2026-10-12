@@ -9,7 +9,6 @@ using Avalonia.VisualTree;
 
 using LiveCaptionsTranslator.models;
 using LiveCaptionsTranslator.utils;
-using LiveCaptionsTranslator.Utils;
 
 namespace LiveCaptionsTranslator
 {

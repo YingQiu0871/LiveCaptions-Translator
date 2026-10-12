@@ -27,12 +27,12 @@ namespace LiveCaptionsTranslator
         private int maxPage = 1;
         private int maxRowPerPage = 30;
 
-        public string SearchText { get; set; } = string.Empty;
+        private string SearchText { get; set; } = string.Empty;
 
         public HistoryPage()
         {
             InitializeComponent();
-            HistoryMaxRow.SelectionChanged += maxRow_SelectionChanged;
+            HistoryMaxRow.SelectionChanged += MaxRow_SelectionChanged;
             HistorySearchBox.KeyDown += async (s, e) =>
             {
                 if (e.Key == Key.Enter)
@@ -197,16 +197,8 @@ namespace LiveCaptionsTranslator
                 Foreground = (IBrush?)this.FindResource("SystemControlHighlightAccentBrush") ?? Brushes.SteelBlue,
             });
             ((StackPanel)((StackPanel)card.Child).Children[1]).Width = 140;
-            card.PointerReleased += async (s, e) =>
-            {
-                if (e.InitialPressMouseButton == MouseButton.Left)
-                    await ShowLectures(course);
-            };
-            var rename = new MenuItem { Header = "重命名" };
-            rename.Click += (s, e) => RenameCourse(course);
-            var delete = new MenuItem { Header = "删除（仅空文件夹）" };
-            delete.Click += (s, e) => DeleteCourse(course);
-            card.ContextMenu = new ContextMenu { Items = { rename, delete } };
+            AddCardActions(card, () => ShowLectures(course),
+                "重命名", () => RenameCourse(course), "删除（仅空文件夹）", () => DeleteCourse(course));
             return card;
         }
 
@@ -214,34 +206,43 @@ namespace LiveCaptionsTranslator
         {
             var card = BuildCard(lecture.Name, lecture.Info, null, 0);
             card.Margin = new Thickness(0, 0, 10, 8);
-            card.PointerReleased += async (s, e) =>
-            {
-                if (e.InitialPressMouseButton == MouseButton.Left)
-                    await ShowDetail(lecture);
-            };
-            var rename = new MenuItem { Header = "重命名 / 移到其他课程" };
-            rename.Click += async (s, e) => await RenameLectureAndRefresh(lecture);
-            var delete = new MenuItem { Header = "删除这节课" };
-            delete.Click += (s, e) => DeleteLecture(lecture);
-            card.ContextMenu = new ContextMenu { Items = { rename, delete } };
+            AddCardActions(card, () => ShowDetail(lecture),
+                "重命名 / 移到其他课程", async () => await RenameLectureAndRefresh(lecture),
+                "删除这节课", () => DeleteLecture(lecture));
             return card;
         }
 
-        private async void CrumbHome_click(object? sender, RoutedEventArgs e) => await ShowCourses();
+        // A left click opens the card; the context menu has a rename and a delete entry.
+        private static void AddCardActions(Border card, Func<Task> open, string renameHeader, Action rename,
+                                           string deleteHeader, Action delete)
+        {
+            card.PointerReleased += async (s, e) =>
+            {
+                if (e.InitialPressMouseButton == MouseButton.Left)
+                    await open();
+            };
+            var renameItem = new MenuItem { Header = renameHeader };
+            renameItem.Click += (s, e) => rename();
+            var deleteItem = new MenuItem { Header = deleteHeader };
+            deleteItem.Click += (s, e) => delete();
+            card.ContextMenu = new ContextMenu { Items = { renameItem, deleteItem } };
+        }
 
-        private async void CrumbCourse_click(object? sender, RoutedEventArgs e)
+        private async void CrumbHome_Click(object? sender, RoutedEventArgs e) => await ShowCourses();
+
+        private async void CrumbCourse_Click(object? sender, RoutedEventArgs e)
         {
             if (view == View.Detail && currentCourse != null)
                 await ShowLectures(currentCourse);
         }
 
-        private async void AllSentences_click(object? sender, RoutedEventArgs e)
+        private async void AllSentences_Click(object? sender, RoutedEventArgs e)
         {
             SetView(View.All);
             await LoadHistory();
         }
 
-        private async void NewCourse_click(object? sender, RoutedEventArgs e)
+        private async void NewCourse_Click(object? sender, RoutedEventArgs e)
         {
             string? name = await LectureDialogs.AskText("新建课程", "课程名称", string.Empty);
             if (string.IsNullOrWhiteSpace(name))
@@ -307,7 +308,7 @@ namespace LiveCaptionsTranslator
                 await ShowLectures(currentCourse);
         }
 
-        private async void RenameLecture_click(object? sender, RoutedEventArgs e)
+        private async void RenameLecture_Click(object? sender, RoutedEventArgs e)
         {
             if (currentLecture != null)
                 await RenameLectureAndRefresh(currentLecture);
@@ -335,7 +336,7 @@ namespace LiveCaptionsTranslator
                 await ShowLectures(currentCourse);
         }
 
-        private async void OpenFile_click(object? sender, RoutedEventArgs e)
+        private async void OpenFile_Click(object? sender, RoutedEventArgs e)
         {
             if (currentLecture == null)
                 return;
@@ -352,7 +353,7 @@ namespace LiveCaptionsTranslator
             }
         }
 
-        private async void NotesDraft_click(object? sender, RoutedEventArgs e)
+        private async void NotesDraft_Click(object? sender, RoutedEventArgs e)
         {
             if (currentLecture == null)
                 return;
@@ -363,7 +364,7 @@ namespace LiveCaptionsTranslator
                 // The draft goes next to the transcript file, so make sure that exists.
                 if (string.IsNullOrEmpty(lecture.FilePath) || !File.Exists(lecture.FilePath))
                     await LectureDocument.Save(lecture);
-                string? path = await LectureDialogs.WriteNotesDraft(lecture);
+                string? path = await LectureSaving.WriteNotesDraft(lecture);
                 if (path != null)
                     LectureDialogs.ShowInFolder(path);
             }
@@ -377,21 +378,21 @@ namespace LiveCaptionsTranslator
             }
         }
 
-        private async void PageDown_click(object? sender, RoutedEventArgs e)
+        private async void PageDown_Click(object? sender, RoutedEventArgs e)
         {
             if (currentPage - 1 >= 1)
                 currentPage--;
             await LoadHistory();
         }
 
-        private async void PageUp_click(object? sender, RoutedEventArgs e)
+        private async void PageUp_Click(object? sender, RoutedEventArgs e)
         {
             if (currentPage < maxPage)
                 currentPage++;
             await LoadHistory();
         }
 
-        private async void Delete_click(object? sender, RoutedEventArgs e)
+        private async void Delete_Click(object? sender, RoutedEventArgs e)
         {
             if (await LectureDialogs.Confirm("要删除全部历史记录吗？",
                     "所有课程里的录音、时间线上的小节总结都会一起删除（课程文件夹和已保存的文件保留），此操作无法撤销！", "删除"))
@@ -406,7 +407,7 @@ namespace LiveCaptionsTranslator
             }
         }
 
-        private async void maxRow_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+        private async void MaxRow_SelectionChanged(object? sender, SelectionChangedEventArgs e)
         {
             if (HistoryMaxRow.SelectedItem is not ComboBoxItem { Tag: string tag })
                 return;
@@ -421,7 +422,7 @@ namespace LiveCaptionsTranslator
             }
         }
 
-        private async void Refresh_click(object? sender, RoutedEventArgs e)
+        private async void Refresh_Click(object? sender, RoutedEventArgs e)
         {
             switch (view)
             {
@@ -440,10 +441,10 @@ namespace LiveCaptionsTranslator
             }
         }
 
-        private async void Export_click(object? sender, RoutedEventArgs e)
+        private async void Export_Click(object? sender, RoutedEventArgs e)
         {
             string? path = await Shell.PickSavePath("导出全部句子", $"exported_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.csv", "csv",
-                new FilePickerFileType("CSV 表格 (*.csv)") { Patterns = new[] { "*.csv" } });
+                new FilePickerFileType("CSV 表格（*.csv）") { Patterns = new[] { "*.csv" } });
             if (path == null)
                 return;
             try
@@ -477,7 +478,7 @@ namespace LiveCaptionsTranslator
             await LoadHistory();
         }
 
-        public async Task LoadHistory()
+        private async Task LoadHistory()
         {
             var data = await SQLiteHistoryLogger.LoadHistoryAsync(currentPage, maxRowPerPage, SearchText);
             List<TranslationHistoryEntry> history = data.Item1;

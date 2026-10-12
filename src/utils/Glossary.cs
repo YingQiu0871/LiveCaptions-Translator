@@ -175,6 +175,7 @@ namespace LiveCaptionsTranslator.utils
                     }
                     catch (Exception)
                     {
+                        // Best effort: the old hot word list may already be gone.
                     }
                 }
             }
@@ -196,7 +197,7 @@ namespace LiveCaptionsTranslator.utils
             return id;
         }
 
-        // The hot word list did not work: update it next time. The id is kept, so that a list that still exists is
+        // Clears the stored hash so the hot word list is updated next time. The id is kept, so that a list that still exists is
         // reused (or deleted before a new one is made) instead of being left behind; an account may only have ten.
         public static void RecheckAsrVocabulary()
         {

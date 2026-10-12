@@ -88,7 +88,7 @@ namespace LiveCaptionsTranslator
         private Button? selectedNav;
         private bool filling = false;
 
-        public static void ShowSingle(Window? owner)
+        public static void ShowSingle()
         {
             if (instance != null)
             {
@@ -406,7 +406,6 @@ namespace LiveCaptionsTranslator
             if (messageLabels.TryGetValue(api, out var message))
                 message.Text = string.Empty;
 
-            // Show the values of the configuration now in use.
             filling = true;
             try
             {

@@ -2,14 +2,12 @@ using LiveCaptionsTranslator.utils;
 
 namespace LiveCaptionsTranslator
 {
-    // Starts and stops the background work of the core (translation, summaries, speech). The WPF app does this in
-    // App.xaml.cs; any desktop window can call it once at startup.
+    // Starts and stops the background work of the core (translation, summaries, speech): the counterpart of the
+    // startup code in the WPF App.xaml.cs. Any desktop window can call Start once at startup.
     public static class AppHost
     {
         private static readonly object startLock = new();
         private static bool started = false;
-
-        public static bool IsStarted => started;
 
         public static void Start()
         {
@@ -49,6 +47,7 @@ namespace LiveCaptionsTranslator
             }
             catch (Exception)
             {
+                // Shutting down: a failing stop has nothing left to affect.
             }
         }
     }

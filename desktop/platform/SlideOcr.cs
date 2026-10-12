@@ -6,7 +6,6 @@ namespace LiveCaptionsTranslator.utils
     // Without these two tools there is no OCR: no languages are offered and recognizing fails with a hint.
     public static class SlideOcr
     {
-        // Pages are rendered at this resolution before recognition.
         private const int RENDER_DPI = 200;
 
         public record OcrLanguage(string Tag, string Name)
@@ -98,6 +97,7 @@ namespace LiveCaptionsTranslator.utils
                 }
                 catch (Exception)
                 {
+                    // Removing the temporary folder is best effort.
                 }
             }
         }

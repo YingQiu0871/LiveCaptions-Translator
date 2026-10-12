@@ -1,4 +1,4 @@
-namespace LiveCaptionsTranslator.Utils
+namespace LiveCaptionsTranslator.utils
 {
     public enum FontBold
     {

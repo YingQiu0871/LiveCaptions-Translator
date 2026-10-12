@@ -5,8 +5,8 @@ using Avalonia.Threading;
 
 namespace LiveCaptionsTranslator
 {
-    // Remembers where a window was and how big, in the same "left, top, width, height" text the Windows version
-    // keeps in Setting.WindowBounds (the position is in pixels, the size in device independent units).
+    // Remembers where a window was and how big, as the "left, top, width, height" text of Setting.WindowBounds
+    // (the position is in pixels, the size in device independent units).
     public static class WindowBounds
     {
         public static Rect? Load(string name)
@@ -57,6 +57,7 @@ namespace LiveCaptionsTranslator
             }
             catch (Exception)
             {
+                // Placement is cosmetic: the window keeps the size and position set so far.
             }
         }
 

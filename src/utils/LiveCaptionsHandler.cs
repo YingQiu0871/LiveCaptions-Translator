@@ -48,8 +48,8 @@ namespace LiveCaptionsTranslator.utils
 
         public static bool IsHidden { get; private set; } = false;
 
-        // Left over from versions that tried to make the window transparent and click-through. LiveCaptions
-        // draws itself in a way that ignores window transparency, so it only became impossible to move.
+        // Extended styles that make the window transparent and click-through. LiveCaptions draws itself in a way
+        // that ignores window transparency, so these styles are cleared if present rather than applied.
         private const int OLD_HIDDEN_STYLES = WindowsAPI.WS_EX_LAYERED | WindowsAPI.WS_EX_TRANSPARENT |
                                               WindowsAPI.WS_EX_NOACTIVATE;
 
@@ -65,6 +65,7 @@ namespace LiveCaptionsTranslator.utils
             }
             catch (Exception)
             {
+                // Best effort: fall back to the default DPI of 96.
             }
             int areaWidth = area.Right - area.Left;
             int width = Math.Min(areaWidth, Math.Max((int)(areaWidth * 0.6), (int)(700 * dpi / 96.0)));

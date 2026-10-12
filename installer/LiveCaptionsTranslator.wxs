@@ -55,15 +55,6 @@
               Advertise="no" />
         </File>
       </Component>
-
-      <!-- Versions before 1.7-lecture.53 kept settings and history next to the program (newer ones move them to
-           %LOCALAPPDATA%), so users must be able to
-           write there even when the folder is under Program Files. -->
-      <Component Id="InstallFolderAccess" Directory="INSTALLFOLDER" Guid="5B0C2F7E-3E54-4C61-9A0B-6C1F4D2E8A31">
-        <CreateFolder>
-          <PermissionEx Sddl="D:PAI(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;0x1301bf;;;BU)" />
-        </CreateFolder>
-      </Component>
     </Feature>
   </Package>
 </Wix>

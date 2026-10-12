@@ -40,7 +40,7 @@ namespace LiveCaptionsTranslator.models
                 tasks.Add(newTranslationTask);
                 if (isFinal)
                     logChain = logChain.ContinueWith(_ => LogInOrder(newTranslationTask)).Unwrap();
-                // Run `OnTaskCompleted` in a new thread.
+                // Run `OnTaskCompleted` as a continuation once the task has run to completion.
                 newTranslationTask.Task.ContinueWith(
                     task => OnTaskCompleted(newTranslationTask),
                     TaskContinuationOptions.OnlyOnRanToCompletion
@@ -97,6 +97,7 @@ namespace LiveCaptionsTranslator.models
             }
             catch (Exception)
             {
+                // Best effort: a failed log or speech step must not affect the translation task.
             }
         }
     }

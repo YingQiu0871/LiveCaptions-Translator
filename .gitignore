@@ -363,6 +363,3 @@ MigrationBackup/
 FodyWeavers.xsd
 
 .idea/
-# Desktop (Linux / macOS) project build output
-desktop/bin/
-desktop/obj/

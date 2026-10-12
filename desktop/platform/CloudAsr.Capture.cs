@@ -115,6 +115,7 @@ namespace LiveCaptionsTranslator.utils
             }
             catch (Exception)
             {
+                // The helper ended or was killed; the code below reports it if that was not on purpose.
             }
 
             lock (captureLock)
@@ -129,6 +130,7 @@ namespace LiveCaptionsTranslator.utils
             }
             catch (Exception)
             {
+                // The helper is already gone; its error text is read below.
             }
             lock (captureLock)
             {
@@ -167,6 +169,7 @@ namespace LiveCaptionsTranslator.utils
                 }
                 catch (OperationCanceledException)
                 {
+                    // Cancelled by a newer message or by Stop: stop repeating.
                 }
             });
         }

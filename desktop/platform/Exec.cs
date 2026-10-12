@@ -28,12 +28,19 @@ namespace LiveCaptionsTranslator.utils
                 }
                 catch (Exception)
                 {
+                    // An unreadable directory in PATH is skipped.
                 }
             }
             return null;
         }
 
         public static bool Exists(string name) => Find(name) != null;
+
+        private static void ExtendPath(ProcessStartInfo info)
+        {
+            string path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+            info.Environment["PATH"] = string.Join(Path.PathSeparator, ExtraDirectories.Prepend(path));
+        }
 
         public static ProcessStartInfo Create(string fileName, IEnumerable<string> arguments)
         {
@@ -48,8 +55,7 @@ namespace LiveCaptionsTranslator.utils
             };
             foreach (string argument in arguments)
                 info.ArgumentList.Add(argument);
-            string path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
-            info.Environment["PATH"] = string.Join(Path.PathSeparator, ExtraDirectories.Prepend(path));
+            ExtendPath(info);
             return info;
         }
 
@@ -60,8 +66,7 @@ namespace LiveCaptionsTranslator.utils
             var info = new ProcessStartInfo(Find(fileName) ?? fileName) { UseShellExecute = false };
             foreach (string argument in arguments)
                 info.ArgumentList.Add(argument);
-            string path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
-            info.Environment["PATH"] = string.Join(Path.PathSeparator, ExtraDirectories.Prepend(path));
+            ExtendPath(info);
             using var process = Process.Start(info);
         }
 
@@ -106,6 +111,7 @@ namespace LiveCaptionsTranslator.utils
             }
             catch (Exception)
             {
+                // The process has already exited.
             }
         }
     }

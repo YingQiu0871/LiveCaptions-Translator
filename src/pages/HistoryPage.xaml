@@ -346,7 +346,7 @@
             </StackPanel>
         </ScrollViewer>
 
-        <!--  All sentences, as before  -->
+        <!--  All sentences  -->
         <Grid
             x:Name="AllView"
             Grid.Row="1"
@@ -356,7 +356,6 @@
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
                 <StackPanel
-                    x:Name="AllToolbar"
                 Grid.Row="0"
                     MaxHeight="34.94"
                     Margin="0,0,3,0"

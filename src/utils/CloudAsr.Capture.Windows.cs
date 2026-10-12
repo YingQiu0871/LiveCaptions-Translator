@@ -28,6 +28,7 @@ namespace LiveCaptionsTranslator.utils
             }
             catch (Exception)
             {
+                // Best effort: the capture device may already be stopped or unplugged.
             }
             capture = null;
         }

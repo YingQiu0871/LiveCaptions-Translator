@@ -202,6 +202,7 @@ namespace LiveCaptionsTranslator.utils
                 }
                 catch (Exception)
                 {
+                    // Best effort: the old file may already be gone or in use; the new file is saved either way.
                 }
             }
             await LectureStore.SetFilePath(lecture.Id, path);

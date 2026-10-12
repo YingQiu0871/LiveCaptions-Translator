@@ -652,6 +652,7 @@ namespace LiveCaptionsTranslator
             }
             catch (Exception)
             {
+                // Best effort: LiveCaptions may already be closed.
             }
 #endif
         }
@@ -670,6 +671,7 @@ namespace LiveCaptionsTranslator
                 }
                 catch (ElementNotAvailableException)
                 {
+                    // The cached window is gone; fall through and look for it again.
                 }
             }
             current = LiveCaptionsHandler.LaunchLiveCaptions();
@@ -691,6 +693,7 @@ namespace LiveCaptionsTranslator
             }
             catch (Exception)
             {
+                // Best effort: LiveCaptions may already be closed.
             }
         }
 #endif
@@ -702,7 +705,6 @@ namespace LiveCaptionsTranslator
             Caption?.OnPropertyChanged("DisplayLogCards");
             Caption?.OnPropertyChanged("OverlayPreviousTranslation");
         }
-
 
     }
 }

@@ -9,10 +9,10 @@ using System.Windows.Threading;
 using Wpf.Ui.Controls;
 
 using LiveCaptionsTranslator.apis;
-using LiveCaptionsTranslator.Utils;
+using LiveCaptionsTranslator.utils;
 using Button = Wpf.Ui.Controls.Button;
 using Color = System.Windows.Media.Color;
-using ColorEnum = LiveCaptionsTranslator.Utils.Color;
+using ColorEnum = LiveCaptionsTranslator.utils.Color;
 
 namespace LiveCaptionsTranslator
 {
@@ -173,8 +173,8 @@ namespace LiveCaptionsTranslator
         private void FontBold_Click(object sender, RoutedEventArgs e)
         {
             Translator.Setting.OverlayWindow.FontBold++;
-            if (Translator.Setting.OverlayWindow.FontBold > Utils.FontBold.Both)
-                Translator.Setting.OverlayWindow.FontBold = Utils.FontBold.None;
+            if (Translator.Setting.OverlayWindow.FontBold > utils.FontBold.Both)
+                Translator.Setting.OverlayWindow.FontBold = utils.FontBold.None;
             ApplyFontBold();
         }
 
@@ -182,19 +182,19 @@ namespace LiveCaptionsTranslator
         {
             switch (Translator.Setting.OverlayWindow.FontBold)
             {
-                case Utils.FontBold.None:
+                case utils.FontBold.None:
                     OriginalCaption.FontWeight = FontWeights.Regular;
                     TranslatedCaption.FontWeight = FontWeights.Regular;
                     break;
-                case Utils.FontBold.TranslationOnly:
+                case utils.FontBold.TranslationOnly:
                     OriginalCaption.FontWeight = FontWeights.Regular;
                     TranslatedCaption.FontWeight = FontWeights.Bold;
                     break;
-                case Utils.FontBold.SubtitleOnly:
+                case utils.FontBold.SubtitleOnly:
                     OriginalCaption.FontWeight = FontWeights.Bold;
                     TranslatedCaption.FontWeight = FontWeights.Regular;
                     break;
-                case Utils.FontBold.Both:
+                case utils.FontBold.Both:
                     OriginalCaption.FontWeight = FontWeights.Bold;
                     TranslatedCaption.FontWeight = FontWeights.Bold;
                     break;

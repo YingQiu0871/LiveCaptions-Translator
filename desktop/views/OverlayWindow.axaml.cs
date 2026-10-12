@@ -7,8 +7,8 @@ using Avalonia.Media;
 using Avalonia.Threading;
 
 using LiveCaptionsTranslator.models;
-using LiveCaptionsTranslator.Utils;
-using ColorEnum = LiveCaptionsTranslator.Utils.Color;
+using LiveCaptionsTranslator.utils;
+using ColorEnum = LiveCaptionsTranslator.utils.Color;
 
 namespace LiveCaptionsTranslator
 {
@@ -46,7 +46,7 @@ namespace LiveCaptionsTranslator
             InitializeComponent();
 
             WindowBounds.Restore(this, "OverlayWindow", new Size(480, 100));
-            // 650 was the old minimum width: start such a window at the new, smaller default.
+            // A width of exactly 650 counts as unset and gets the default width.
             if (Math.Abs(Width - 650) < 1)
                 Width = 480;
             WindowBounds.Track(this, "OverlayWindow");
@@ -92,18 +92,18 @@ namespace LiveCaptionsTranslator
         private void ShowCaption()
         {
             var caption = Translator.Caption;
-            var font = new SolidColorBrush(colorMap[Look.FontColor]);
+            var fontBrush = new SolidColorBrush(colorMap[Look.FontColor]);
             OriginalCaption.FontSize = Look.FontSize;
             TranslatedCaption.FontSize = (int)(Look.FontSize * 1.25);
             ApplyFontBold();
             OriginalCaption.StrokeThickness = TranslatedCaption.StrokeThickness = Look.FontStroke;
 
-            OriginalCaption.SetText(new (string, IBrush)[] { (caption.OverlayOriginalCaption, font) });
+            OriginalCaption.SetText(new (string, IBrush)[] { (caption.OverlayOriginalCaption, fontBrush) });
             TranslatedCaption.SetText(new (string, IBrush)[]
             {
-                (caption.OverlayNoticePrefix, font),
-                (caption.OverlayPreviousTranslation, font),
-                (caption.OverlayCurrentTranslation, new SolidColorBrush(TranslationColor(font.Color))),
+                (caption.OverlayNoticePrefix, fontBrush),
+                (caption.OverlayPreviousTranslation, fontBrush),
+                (caption.OverlayCurrentTranslation, new SolidColorBrush(TranslationColor(fontBrush.Color))),
             });
         }
 
@@ -138,15 +138,15 @@ namespace LiveCaptionsTranslator
         private void FontBold_Click(object? sender, RoutedEventArgs e)
         {
             Look.FontBold++;
-            if (Look.FontBold > Utils.FontBold.Both)
-                Look.FontBold = Utils.FontBold.None;
+            if (Look.FontBold > utils.FontBold.Both)
+                Look.FontBold = utils.FontBold.None;
             ApplyFontBold();
         }
 
         private void ApplyFontBold()
         {
-            bool original = Look.FontBold is Utils.FontBold.SubtitleOnly or Utils.FontBold.Both;
-            bool translation = Look.FontBold is Utils.FontBold.TranslationOnly or Utils.FontBold.Both;
+            bool original = Look.FontBold is utils.FontBold.SubtitleOnly or utils.FontBold.Both;
+            bool translation = Look.FontBold is utils.FontBold.TranslationOnly or utils.FontBold.Both;
             OriginalCaption.FontWeight = original ? FontWeight.Bold : FontWeight.Normal;
             TranslatedCaption.FontWeight = translation ? FontWeight.Bold : FontWeight.Normal;
         }
@@ -175,21 +175,15 @@ namespace LiveCaptionsTranslator
             ShowCaption();
         }
 
-        private void BackgroundOpacityIncrease_Click(object? sender, RoutedEventArgs e)
-        {
-            if (Look.Opacity + StyleConsts.DELTA_OPACITY < StyleConsts.MAX_OPACITY)
-                Look.Opacity += StyleConsts.DELTA_OPACITY;
-            else
-                Look.Opacity = StyleConsts.MAX_OPACITY;
-            ApplyBackgroundOpacity();
-        }
+        private void BackgroundOpacityIncrease_Click(object? sender, RoutedEventArgs e) =>
+            StepBackgroundOpacity(StyleConsts.DELTA_OPACITY);
 
-        private void BackgroundOpacityDecrease_Click(object? sender, RoutedEventArgs e)
+        private void BackgroundOpacityDecrease_Click(object? sender, RoutedEventArgs e) =>
+            StepBackgroundOpacity(-StyleConsts.DELTA_OPACITY);
+
+        private void StepBackgroundOpacity(int delta)
         {
-            if (Look.Opacity - StyleConsts.DELTA_OPACITY > StyleConsts.MIN_OPACITY)
-                Look.Opacity -= StyleConsts.DELTA_OPACITY;
-            else
-                Look.Opacity = StyleConsts.MIN_OPACITY;
+            Look.Opacity = Math.Clamp(Look.Opacity + delta, StyleConsts.MIN_OPACITY, StyleConsts.MAX_OPACITY);
             ApplyBackgroundOpacity();
         }
 

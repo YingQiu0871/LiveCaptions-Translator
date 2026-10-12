@@ -4,7 +4,7 @@
         x:Class="LiveCaptionsTranslator.OverlayWindow"
         Title="悬浮字幕"
         Icon="/assets/icon.png"
-        Width="480" Height="135"
+        Width="480" Height="100"
         MinWidth="300" MinHeight="60"
         Background="Transparent"
         TransparencyLevelHint="Transparent"
@@ -37,21 +37,21 @@
 
                 <WrapPanel x:Name="ControlPanel" Grid.Row="1" Margin="0,0,5,5" HorizontalAlignment="Right"
                            VerticalAlignment="Bottom" IsVisible="False">
-                    <Button x:Name="FontSizeIncrease" Classes="tool" Content="A+" ToolTip.Tip="字号加大" Click="FontIncrease_Click" />
-                    <Button x:Name="FontSizeDecrease" Classes="tool" Content="A−" ToolTip.Tip="字号减小" Click="FontDecrease_Click" />
-                    <Button x:Name="FontStrokeIncrease" Classes="tool" Content="描+" ToolTip.Tip="描边加粗" Click="FontStrokeIncrease_Click" />
-                    <Button x:Name="FontStrokeDecrease" Classes="tool" Content="描−" ToolTip.Tip="描边变细" Click="FontStrokeDecrease_Click" />
+                    <Button Classes="tool" Content="A+" ToolTip.Tip="字号加大" Click="FontIncrease_Click" />
+                    <Button Classes="tool" Content="A−" ToolTip.Tip="字号减小" Click="FontDecrease_Click" />
+                    <Button Classes="tool" Content="描+" ToolTip.Tip="描边加粗" Click="FontStrokeIncrease_Click" />
+                    <Button Classes="tool" Content="描−" ToolTip.Tip="描边变细" Click="FontStrokeDecrease_Click" />
                     <Button x:Name="FontBold" Classes="tool" Content="B" FontWeight="Bold" ToolTip.Tip="加粗" Click="FontBold_Click" />
-                    <Button x:Name="FontColorCycle" Classes="tool" Content="字色" ToolTip.Tip="文字颜色" Click="FontColorCycle_Click" />
-                    <Button x:Name="OpacityIncrease" Classes="tool" Margin="6,1,1,1" Content="深" ToolTip.Tip="背景加深"
+                    <Button Classes="tool" Content="字色" ToolTip.Tip="文字颜色" Click="FontColorCycle_Click" />
+                    <Button Classes="tool" Margin="6,1,1,1" Content="深" ToolTip.Tip="背景加深"
                             Click="BackgroundOpacityIncrease_Click" />
-                    <Button x:Name="OpacityDecrease" Classes="tool" Content="浅" ToolTip.Tip="背景变浅"
+                    <Button Classes="tool" Content="浅" ToolTip.Tip="背景变浅"
                             Click="BackgroundOpacityDecrease_Click" />
-                    <Button x:Name="BackgroundColorCycle" Classes="tool" Content="底色" ToolTip.Tip="背景颜色"
+                    <Button Classes="tool" Content="底色" ToolTip.Tip="背景颜色"
                             Click="BackgroundColorCycle_Click" />
                     <Button x:Name="OnlyModeButton" Classes="tool" Margin="6,1,1,1" Content="全显" ToolTip.Tip="只显示原文或译文"
                             Click="OnlyModeButton_Click" />
-                    <Button x:Name="SwitchModeButton" Classes="tool" Content="⇅" ToolTip.Tip="交换原文和译文的上下顺序"
+                    <Button Classes="tool" Content="⇅" ToolTip.Tip="交换原文和译文的上下顺序"
                             Click="SwitchModeButton_Click" />
                 </WrapPanel>
             </Grid>

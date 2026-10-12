@@ -5,7 +5,6 @@ using Wpf.Ui.Appearance;
 using Wpf.Ui.Controls;
 
 using LiveCaptionsTranslator.utils;
-using LiveCaptionsTranslator.Utils;
 using Button = Wpf.Ui.Controls.Button;
 
 namespace LiveCaptionsTranslator
@@ -43,7 +42,7 @@ namespace LiveCaptionsTranslator
                 SystemThemeWatcher.Watch(this, WindowBackdropType.Mica, true);
                 RootNavigation.Navigate(typeof(CaptionPage));
                 CheckForFirstUse();
-                // This fork adds lecture features; do not prompt to install upstream releases.
+                // Update checks point to upstream releases, so they are off.
             };
 
             double screenWidth = SystemParameters.PrimaryScreenWidth;
@@ -58,7 +57,7 @@ namespace LiveCaptionsTranslator
             }
             else
                 WindowHandler.RestoreState(this, windowState);
-            // Older versions saved a thin caption strip.
+            // A saved window shorter than the minimum height (e.g. a thin caption strip) gets the default height.
             if (Height < MinHeight)
                 Height = DEFAULT_HEIGHT;
             KeepOnScreen();
@@ -101,7 +100,7 @@ namespace LiveCaptionsTranslator
                 }
                 else
                 {
-                    // 650 was the old minimum width: start such a window at the new, smaller default.
+                    // A saved width of exactly 650 means the former default: use the current, smaller default.
                     if (Math.Abs(windowState.Width - 650) < 1)
                         windowState.Width = 480;
                     WindowHandler.RestoreState(OverlayWindow, windowState);
@@ -160,7 +159,7 @@ namespace LiveCaptionsTranslator
             {
                 long lectureId = ClassSession.CurrentLectureId;
                 ClassSession.Stop();
-                await LectureDialogs.SaveAfterStop(lectureId);
+                await LectureSaving.SaveAfterStop(lectureId);
             }
             else
             {
@@ -290,7 +289,7 @@ namespace LiveCaptionsTranslator
         }
 
         // Only grows the window when a page needs more room. Shrinking it to a thin caption strip
-        // (upstream behaviour) hides most of the navigation; the overlay window serves that purpose.
+        // would hide most of the navigation; the overlay window serves that purpose.
         public void AutoHeightAdjust(int minHeight = -1)
         {
             if (minHeight > 0 && Height < minHeight)

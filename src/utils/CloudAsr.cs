@@ -102,6 +102,7 @@ namespace LiveCaptionsTranslator.utils
             }
             catch (Exception)
             {
+                // Best effort: the server may already have closed the connection.
             }
         }
 
@@ -272,6 +273,7 @@ namespace LiveCaptionsTranslator.utils
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)
             {
+                // Cancelled: the session was stopped, so there is nothing to report.
             }
             catch (Exception ex)
             {
@@ -380,10 +382,10 @@ namespace LiveCaptionsTranslator.utils
                 ["format"] = "pcm",
                 ["sample_rate"] = SAMPLE_RATE,
                 ["heartbeat"] = true,
-                // Keep every word: removing "um"/"uh" also removed real words now and then.
+                // Keep every word: disfluency removal also drops real words now and then.
                 ["disfluency_removal_enabled"] = false,
                 // Split sentences by meaning rather than by short pauses: a lecturer pauses mid-sentence a lot,
-                // which turned one sentence into fragments like "I." and "And you, I'm.".
+                // and pause-based splitting turns one sentence into fragments like "I." and "And you, I'm.".
                 ["semantic_punctuation_enabled"] = true,
                 // Used when the model splits by pauses: wait longer before ending a sentence (default 800 ms).
                 ["max_sentence_silence"] = 1300,
