@@ -186,7 +186,7 @@ namespace LiveCaptionsTranslator
                             new Avalonia.Controls.Documents.Run("注意 1：") { FontWeight = FontWeight.Bold },
                             new Avalonia.Controls.Documents.Run("提示词里的 {0} 代表目标语言，请确保提示词中包含 {0}。"),
                             new Avalonia.Controls.Documents.Run("\n注意 2：") { FontWeight = FontWeight.Bold },
-                            new Avalonia.Controls.Documents.Run("原文用 🔤 包裹。"),
+                            new Avalonia.Controls.Documents.Run("原文前后会加上标记符号（默认提示词里有说明），输出时需要去掉。"),
                         },
                     },
                     box,
@@ -257,7 +257,7 @@ namespace LiveCaptionsTranslator
             label.Children.Add(new TextBlock { Text = field.Label, Margin = new Thickness(2.5, 0, 0, 5) });
             if (field.Info != null)
             {
-                var info = new TextBlock { Text = " ⓘ", Opacity = 0.7 };
+                var info = new TextBlock { Text = " (?)", Opacity = 0.7 };
                 ToolTip.SetTip(info, field.Info);
                 label.Children.Add(info);
             }

@@ -79,6 +79,19 @@ namespace LiveCaptionsTranslator
             LatencySwitch.IsCheckedChanged += (s, e) =>
                 Translator.Setting.MainWindow.LatencyShow = LatencySwitch.IsChecked == true;
 
+            if (OperatingSystem.IsLinux())
+            {
+                ScaleCard.IsVisible = true;
+                UiScaleBox.ItemsSource = LinuxScale.Choices.Select(c => new Choice(c, LinuxScale.Label(c))).ToList();
+                UiScaleBox.SelectedItem = ((IEnumerable<Choice>)UiScaleBox.ItemsSource).FirstOrDefault(c => c.Tag == DesktopSettings.UiScale)
+                    ?? ((IEnumerable<Choice>)UiScaleBox.ItemsSource).First();
+                UiScaleBox.SelectionChanged += (s, e) =>
+                {
+                    if (UiScaleBox.SelectedItem is Choice choice)
+                        DesktopSettings.UiScale = choice.Tag;
+                };
+            }
+
             AsrKeyBox.TextChanged += AsrKeyBox_TextChanged;
             ApiKeyBox.TextChanged += ApiKeyBox_TextChanged;
             AsrLanguageBox.ItemsSource = ASR_LANGUAGES;
@@ -559,7 +572,7 @@ namespace LiveCaptionsTranslator
             }
             catch (Exception ex)
             {
-                result.Text = $"✗ {ex.Message}";
+                result.Text = $"× {ex.Message}";
             }
             finally
             {

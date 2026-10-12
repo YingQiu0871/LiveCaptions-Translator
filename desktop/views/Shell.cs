@@ -148,6 +148,7 @@ namespace LiveCaptionsTranslator
         private class Data
         {
             public string MicrophoneId { get; set; } = string.Empty;
+            public string UiScale { get; set; } = "auto";
         }
 
         private static string FilePath => Path.Combine(AppPaths.DataDirectory, "desktop.json");
@@ -156,20 +157,29 @@ namespace LiveCaptionsTranslator
         public static string MicrophoneId
         {
             get => Read().MicrophoneId;
-            set
+            set => Update(data => data.MicrophoneId = value ?? string.Empty);
+        }
+
+        // The interface scale on Linux, applied at the next start: "auto" (follow the system) or a factor like "1.5".
+        public static string UiScale
+        {
+            get => Read().UiScale is { Length: > 0 } scale ? scale : "auto";
+            set => Update(data => data.UiScale = string.IsNullOrWhiteSpace(value) ? "auto" : value);
+        }
+
+        private static void Update(Action<Data> change)
+        {
+            var data = Read();
+            change(data);
+            lock (fileLock)
             {
-                var data = Read();
-                data.MicrophoneId = value ?? string.Empty;
-                lock (fileLock)
+                try
                 {
-                    try
-                    {
-                        File.WriteAllText(FilePath, JsonSerializer.Serialize(data));
-                    }
-                    catch (Exception)
-                    {
-                        // A choice that cannot be saved is simply not remembered.
-                    }
+                    File.WriteAllText(FilePath, JsonSerializer.Serialize(data));
+                }
+                catch (Exception)
+                {
+                    // A choice that cannot be saved is simply not remembered.
                 }
             }
         }

@@ -38,7 +38,7 @@
     </UserControl.Styles>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <Grid Margin="15,12,5,12" ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto">
+        <Grid Margin="15,12,5,12" ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
 
             <!-- Left column: input, model / API -->
             <StackPanel Grid.Row="0" Grid.Column="0">
@@ -286,8 +286,18 @@
                 </StackPanel>
             </Border>
 
+            <!-- Full width: interface scale (Linux only, shown from code) -->
+            <Border x:Name="ScaleCard" Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Classes="card" IsVisible="False">
+                <StackPanel>
+                    <TextBlock Classes="title" Text="界面显示" />
+                    <TextBlock Classes="label" Text="界面缩放" />
+                    <ComboBox x:Name="UiScaleBox" MinWidth="200" />
+                    <TextBlock Classes="hint" Text="高分屏上界面太小或太大时可以在这里调整。选“自动”会跟随系统的缩放设置。重启程序后生效。" />
+                </StackPanel>
+            </Border>
+
             <!-- Full width: prompt -->
-            <Border Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Classes="card">
+            <Border Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Classes="card">
                 <Expander Header="高级：总结提示词">
                     <StackPanel Margin="0,8,0,0">
                         <TextBlock Classes="hint" Text="{}{0} 会被替换为目标语言。" />
