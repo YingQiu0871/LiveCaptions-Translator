@@ -3,7 +3,9 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+#if WINDOWS
 using System.Windows;
+#endif
 
 using LiveCaptionsTranslator.apis;
 using LiveCaptionsTranslator.utils;
@@ -186,8 +188,13 @@ namespace LiveCaptionsTranslator.models
             overlayWindowState = new OverlayWindowState();
             lectureState = new LectureState();
 
+#if WINDOWS
             double screenWidth = SystemParameters.PrimaryScreenWidth;
             double screenHeight = SystemParameters.PrimaryScreenHeight;
+#else
+            double screenWidth = 1920;
+            double screenHeight = 1080;
+#endif
             windowBounds = new Dictionary<string, string>
             {
                 {
@@ -248,6 +255,7 @@ namespace LiveCaptionsTranslator.models
                 }
                 catch (Exception)
                 {
+                    // Best effort: without a backup the unreadable file is simply replaced.
                 }
                 return Load(jsonPath);
             }
@@ -287,6 +295,11 @@ namespace LiveCaptionsTranslator.models
                     setting.ConfigIndices[key] = 0;
             }
 
+#if !WINDOWS
+            // Windows Live Captions does not exist here: a settings file copied from Windows must not select it.
+            setting.Lecture.Engine = RecognitionEngine.Aliyun;
+#endif
+
             return setting;
         }
 
@@ -323,7 +336,7 @@ namespace LiveCaptionsTranslator.models
                     if (lastSaveError == ex.Message)
                         return;
                     lastSaveError = ex.Message;
-                    Application.Current?.Dispatcher.InvokeAsync(() =>
+                    UiThread.Post(() =>
                         SnackbarHost.Show("[ERROR] 设置没能保存。", ex.Message, SnackbarType.Error,
                             timeout: 5, closeButton: true));
                 }

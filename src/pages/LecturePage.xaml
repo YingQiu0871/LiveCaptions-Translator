@@ -214,7 +214,9 @@
                             Margin="0,8,0,0"
                             Content="所有页面都用 OCR（文字乱码时打开）"
                             IsChecked="{Binding ForceOcr, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                        <TextBlock Style="{StaticResource Hint}" Text="上传后按老师讲到的页码分节，小结也会参考这一页的文字纠正术语。没有文字的页面（扫描件、图片）会自动用 Windows 自带的 OCR 识别；OCR 语言来自 Windows 已安装的语言包。也支持 .pptx。" />
+                        <TextBlock
+                            Style="{StaticResource Hint}"
+                            Text="上传后按老师讲到的页码分节，小结也会参考这一页的文字纠正术语。没有文字的页面（扫描件、图片）会自动用 Windows 自带的 OCR 识别；OCR 语言来自 Windows 已安装的语言包。也支持 .pptx。" />
                     </StackPanel>
                 </Border>
 
@@ -370,7 +372,9 @@
                                 VerticalAlignment="Center"
                                 TextWrapping="Wrap" />
                         </StackPanel>
-                        <TextBlock Style="{StaticResource Hint}" Text="用阿里云识别时，术语会作为热词提高识别率。翻译接口选 DeepSeek / 通义千问时，翻译、精修、小结和笔记都会按这里的译法统一（选 Google 翻译时，实时翻译和精修用不上术语表，只有小结和笔记会用）。换课时记得换成这门课的术语。" />
+                        <TextBlock
+                            Style="{StaticResource Hint}"
+                            Text="用阿里云识别时，术语会作为热词提高识别率。翻译接口选 DeepSeek / 通义千问时，翻译、精修、小结和笔记都会按这里的译法统一（选 Google 翻译时，实时翻译和精修用不上术语表，只有小结和笔记会用）。换课时记得换成这门课的术语。" />
 
                         <TextBlock Style="{StaticResource Label}" Text="翻译接口" />
                         <ComboBox
@@ -412,7 +416,9 @@
                             Margin="0,12,0,0"
                             Content="段落精修（推荐）"
                             IsChecked="{Binding RefineParagraphs, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                        <TextBlock Style="{StaticResource Hint}" Text="每说完几句，用 DeepSeek 结合上下文、课程主题和课件把这几句整理成一段：纠正听错的词，再整段翻译。比逐句翻译准确得多，大约晚 5～10 秒出现，逐句的即时翻译会被替换。只在翻译接口选 DeepSeek / 通义千问时生效。" />
+                        <TextBlock
+                            Style="{StaticResource Hint}"
+                            Text="每说完几句，用 DeepSeek 结合上下文、课程主题和课件把这几句整理成一段：纠正听错的词，再整段翻译。比逐句翻译准确得多，大约晚 5～10 秒出现，逐句的即时翻译会被替换。只在翻译接口选 DeepSeek / 通义千问时生效。" />
 
                         <ui:ToggleSwitch
                             Margin="0,12,0,0"
@@ -427,7 +433,10 @@
                         <ui:ToggleSwitch
                             Margin="0,12,0,0"
                             Content="显示翻译用时"
-                            IsChecked="{Binding MainWindow.LatencyShow, Source={x:Static local:Translator.Setting}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            IsChecked="{Binding MainWindow.LatencyShow,
+                                        Source={x:Static local:Translator.Setting},
+                                        Mode=TwoWay,
+                                        UpdateSourceTrigger=PropertyChanged}" />
 
                         <TextBlock Style="{StaticResource Label}">
                             <Run Text="翻译频率：字幕每变化" />
@@ -485,12 +494,16 @@
                             Click="ResetSaveFolder_click"
                             Content="恢复默认" />
                     </Grid>
-                    <TextBlock Style="{StaticResource Hint}" Text="每节课点“停止”后，会让你给这节课命名并选择课程，然后保存为“保存位置\课程名\本节课名称.md”，里面有小节总结、原文和译文。历史页里也能按课程查看。改位置只影响之后保存的文件。" />
+                    <TextBlock
+                        Style="{StaticResource Hint}"
+                        Text="每节课点“停止”后，会让你给这节课命名并选择课程，然后保存为“保存位置\课程名\本节课名称.md”，里面有小节总结、原文和译文。历史页里也能按课程查看。改位置只影响之后保存的文件。" />
                     <ui:ToggleSwitch
                         Margin="0,12,0,0"
                         Content="下课后自动生成笔记初稿"
                         IsChecked="{Binding NotesDraft, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                    <TextBlock Style="{StaticResource Hint}" Text="点“停止”保存后，用 ① 的模型把小节总结、转录和已上传的课件整理成一份笔记初稿（按课件结构，标出课上补充的内容，附复习题），保存为“本节课名称 笔记初稿.md”，和转录文件放在一起。历史页里也可以对任意一节课重新生成。" />
+                    <TextBlock
+                        Style="{StaticResource Hint}"
+                        Text="点“停止”保存后，用 ① 的模型把小节总结、转录和已上传的课件整理成一份笔记初稿（按课件结构，标出课上补充的内容，附复习题），保存为“本节课名称 笔记初稿.md”，和转录文件放在一起。历史页里也可以对任意一节课重新生成。" />
                 </StackPanel>
             </Border>
 

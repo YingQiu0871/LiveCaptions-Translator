@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>课堂同传助手</string>
+    <key>CFBundleDisplayName</key>
+    <string>课堂同传助手</string>
+    <key>CFBundleIdentifier</key>
+    <string>io.github.yingqiu0871.livecaptionstranslator</string>
+    <key>CFBundleExecutable</key>
+    <string>LiveCaptionsTranslator</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>__VERSION__</string>
+    <key>CFBundleVersion</key>
+    <string>__VERSION__</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>13.0</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>课堂同传助手需要使用麦克风来识别老师的讲课声音。</string>
+    <key>NSScreenCaptureUsageDescription</key>
+    <string>课堂同传助手需要录制系统声音（网课、视频的声音）来识别和翻译。</string>
+</dict>
+</plist>

@@ -303,7 +303,7 @@ namespace LiveCaptionsTranslator
                 // The draft goes next to the transcript file, so make sure that exists.
                 if (string.IsNullOrEmpty(lecture.FilePath) || !System.IO.File.Exists(lecture.FilePath))
                     await LectureDocument.Save(lecture);
-                string? path = await LectureDialogs.WriteNotesDraft(lecture);
+                string? path = await LectureSaving.WriteNotesDraft(lecture);
                 if (path != null)
                     LectureDialogs.ShowInFolder(path);
             }

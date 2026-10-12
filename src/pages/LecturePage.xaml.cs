@@ -76,6 +76,7 @@ namespace LiveCaptionsTranslator
                     }
                     catch (Exception)
                     {
+                        // Best effort: one failed status line should not block the others.
                     }
                 }
                 initializing = false;
@@ -287,6 +288,7 @@ namespace LiveCaptionsTranslator
                 }
                 catch (Exception)
                 {
+                    // Best effort: the LiveCaptions window may already be gone.
                 }
             }
             if (ClassSession.IsRunning)

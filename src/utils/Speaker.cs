@@ -151,6 +151,7 @@ namespace LiveCaptionsTranslator.utils
             }
             catch (Exception)
             {
+                // Best effort: the synthesizer may be idle or disposed.
             }
         }
 
@@ -285,6 +286,7 @@ namespace LiveCaptionsTranslator.utils
                     }
                     catch (Exception)
                     {
+                        // The configured voice is unavailable; fall back to choosing one by language.
                     }
                 }
                 else
@@ -302,6 +304,7 @@ namespace LiveCaptionsTranslator.utils
             }
             catch (Exception)
             {
+                // Best effort: keep the current voice if none matches the language.
             }
         }
 

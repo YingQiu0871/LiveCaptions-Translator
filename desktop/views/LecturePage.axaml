@@ -1,0 +1,302 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:m="using:LiveCaptionsTranslator.models"
+             xmlns:local="using:LiveCaptionsTranslator"
+             x:Class="LiveCaptionsTranslator.LecturePage"
+             x:DataType="m:LectureState">
+    <UserControl.Styles>
+        <Style Selector="Border.card">
+            <Setter Property="Margin" Value="0,0,10,10" />
+            <Setter Property="Padding" Value="14,10,14,12" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListLowBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+        </Style>
+        <Style Selector="TextBlock.title">
+            <Setter Property="Margin" Value="0,0,0,8" />
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="TextBlock.label">
+            <Setter Property="Margin" Value="2,8,0,4" />
+            <Setter Property="Opacity" Value="0.85" />
+        </Style>
+        <Style Selector="TextBlock.hint">
+            <Setter Property="Margin" Value="2,6,0,0" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Opacity" Value="0.65" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style Selector="ComboBox">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+        </Style>
+        <Style Selector="ToggleSwitch">
+            <Setter Property="OnContent" Value="{x:Null}" />
+            <Setter Property="OffContent" Value="{x:Null}" />
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid Margin="15,12,5,12" ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto">
+
+            <!-- Left column: input, model / API -->
+            <StackPanel Grid.Row="0" Grid.Column="0">
+                <Border Classes="card">
+                    <StackPanel>
+                        <TextBlock Classes="title" Text="⓪ 输入源" />
+
+                        <TextBlock Classes="label" Text="语音识别方式" />
+                        <TextBlock Text="阿里云实时语音识别（更准，按时长收费）" TextWrapping="Wrap" />
+
+                        <TextBlock Classes="label" Text="阿里云百炼 API Key" />
+                        <TextBox x:Name="AsrKeyBox" PasswordChar="●" />
+                        <TextBlock x:Name="AsrKeyStatus" Classes="hint" />
+                        <TextBlock Classes="hint"
+                                   Text="在阿里云百炼控制台（bailian.console.aliyun.com）开通后创建 API Key。如果 ① 里用的是通义千问，可以填同一个 Key。" />
+
+                        <TextBlock Classes="label" Text="老师讲课的语言" />
+                        <ComboBox x:Name="AsrLanguageBox" />
+
+                        <Expander Margin="0,8,0,0" Header="高级：模型和接口地址">
+                            <StackPanel Margin="0,6,0,0">
+                                <TextBlock Classes="label" Text="识别模型" />
+                                <local:EditableCombo x:Name="AsrModelBox" />
+                                <TextBlock Classes="label" Text="接口地址" />
+                                <TextBox x:Name="AsrEndpointBox" />
+                                <TextBlock Classes="hint"
+                                           Text="国内账号保持默认；国际站账号改成 wss://dashscope-intl.aliyuncs.com/api-ws/v1/inference。" />
+                            </StackPanel>
+                        </Expander>
+
+                        <StackPanel Margin="0,10,0,0" Orientation="Horizontal">
+                            <Button x:Name="TestAsrButton" Content="测试连接" Click="TestAsr_Click" />
+                            <TextBlock x:Name="TestAsrResult" Margin="10,0,0,0" VerticalAlignment="Center"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <TextBlock Classes="label" Text="听哪里的声音" />
+                        <ComboBox x:Name="SourceBox" SelectionChanged="SourceBox_SelectionChanged">
+                            <ComboBoxItem Content="电脑播放的声音（网课、视频）" />
+                            <ComboBoxItem Content="麦克风（线下教室）" />
+                        </ComboBox>
+
+                        <StackPanel x:Name="MicPanel">
+                            <TextBlock Classes="label" Text="麦克风" />
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <ComboBox x:Name="MicBox" MinWidth="230" SelectionChanged="MicBox_SelectionChanged" />
+                                <Button x:Name="RefreshDevicesButton" Content="刷新" ToolTip.Tip="刷新设备列表" Click="RefreshDevices_Click" />
+                            </StackPanel>
+                        </StackPanel>
+                        <TextBlock x:Name="SourceStatus" Classes="hint" />
+                        <TextBlock x:Name="MicHint" Classes="hint" />
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="card" x:DataType="m:OpenAIConfig">
+                    <StackPanel>
+                        <TextBlock Classes="title" Text="① 模型与 API" />
+
+                        <TextBlock Classes="label" Text="服务商" />
+                        <ComboBox x:Name="ProviderBox" SelectionChanged="ProviderBox_SelectionChanged">
+                            <ComboBoxItem Content="DeepSeek" />
+                            <ComboBoxItem Content="通义千问（阿里云百炼）" />
+                            <ComboBoxItem Content="其他 OpenAI 兼容接口" />
+                        </ComboBox>
+
+                        <TextBlock Classes="label" Text="API 地址" />
+                        <TextBox x:Name="ApiUrlBox" Watermark="https://…/chat/completions" />
+
+                        <TextBlock Classes="label" Text="API Key" />
+                        <TextBox x:Name="ApiKeyBox" PasswordChar="●" />
+                        <TextBlock x:Name="ApiKeyStatus" Classes="hint" />
+
+                        <TextBlock Classes="label" Text="模型（可从列表选，也可以直接输入）" />
+                        <local:EditableCombo x:Name="ModelBox" />
+
+                        <TextBlock Classes="hint" Text="小节总结始终用这里的模型；翻译用哪个接口在“⑤ 翻译”里选。" />
+
+                        <StackPanel Margin="0,10,0,0" Orientation="Horizontal">
+                            <Button x:Name="TestApiButton" Content="测试连接" Click="TestApi_Click" />
+                            <TextBlock x:Name="TestApiResult" Margin="10,0,0,0" VerticalAlignment="Center"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- Right column: slides, sections, speech -->
+            <StackPanel Grid.Row="0" Grid.Column="1">
+                <Border Classes="card">
+                    <StackPanel>
+                        <TextBlock Classes="title" Text="② 课件（可选）" />
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Button x:Name="LoadSlidesButton" Content="上传课件 PDF" Click="LoadSlides_Click" />
+                            <Button x:Name="ClearSlidesButton" Content="移除" IsVisible="False" Click="ClearSlides_Click" />
+                        </StackPanel>
+                        <TextBlock x:Name="SlidesInfo" Margin="2,8,0,0" TextWrapping="Wrap" />
+                        <TextBlock Classes="label" Text="扫描版课件的 OCR 语言" />
+                        <ComboBox x:Name="OcrLanguageBox" SelectionChanged="OcrLanguageBox_SelectionChanged" />
+                        <ToggleSwitch Margin="0,8,0,0" Content="所有页面都用 OCR（文字乱码时打开）"
+                                      IsChecked="{Binding ForceOcr, Mode=TwoWay}" />
+                        <TextBlock x:Name="OcrHint" Classes="hint" />
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="card">
+                    <StackPanel>
+                        <TextBlock Classes="title" Text="③ 分节总结" />
+                        <ToggleSwitch Content="自动分节并总结" IsChecked="{Binding SummaryEnabled, Mode=TwoWay}" />
+
+                        <TextBlock Classes="label" Text="分节方式" />
+                        <ComboBox x:Name="SegmentModeBox">
+                            <ComboBoxItem Content="自动：按课件页码 / 话题变化" />
+                            <ComboBoxItem Content="固定按时间" />
+                        </ComboBox>
+
+                        <TextBlock x:Name="MaxSectionLabel" Classes="label"
+                                   ToolTip.Tip="自动模式下，同一话题讲了这么久也会强制分一节" />
+                        <Slider x:Name="MaxSectionSlider" Minimum="2" Maximum="20" TickFrequency="1"
+                                IsSnapToTickEnabled="True" />
+
+                        <TextBlock x:Name="IntervalLabel" Classes="label"
+                                   ToolTip.Tip="固定按时间模式，或自动识别失败时使用" />
+                        <Slider x:Name="IntervalSlider" Minimum="1" Maximum="15" TickFrequency="1"
+                                IsSnapToTickEnabled="True" />
+                        <TextBlock Classes="hint" Text="随时按 Ctrl+Alt+S 可手动结束本节。" />
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="card">
+                    <StackPanel>
+                        <TextBlock Classes="title" Text="④ 耳机播报" />
+
+                        <TextBlock Classes="label" Text="读出内容" />
+                        <ComboBox x:Name="SpeakModeBox">
+                            <ComboBoxItem Content="关闭" />
+                            <ComboBoxItem Content="只读小节总结" />
+                            <ComboBoxItem Content="小节总结 + 每句译文" />
+                            <ComboBoxItem Content="实时同传：每句中文译文马上读（不读总结）" />
+                        </ComboBox>
+                        <TextBlock Classes="hint"
+                                   Text="实时同传会把每句译文一出来就读给你听，读不过来时跳过积压的旧句子，保证跟得上老师。" />
+
+                        <TextBlock Classes="label" Text="输出设备" />
+                        <ComboBox x:Name="SpeechDeviceBox" SelectionChanged="SpeechDeviceBox_SelectionChanged" />
+                        <TextBlock x:Name="SpeechDeviceHint" Classes="hint" />
+
+                        <TextBlock Classes="label" Text="语音" />
+                        <ComboBox x:Name="VoiceBox" SelectionChanged="VoiceBox_SelectionChanged" />
+
+                        <TextBlock x:Name="RateLabel" Classes="label" />
+                        <Slider x:Name="RateSlider" Minimum="-5" Maximum="10" TickFrequency="1" IsSnapToTickEnabled="True" />
+
+                        <TextBlock x:Name="VolumeLabel" Classes="label" />
+                        <Slider x:Name="VolumeSlider" Minimum="10" Maximum="100" TickFrequency="5"
+                                IsSnapToTickEnabled="True" />
+
+                        <StackPanel Margin="0,10,0,0" Orientation="Horizontal" Spacing="6">
+                            <Button Content="试听" Click="TestSpeech_Click" />
+                            <Button Content="选择输出设备…" Click="SoundSettings_Click" />
+                        </StackPanel>
+                        <TextBlock Classes="hint" Text="标题栏的“耳机播报”开关或 Ctrl+Alt+M 可以随时打开 / 关闭。" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- Full width: translation -->
+            <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Classes="card">
+                <Grid ColumnDefinitions="*,20,*">
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Classes="title" Text="⑤ 翻译" />
+
+                        <TextBlock Classes="label" Text="这门课的学科 / 主题" />
+                        <TextBox x:Name="SubjectBox" Watermark="例如：基因治疗、分子生物学、宏观经济学" />
+                        <TextBlock Classes="hint"
+                                   Text="填了之后，翻译和小结会按这个学科的术语来，例如 vector 译成“载体”而不是“向量”。也会写进课件识别和小结里。" />
+
+                        <TextBlock Classes="label" Text="术语表（每行一个，可写成“术语 = 译法”）" />
+                        <TextBox x:Name="GlossaryBox" MinHeight="90" MaxHeight="200" AcceptsReturn="True"
+                                 TextWrapping="Wrap"
+                                 Watermark="例如：&#x0a;adeno-associated virus = 腺相关病毒&#x0a;CRISPR&#x0a;vector = 载体" />
+                        <StackPanel Margin="0,6,0,0" Orientation="Horizontal">
+                            <Button x:Name="ExtractGlossaryButton" Content="从课件提取术语" Click="ExtractGlossary_Click" />
+                            <TextBlock x:Name="GlossaryResult" Margin="10,0,0,0" VerticalAlignment="Center"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                        <TextBlock Classes="hint"
+                                   Text="用阿里云识别时，术语会作为热词提高识别率。翻译接口选 DeepSeek / 通义千问时，翻译、精修、小结和笔记都会按这里的译法统一（选 Google 翻译时，实时翻译和精修用不上术语表，只有小结和笔记会用）。换课时记得换成这门课的术语。" />
+
+                        <TextBlock Classes="label" Text="翻译接口" />
+                        <ComboBox x:Name="TranslateApiBox" SelectionChanged="TranslateApiBox_SelectionChanged" />
+                        <TextBlock Classes="hint" Text="选 DeepSeek / 通义千问时使用“① 模型与 API”的设置；Google 免费，不用 Key。" />
+
+                        <TextBlock Classes="label" Text="翻译成" />
+                        <local:EditableCombo x:Name="TargetLangBox" />
+                        <TextBlock Classes="hint" Text="可以直接输入语言代码，例如 zh-CN、en-US。" />
+
+                        <Button Margin="0,10,0,0" Content="其他接口的配置…" Click="ApiSettingButton_Click" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2">
+                        <ToggleSwitch Margin="0,34,0,0" Content="纯英文模式" IsChecked="{Binding EnglishOnly, Mode=TwoWay}" />
+                        <TextBlock Classes="hint"
+                                   Text="不翻译，只显示英文原文；小节总结、段落精修（只纠错不翻译）、笔记初稿和语音播报都用英文。适合想直接练英文听课的时候。" />
+
+                        <ToggleSwitch Margin="0,12,0,0" Content="只转录，不翻译" IsChecked="{Binding CaptionsOnly, Mode=TwoWay}" />
+                        <TextBlock Classes="hint" Text="只显示听写出来的原文，不调用翻译接口（小节总结仍然会做）。" />
+
+                        <ToggleSwitch Margin="0,12,0,0" Content="段落精修（推荐）"
+                                      IsChecked="{Binding RefineParagraphs, Mode=TwoWay}" />
+                        <TextBlock Classes="hint"
+                                   Text="每说完几句，用 DeepSeek 结合上下文、课程主题和课件把这几句整理成一段：纠正听错的词，再整段翻译。比逐句翻译准确得多，大约晚 5～10 秒出现，逐句的即时翻译会被替换。只在翻译接口选 DeepSeek / 通义千问时生效。" />
+
+                        <ToggleSwitch Margin="0,12,0,0" Content="中外对照（译文上方保留原文）"
+                                      IsChecked="{Binding ShowOriginal, Mode=TwoWay}" />
+
+                        <ToggleSwitch x:Name="ContextAwareSwitch" Margin="0,12,0,0"
+                                      Content="结合上下文翻译（更准确，多用一些 token）" />
+
+                        <ToggleSwitch x:Name="LatencySwitch" Margin="0,12,0,0" Content="显示翻译用时" />
+
+                        <TextBlock x:Name="SyncLabel" Classes="label" />
+                        <Slider x:Name="SyncSlider" Minimum="1" Maximum="10" TickFrequency="1" IsSnapToTickEnabled="True" />
+                        <TextBlock Classes="hint" Text="数值越小翻得越及时，调用接口也越频繁。" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Full width: where transcripts are saved -->
+            <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Classes="card">
+                <StackPanel>
+                    <TextBlock Classes="title" Text="⑥ 转录保存" />
+                    <TextBlock Classes="label" Text="保存位置" />
+                    <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+                        <TextBox x:Name="SaveFolderBox" Grid.Column="0" IsReadOnly="True" />
+                        <Button Grid.Column="1" Margin="6,0,0,0" Content="选择…" Click="ChooseSaveFolder_Click" />
+                        <Button Grid.Column="2" Margin="6,0,0,0" Content="打开" Click="OpenSaveFolder_Click" />
+                        <Button Grid.Column="3" Margin="6,0,0,0" Content="恢复默认" Click="ResetSaveFolder_Click" />
+                    </Grid>
+                    <TextBlock Classes="hint"
+                               Text="每节课点“停止”后，会让你给这节课命名并选择课程，然后保存为“保存位置/课程名/本节课名称.md”，里面有小节总结、原文和译文。历史页里也能按课程查看。改位置只影响之后保存的文件。" />
+                    <ToggleSwitch Margin="0,12,0,0" Content="下课后自动生成笔记初稿"
+                                  IsChecked="{Binding NotesDraft, Mode=TwoWay}" />
+                    <TextBlock Classes="hint"
+                               Text="点“停止”保存后，用 ① 的模型把小节总结、转录和已上传的课件整理成一份笔记初稿（按课件结构，标出课上补充的内容，附复习题），保存为“本节课名称 笔记初稿.md”，和转录文件放在一起。历史页里也可以对任意一节课重新生成。" />
+                </StackPanel>
+            </Border>
+
+            <!-- Full width: prompt -->
+            <Border Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Classes="card">
+                <Expander Header="高级：总结提示词">
+                    <StackPanel Margin="0,8,0,0">
+                        <TextBlock Classes="hint" Text="{}{0} 会被替换为目标语言。" />
+                        <TextBox x:Name="SummaryPromptBox" MinHeight="90" Margin="0,6,0,0" AcceptsReturn="True"
+                                 TextWrapping="Wrap" />
+                        <Button Margin="0,6,0,0" Content="恢复默认" Click="ResetPrompt_Click" />
+                    </StackPanel>
+                </Expander>
+            </Border>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

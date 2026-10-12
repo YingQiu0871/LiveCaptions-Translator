@@ -1,0 +1,20 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="LiveCaptionsTranslator.WelcomeWindow"
+        Title="开始使用"
+        Icon="/assets/icon.png"
+        Width="700" Height="470"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner">
+    <StackPanel>
+        <TextBlock Margin="20" FontSize="24" FontWeight="Bold" Text="欢迎使用课堂同传助手！" />
+        <TextBlock Margin="20,10,20,10" TextWrapping="Wrap" x:Name="Steps" />
+        <StackPanel Margin="20,0,20,10" Orientation="Horizontal">
+            <TextBlock VerticalAlignment="Center" Text="更多说明见原项目文档：" />
+            <HyperlinkButton Padding="0" Content="https://github.com/SakiRinn/LiveCaptions-Translator/wiki"
+                             NavigateUri="https://github.com/SakiRinn/LiveCaptions-Translator/wiki" />
+        </StackPanel>
+        <Button Margin="0,10,0,0" Padding="30,10" HorizontalAlignment="Center" Classes="accent"
+                Content="我已了解并完成设置" Click="CloseButton_Click" />
+    </StackPanel>
+</Window>

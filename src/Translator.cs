@@ -2,7 +2,9 @@
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+#if WINDOWS
 using System.Windows.Automation;
+#endif
 
 using LiveCaptionsTranslator.apis;
 using LiveCaptionsTranslator.models;
@@ -12,7 +14,9 @@ namespace LiveCaptionsTranslator
 {
     public static class Translator
     {
+#if WINDOWS
         private static AutomationElement? window = null;
+#endif
         private static Caption? caption = null;
         private static Setting? setting = null;
 
@@ -20,11 +24,13 @@ namespace LiveCaptionsTranslator
         private static readonly ConcurrentQueue<(string Text, bool Final)> pendingTextQueue = new();
         private static readonly TranslationTaskQueue translationTaskQueue = new();
 
+#if WINDOWS
         public static AutomationElement? Window
         {
             get => window;
             set => window = value;
         }
+#endif
         public static Caption? Caption => caption;
         public static Setting? Setting => setting;
 
@@ -258,6 +264,7 @@ namespace LiveCaptionsTranslator
             setting = Setting.Load();
             CloudAsr.Recognized += OnCloudRecognized;
 
+#if WINDOWS
             // LiveCaptions runs its own speech recognition all the time, so it is not started at all when the
             // cloud engine is used.
             if (setting.Lecture.Engine == RecognitionEngine.LiveCaptions)
@@ -266,6 +273,7 @@ namespace LiveCaptionsTranslator
                 LiveCaptionsHandler.FixLiveCaptions(Window);
                 LiveCaptionsHandler.HideLiveCaptions(Window);
             }
+#endif
         }
 
         // Reading LiveCaptions over UI Automation costs CPU on both sides, so it is read often only while the text
@@ -274,6 +282,7 @@ namespace LiveCaptionsTranslator
         private const int IDLE_POLL_MS = 150;
         private const int FAST_POLL_TICKS = 16;
 
+#if WINDOWS
         public static void SyncLoop()
         {
             int idleCount = 0;
@@ -430,11 +439,13 @@ namespace LiveCaptionsTranslator
                 Thread.Sleep(pollMs);
             }
         }
+#endif
 
         public static async Task TranslateLoop()
         {
             while (true)
             {
+#if WINDOWS
                 // Check LiveCaptions.exe still alive. It is only needed (and only kept running, since its own speech
                 // recognition costs power) for a class that uses the system engine.
                 if (Window == null && ClassSession.IsRunning &&
@@ -446,6 +457,7 @@ namespace LiveCaptionsTranslator
                     LiveCaptionsHandler.HideLiveCaptions(Window);
                     Caption.DisplayTranslatedCaption = "";
                 }
+#endif
 
                 // Translate
                 if (pendingTextQueue.TryDequeue(out var pending))
@@ -629,6 +641,7 @@ namespace LiveCaptionsTranslator
         // Closes LiveCaptions when it is not needed (cloud engine), to save the power its recognition uses.
         public static void CloseLiveCaptions()
         {
+#if WINDOWS
             var current = Window;
             if (current == null)
                 return;
@@ -639,9 +652,12 @@ namespace LiveCaptionsTranslator
             }
             catch (Exception)
             {
+                // Best effort: LiveCaptions may already be closed.
             }
+#endif
         }
 
+#if WINDOWS
         // Starts LiveCaptions if it is not running (e.g. to show it for its first-time setup).
         public static AutomationElement EnsureLiveCaptions()
         {
@@ -655,6 +671,7 @@ namespace LiveCaptionsTranslator
                 }
                 catch (ElementNotAvailableException)
                 {
+                    // The cached window is gone; fall through and look for it again.
                 }
             }
             current = LiveCaptionsHandler.LaunchLiveCaptions();
@@ -676,8 +693,10 @@ namespace LiveCaptionsTranslator
             }
             catch (Exception)
             {
+                // Best effort: LiveCaptions may already be closed.
             }
         }
+#endif
 
         public static void ClearContexts()
         {
@@ -686,7 +705,6 @@ namespace LiveCaptionsTranslator
             Caption?.OnPropertyChanged("DisplayLogCards");
             Caption?.OnPropertyChanged("OverlayPreviousTranslation");
         }
-
 
     }
 }

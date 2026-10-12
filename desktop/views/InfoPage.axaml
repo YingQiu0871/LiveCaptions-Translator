@@ -1,0 +1,30 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="LiveCaptionsTranslator.InfoPage">
+    <StackPanel Margin="10" Spacing="4">
+        <TextBlock TextWrapping="Wrap"
+                   Text="本工具基于开源项目 LiveCaptions Translator 改造，增加了课堂分节总结、时间线和耳机播报。欢迎通过 GitHub Issue 反馈问题或提出建议，也可以直接提交 Pull Request。&#x0A;如果觉得好用，欢迎给原项目点个 Star！" />
+        <Separator Margin="0,5,0,5" />
+        <StackPanel Orientation="Horizontal">
+            <TextBlock FontWeight="SemiBold" Text="原项目仓库：" VerticalAlignment="Center" />
+            <HyperlinkButton Padding="0" Content="https://github.com/SakiRinn/LiveCaptions-Translator"
+                             NavigateUri="https://github.com/SakiRinn/LiveCaptions-Translator" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal">
+            <TextBlock FontWeight="SemiBold" Text="使用文档：" VerticalAlignment="Center" />
+            <HyperlinkButton Padding="0" Content="https://github.com/SakiRinn/LiveCaptions-Translator/wiki"
+                             NavigateUri="https://github.com/SakiRinn/LiveCaptions-Translator/wiki" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal">
+            <TextBlock FontWeight="SemiBold" Text="原作者：" VerticalAlignment="Center" />
+            <HyperlinkButton Padding="0" Content="@SakiRinn" NavigateUri="https://github.com/SakiRinn" />
+            <TextBlock Text="（作者）和" VerticalAlignment="Center" />
+            <HyperlinkButton Padding="0" Content="@A-nony-mous" NavigateUri="https://github.com/A-nony-mous" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal">
+            <TextBlock FontWeight="SemiBold" Text="版本：" VerticalAlignment="Center" />
+            <HyperlinkButton x:Name="Version" Padding="0" Content="1.1.1.1"
+                             NavigateUri="https://github.com/SakiRinn/LiveCaptions-Translator/releases" />
+        </StackPanel>
+    </StackPanel>
+</UserControl>

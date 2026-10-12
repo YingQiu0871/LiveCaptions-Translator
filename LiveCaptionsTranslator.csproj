@@ -22,6 +22,20 @@
 		<Platforms>AnyCPU;ARM64</Platforms>
 	</PropertyGroup>
 
+	<!-- desktop/ is the Linux / macOS (Avalonia) project; it has its own csproj. -->
+	<PropertyGroup>
+		<DefaultItemExcludes>$(DefaultItemExcludes);desktop/**</DefaultItemExcludes>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Compile Remove="desktop/**" />
+		<None Remove="desktop/**" />
+		<Content Remove="desktop/**" />
+		<EmbeddedResource Remove="desktop/**" />
+		<Page Remove="desktop/**" />
+		<ApplicationDefinition Remove="desktop/**" />
+	</ItemGroup>
+
 	<ItemGroup>
 		<ApplicationDefinition Include="src\App.xaml">
 			<Generator>MSBuild:Compile</Generator>

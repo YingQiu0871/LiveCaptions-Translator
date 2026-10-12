@@ -22,6 +22,10 @@ namespace LiveCaptionsTranslator.utils
             string programDir = AppContext.BaseDirectory;
             string userDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LiveCaptionsTranslator");
+            // For tests (e.g. the desktop self-test): keep everything in a folder of their own.
+            string? overrideDir = Environment.GetEnvironmentVariable("LCT_DATA_DIR");
+            if (!string.IsNullOrWhiteSpace(overrideDir))
+                userDir = Path.GetFullPath(overrideDir);
             try
             {
                 Directory.CreateDirectory(userDir);
@@ -31,7 +35,7 @@ namespace LiveCaptionsTranslator.utils
                 return programDir;
             }
 
-            // Older versions kept the files next to the program: bring them over once.
+            // Files from installs that kept them next to the program: copy them over once.
             foreach (string name in new[] { SETTING_FILE, HISTORY_FILE })
             {
                 string target = Path.Combine(userDir, name);
@@ -44,6 +48,7 @@ namespace LiveCaptionsTranslator.utils
                 }
                 catch (Exception)
                 {
+                    // Best effort: a file that cannot be copied is simply not migrated.
                 }
             }
             return userDir;

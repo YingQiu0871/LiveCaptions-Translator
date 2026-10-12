@@ -1,0 +1,12 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="LiveCaptionsTranslator.App"
+             Name="课堂同传助手"
+             RequestedThemeVariant="Default">
+    <Application.Styles>
+        <FluentTheme />
+        <Style Selector="Window">
+            <Setter Property="FontFamily" Value="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, WenQuanYi Zen Hei, WenQuanYi Micro Hei, sans-serif" />
+        </Style>
+    </Application.Styles>
+</Application>

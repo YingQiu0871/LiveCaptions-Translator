@@ -9,8 +9,18 @@ namespace LiveCaptionsTranslator.utils
     // Shown in the history and saved as a Markdown file in the folder chosen in the settings.
     public static class LectureDocument
     {
-        public static string DefaultSaveFolder => Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "课堂同传助手");
+        public static string DefaultSaveFolder => Path.Combine(DocumentsFolder(), "课堂同传助手");
+
+        // Linux reports the home folder when the user has no Documents folder configured: use ~/Documents then.
+        private static string DocumentsFolder()
+        {
+            string documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            if (!OperatingSystem.IsWindows() && !string.IsNullOrEmpty(home) &&
+                (string.IsNullOrEmpty(documents) || documents == home))
+                return Path.Combine(home, "Documents");
+            return documents;
+        }
 
         public static string SaveFolder
         {
@@ -192,6 +202,7 @@ namespace LiveCaptionsTranslator.utils
                 }
                 catch (Exception)
                 {
+                    // Best effort: the old file may already be gone or in use; the new file is saved either way.
                 }
             }
             await LectureStore.SetFilePath(lecture.Id, path);

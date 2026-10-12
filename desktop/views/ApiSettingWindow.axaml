@@ -1,0 +1,26 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="LiveCaptionsTranslator.ApiSettingWindow"
+        Title="接口配置"
+        Icon="/assets/icon.png"
+        Width="950" Height="500"
+        MinWidth="640" MinHeight="320"
+        Topmost="True"
+        WindowStartupLocation="CenterScreen">
+    <Grid ColumnDefinitions="Auto,*">
+        <Border Grid.Column="0" BorderThickness="0,0,1,0"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel x:Name="NavPanel" Width="200" Margin="0,0,5,10" />
+            </ScrollViewer>
+        </Border>
+        <Border Grid.Column="1" Margin="4" CornerRadius="8">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="30">
+                    <TextBlock Margin="0,0,0,10" FontSize="28" FontWeight="Heavy" Text="接口配置" />
+                    <StackPanel x:Name="Sections" Margin="5" />
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</Window>

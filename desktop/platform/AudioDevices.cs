@@ -1,0 +1,84 @@
+using System.Text.RegularExpressions;
+
+namespace LiveCaptionsTranslator.utils
+{
+    public record AudioDevice(string Id, string Name, bool IsDefault)
+    {
+        public override string ToString() => IsDefault ? $"{Name}（当前默认）" : Name;
+    }
+
+    // The members of NAudio's DataFlow that shared code uses, so it compiles against both implementations.
+    public enum DataFlow
+    {
+        Render,
+        Capture,
+    }
+
+    // Linux: PulseAudio / PipeWire through `pactl`. macOS: the output devices known to `say`.
+    public static class AudioDevices
+    {
+        public static async Task<List<AudioDevice>> ListAsync(DataFlow flow)
+        {
+            try
+            {
+                if (OperatingSystem.IsMacOS())
+                    return flow == DataFlow.Capture ? new List<AudioDevice>() : await ListMacOutputs().ConfigureAwait(false);
+                return await ListPulse(flow).ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                return new List<AudioDevice>();
+            }
+        }
+
+        // The id of the default device; null if it cannot be told (macOS: `say` does not mark it).
+        public static async Task<string?> DefaultIdAsync(DataFlow flow)
+        {
+            if (!OperatingSystem.IsLinux())
+                return null;
+            string command = flow == DataFlow.Capture ? "get-default-source" : "get-default-sink";
+            return (await Exec.Run("pactl", new[] { command }).ConfigureAwait(false))?.Trim();
+        }
+
+        // `pactl list short sources`: index, name, driver, sample spec, state. Monitors of the outputs are the
+        // sources named *.monitor: they carry what the computer plays.
+        private static async Task<List<AudioDevice>> ListPulse(DataFlow flow)
+        {
+            bool capture = flow == DataFlow.Capture;
+            string? text = await Exec.Run("pactl", new[] { "list", "short", capture ? "sources" : "sinks" }).ConfigureAwait(false);
+            if (text == null)
+                return new List<AudioDevice>();
+            string? defaultId = await DefaultIdAsync(flow).ConfigureAwait(false);
+
+            var result = new List<AudioDevice>();
+            foreach (string line in text.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var fields = line.Split('\t');
+                if (fields.Length < 2)
+                    continue;
+                string name = fields[1];
+                if (capture && name.EndsWith(".monitor", StringComparison.Ordinal))
+                    continue;
+                result.Add(new AudioDevice(name, name, name == defaultId));
+            }
+            return result;
+        }
+
+        // `say -a '?'` prints "  73 MacBook Pro Speakers": a CoreAudio id that changes between sessions, then the
+        // name. `say -a` also takes the name, so that is what is stored and passed.
+        private static async Task<List<AudioDevice>> ListMacOutputs()
+        {
+            string? text = await Exec.Run("say", new[] { "-a", "?" }).ConfigureAwait(false);
+            var result = new List<AudioDevice>();
+            if (text == null)
+                return result;
+            foreach (string line in text.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var match = Regex.Match(line, @"^\s*(\d+)\s+(.+?)\s*$");
+                if (match.Success)
+                    result.Add(new AudioDevice(match.Groups[2].Value, match.Groups[2].Value, false));
+            }
+            return result;
+        }
+    }
+}

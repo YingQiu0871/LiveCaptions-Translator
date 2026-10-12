@@ -99,6 +99,7 @@ namespace LiveCaptionsTranslator
                 }
                 catch (Exception)
                 {
+                    // Best effort: show an empty lecture list if loading fails.
                 }
             }
             selecting = true;
