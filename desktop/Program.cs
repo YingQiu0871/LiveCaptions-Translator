@@ -12,6 +12,10 @@ namespace LiveCaptionsTranslator
             if (args.Contains("--selftest"))
                 return SelfTest.Run();
 
+            // Avalonia often finds no scale on a Linux HiDPI screen; this must be set before it starts.
+            if (OperatingSystem.IsLinux())
+                utils.LinuxScale.Apply();
+
             return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }
 

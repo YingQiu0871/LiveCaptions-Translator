@@ -59,8 +59,12 @@
                             <TextBlock x:Name="ToastTitle" FontWeight="SemiBold" TextWrapping="Wrap" />
                             <TextBlock x:Name="ToastMessage" Margin="0,2,0,0" TextWrapping="Wrap" />
                         </StackPanel>
-                        <Button x:Name="ToastClose" Grid.Column="1" Content="✕" Padding="6,2" Margin="10,0,0,0"
-                                VerticalAlignment="Top" Background="Transparent" Click="ToastClose_Click" />
+                        <Button x:Name="ToastClose" Grid.Column="1" Padding="8,6" Margin="10,0,0,0"
+                                VerticalAlignment="Top" Background="Transparent" Click="ToastClose_Click">
+                            <!-- Drawn, not a "✕" character: not every Linux font has that glyph. -->
+                            <Path Data="M0,0 L8,8 M8,0 L0,8" Stroke="{Binding Foreground, RelativeSource={RelativeSource FindAncestor, AncestorType=ContentPresenter}}" StrokeThickness="1.5"
+                                  StrokeLineCap="Round" />
+                        </Button>
                     </Grid>
                 </Border>
             </Grid>
