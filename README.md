@@ -7,7 +7,7 @@
 ### *听外语课：实时转录 + 中文翻译 + 分节小结 + 耳机同传 + 课后笔记*
 
 [![Build](https://github.com/YingQiu0871/LiveCaptions-Translator/actions/workflows/dotnet-build.yml/badge.svg)](https://github.com/YingQiu0871/LiveCaptions-Translator/actions/workflows/dotnet-build.yml)
-[![Windows 11](https://img.shields.io/badge/platform-Windows11-blue?logo=windows11&color=1E9BFA)](https://www.microsoft.com/windows/windows-11)
+[![Platform](https://img.shields.io/badge/platform-Windows%2011%20%7C%20macOS%20%7C%20Linux-blue?color=1E9BFA)](#下载)
 [![License](https://img.shields.io/github/license/SakiRinn/LiveCaptions-Translator)](LICENSE)
 
 [SakiRinn/LiveCaptions-Translator](https://github.com/SakiRinn/LiveCaptions-Translator) 的课堂同传特化分支 · 原版说明：[English](README.upstream.md) | [中文](README.upstream_zh-CN.md)
@@ -16,7 +16,7 @@
 
 > [!NOTE]
 > **这是原项目的课堂同传特化分支，不是官方版本。**
-> 本仓库从 [SakiRinn/LiveCaptions-Translator](https://github.com/SakiRinn/LiveCaptions-Translator) 分出，专门针对“听外语课”改造：界面只有中文、只支持 Windows 11，加入了云端语音识别、分节总结、按课程保存和课后笔记，也去掉了原版的一些通用设置。
+> 本仓库从 [SakiRinn/LiveCaptions-Translator](https://github.com/SakiRinn/LiveCaptions-Translator) 分出，专门针对“听外语课”改造：界面只有中文，支持 Windows 11、macOS 和 Linux，加入了云端语音识别、分节总结、按课程保存和课后笔记，也去掉了原版的一些通用设置。
 > 如果想给视频、会议、直播加实时翻译字幕，或者需要英文界面、更多翻译接口，推荐使用[原项目](https://github.com/SakiRinn/LiveCaptions-Translator)。
 > 本分支中与课堂无关的几处通用修复，已整理成独立的小改动提交给原项目，供原作者参考（[#286](https://github.com/SakiRinn/LiveCaptions-Translator/pull/286)–[#290](https://github.com/SakiRinn/LiveCaptions-Translator/pull/290)）。本分支的问题请在本仓库反馈，以免给原作者添麻烦。
 >
@@ -31,7 +31,7 @@
 - **不用盯屏幕**：用蓝牙耳机听小结，或者开“实时同传”，每句中文译文一出来就读给你听。
 - **课后复习**：每节课单独保存，按“课程 → 每节课”整理。每节课自动存成 Markdown，含小节总结、原文和译文，还可以自动生成一份结合课件的笔记初稿。
 
-语音识别有两种：Windows 11 自带的“实时辅助字幕”（免费），或阿里云实时语音识别（更准，按时长收费）。翻译和总结按大模型 API 用量计费，用 DeepSeek 的话，一节课大约几毛到一两块钱（估算）。
+语音识别有两种：Windows 11 自带的“实时辅助字幕”（免费，仅 Windows），或阿里云实时语音识别（更准，按时长收费；macOS 和 Linux 只能用这个）。翻译和总结按大模型 API 用量计费，用 DeepSeek 的话，一节课大约几毛到一两块钱（估算）。
 
 ## 功能
 
@@ -54,29 +54,83 @@
 
 ## 系统要求
 
-- **Windows 11 22H2 或更高版本**。
+- **Windows 11 22H2 或更高版本**，或 **macOS 13 或更高版本**（Apple 芯片、Intel 都有对应安装包），或 **Linux x64**（需要 PulseAudio 或 PipeWire）。macOS 和 Linux 版是新加的，见下面“[macOS 和 Linux 版](#macos-和-linux-版)”。
 - 一个大模型 API Key，推荐 [DeepSeek](https://platform.deepseek.com/)，也可以用[阿里云百炼](https://bailian.console.aliyun.com/)的通义千问。只用 Google 翻译的话可以先不填，但就没有小结、段落精修和笔记初稿了。
 - 用阿里云实时语音识别的话，需要阿里云百炼的 API Key（和通义千问可以是同一个 Key）。
 
 ## 下载
 
-到 [Releases](https://github.com/YingQiu0871/LiveCaptions-Translator/releases/latest) 下载最新版本：
+到 [Releases](https://github.com/YingQiu0871/LiveCaptions-Translator/releases/latest) 下载最新版本。
+
+**Windows：**
 
 - `LiveCaptionsTranslator-win-x64-setup.msi`：**推荐**。Windows 标准安装程序，双击安装，可以选择安装位置。装好后开始菜单和桌面都有“课堂同传助手”的快捷方式；以后装新版会自动替换旧版，卸载在“设置 > 应用”里。
 - `LiveCaptionsTranslator-win-x64-withruntime.exe`：免安装版，自带运行库，下载后直接运行。
 - `LiveCaptionsTranslator-win-x64.exe`：免安装版，体积小，需要先安装 [.NET 8 桌面运行时](https://dotnet.microsoft.com/download/dotnet/8.0)。
 - ARM 电脑选文件名带 `arm64` 的版本。
 
-数据保存位置：
+**macOS / Linux：**
+
+- `LiveCaptionsTranslator-macos-arm64.dmg`（Apple 芯片）/ `LiveCaptionsTranslator-macos-x64.dmg`（Intel 芯片）
+- `LiveCaptionsTranslator-linux-x64.tar.gz`
+
+安装方法见下面“macOS 和 Linux 版”。
+
+数据保存位置（Windows）：
 
 - 设置（`setting.json`）和历史数据库（`translation_history.db`，含课程、每节课、小结）在 `%LOCALAPPDATA%\LiveCaptionsTranslator`，装新版、卸载都不会动它们。旧版本放在程序文件夹里的设置，第一次启动时会自动复制过去。
 - 每节课的 Markdown 文件和笔记初稿在“设置 ⑥”选的文件夹里，默认是 `文档\课堂同传助手`。
 
 发布新版本：在 Actions 里手动运行 "CI/CD Pipeline"，勾选 "Publish a GitHub Release from this build"。
 
+## macOS 和 Linux 版
+
+> [!WARNING]
+> **macOS 和 Linux 版是新加的，还没有在真机上测试过**，可能有各种问题。遇到问题（打不开、没声音、识别不出字、播报异常等）请到本仓库的 [Issues](https://github.com/YingQiu0871/LiveCaptions-Translator/issues) 反馈，写上系统版本和出错提示，谢谢。
+
+翻译、小结、段落精修、分节、按课保存、笔记初稿、历史、时间线这些功能和 Windows 版相同，设置页的布局也一样。区别如下：
+
+| 方面 | macOS / Linux 版 |
+|---|---|
+| 语音识别 | **只有阿里云实时语音识别**，没有 Windows 的“实时辅助字幕”。需要阿里云百炼 API Key（见下面“第一次使用”里的“用阿里云实时语音识别”） |
+| 采集声音 | “电脑播放的声音”：Linux 用 `parec`（装 `pulseaudio-utils`，PulseAudio 和 PipeWire 都可以）；macOS 用系统的 ScreenCaptureKit，需要 macOS 13 以上和“屏幕录制”权限。“麦克风”：macOS 第一次使用会请求麦克风权限 |
+| 课件 OCR | PDF 里的扫描页用 `pdftoppm`（poppler）+ `tesseract` 识别，需要自己安装，并装上课程语言的语言包（例如 `tesseract-ocr-eng`）。没装的话，扫描页读不出字，只能读有文字的页 |
+| 耳机播报 | macOS 用系统的 `say`；Linux 用 `spd-say`（speech-dispatcher），没有的话用 `espeak-ng`。Linux 上的中文发音效果一般 |
+| 快捷键 | **Ctrl+Alt+S**（结束本节）、**Ctrl+Alt+M**（开关播报）只在软件窗口处于前台时有效，不是系统全局快捷键。macOS 上也是 Ctrl 和 Option，不是 Command |
+| 系统字幕相关设置 | 没有（没有 Windows 系统字幕的窄条、麦克风切换等） |
+
+### Linux 安装
+
+1. 下载 `LiveCaptionsTranslator-linux-x64.tar.gz`，解压：`tar -xzf LiveCaptionsTranslator-linux-x64.tar.gz`。
+2. 进入解压出的文件夹，运行 `./install.sh`。不需要 root 权限，程序装到 `~/.local/opt/LiveCaptionsTranslator`，并在应用菜单里加上“课堂同传助手”。
+3. 安装需要的系统组件（Debian / Ubuntu 的包名）：
+   - `pulseaudio-utils`：采集声音（必需）
+   - `fonts-noto-cjk`：中文字体
+   - `speech-dispatcher` 或 `espeak-ng`：语音播报（可选）
+   - `poppler-utils`、`tesseract-ocr` 和语言包（如 `tesseract-ocr-eng`）：扫描版课件 OCR（可选）
+
+### macOS 安装
+
+1. 按芯片下载：Apple 芯片（M1 及以后）选 `LiveCaptionsTranslator-macos-arm64.dmg`，Intel 芯片选 `LiveCaptionsTranslator-macos-x64.dmg`。不确定的话，点左上角苹果菜单 → 关于本机查看“芯片”。
+2. 打开 dmg，把“课堂同传助手”拖进“应用程序”。
+3. **第一次打开会被拦下**，因为应用没有苹果的公证签名，macOS 15 及以上不能再靠右键“打开”放行。先双击打开一次，再到 **系统设置 → 隐私与安全性**，点“仍要打开”。也可以在终端运行：`xattr -dr com.apple.quarantine /Applications/课堂同传助手.app`
+4. 按提示授权：听“电脑播放的声音”需要 **屏幕录制**权限，用“麦克风”需要 **麦克风**权限。每次更新软件后，这两个权限可能需要重新授权。
+5. 需要扫描版课件 OCR 的话，另外安装 poppler 和 tesseract（例如用 Homebrew：`brew install poppler tesseract tesseract-lang`）。
+
+### 数据保存位置
+
+| | 设置和历史数据库 | 每节课的 Markdown 默认保存位置 |
+|---|---|---|
+| macOS | `~/Library/Application Support/LiveCaptionsTranslator` | `~/Documents/课堂同传助手` |
+| Linux | `~/.local/share/LiveCaptionsTranslator` | `~/Documents/课堂同传助手`（没有配置“文档”文件夹时也用这个） |
+
+保存位置可以在“设置 ⑥”里改。
+
 ## 第一次使用
 
 ### 1. 准备语音识别
+
+以下 Windows 系统字幕的步骤只适用于 Windows；macOS 和 Linux 直接看后面的“用阿里云实时语音识别”。
 
 **用 Windows 系统实时字幕（免费）：**
 
