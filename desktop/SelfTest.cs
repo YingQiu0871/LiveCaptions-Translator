@@ -63,6 +63,10 @@ namespace LiveCaptionsTranslator
                 long last = SectionLogger.GetMaxHistoryId().GetAwaiter().GetResult();
                 if (last < 1)
                     throw new InvalidOperationException("no history row");
+                SQLiteHistoryLogger.LogTranslation("second", "第二", "zh-CN", "SelfTest").GetAwaiter().GetResult();
+                var tail = SectionLogger.LoadLastHistory(0, 1).GetAwaiter().GetResult();
+                if (tail.Count != 1 || tail[0].SourceText != "second")
+                    throw new InvalidOperationException("last history row not found");
                 return $"last history id {last}";
             });
 

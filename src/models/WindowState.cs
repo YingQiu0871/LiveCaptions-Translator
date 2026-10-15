@@ -151,4 +151,60 @@ namespace LiveCaptionsTranslator.models
             Translator.Setting?.Save();
         }
     }
+
+    // Look of the bilingual floating window. FontSize is the size of the translation; the original is smaller.
+    public class BilingualWindowState : INotifyPropertyChanged
+    {
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        private int fontSize = 18;
+        private int opacity = 153;
+        private bool topmost = true;
+        private int sentences = 3;
+
+        public int FontSize
+        {
+            get => fontSize;
+            set
+            {
+                fontSize = value;
+                OnPropertyChanged("FontSize");
+            }
+        }
+        // Alpha of the black panel, 0-255.
+        public int Opacity
+        {
+            get => opacity;
+            set
+            {
+                opacity = value;
+                OnPropertyChanged("Opacity");
+            }
+        }
+        public bool Topmost
+        {
+            get => topmost;
+            set
+            {
+                topmost = value;
+                OnPropertyChanged("Topmost");
+            }
+        }
+        // How many finished sentence pairs are shown above the one in progress.
+        public int Sentences
+        {
+            get => sentences;
+            set
+            {
+                sentences = value;
+                OnPropertyChanged("Sentences");
+            }
+        }
+
+        public void OnPropertyChanged([CallerMemberName] string propName = "")
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propName));
+            Translator.Setting?.Save();
+        }
+    }
 }

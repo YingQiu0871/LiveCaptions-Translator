@@ -12,6 +12,7 @@ namespace LiveCaptionsTranslator
     public partial class MainWindow : Window
     {
         public OverlayWindow? OverlayWindow { get; set; } = null;
+        public BilingualWindow? BilingualWindow { get; set; } = null;
         private const double DEFAULT_WIDTH = 900;
         private const double DEFAULT_HEIGHT = 560;
 
@@ -60,6 +61,7 @@ namespace LiveCaptionsTranslator
             {
                 SnackbarHost.Shown -= ShowToast;
                 OverlayWindow?.Close();
+                BilingualWindow?.Close();
             };
 
             WindowBounds.Restore(this, "MainWindow", new Size(DEFAULT_WIDTH, DEFAULT_HEIGHT));
@@ -138,6 +140,24 @@ namespace LiveCaptionsTranslator
                 OverlayWindow = null;
                 OverlayModeButton.IsChecked = false;
             }
+        }
+
+        private void BilingualModeButton_Click(object? sender, RoutedEventArgs e)
+        {
+            if (BilingualWindow != null)
+            {
+                BilingualWindow.Close();
+                return;
+            }
+
+            BilingualWindow = new BilingualWindow();
+            BilingualWindow.Closed += (s, args) =>
+            {
+                BilingualWindow = null;
+                BilingualModeButton.IsChecked = false;
+            };
+            BilingualModeButton.IsChecked = true;
+            BilingualWindow.Show();
         }
 
         private void LogOnlyButton_Click(object? sender, RoutedEventArgs e)

@@ -29,6 +29,7 @@ namespace LiveCaptionsTranslator.models
 
         private MainWindowState mainWindowState;
         private OverlayWindowState overlayWindowState;
+        private BilingualWindowState bilingualWindowState;
         private LectureState lectureState;
         private Dictionary<string, string> windowBounds;
 
@@ -128,6 +129,15 @@ namespace LiveCaptionsTranslator.models
                 OnPropertyChanged("OverlayWindow");
             }
         }
+        public BilingualWindowState BilingualWindow
+        {
+            get => bilingualWindowState;
+            set
+            {
+                bilingualWindowState = value ?? new BilingualWindowState();
+                OnPropertyChanged("BilingualWindow");
+            }
+        }
         public LectureState Lecture
         {
             get => lectureState;
@@ -186,6 +196,7 @@ namespace LiveCaptionsTranslator.models
 
             mainWindowState = new MainWindowState();
             overlayWindowState = new OverlayWindowState();
+            bilingualWindowState = new BilingualWindowState();
             lectureState = new LectureState();
 
 #if WINDOWS
@@ -204,6 +215,10 @@ namespace LiveCaptionsTranslator.models
                 {
                     "OverlayWindow", string.Format(System.Globalization.CultureInfo.InvariantCulture,
                         "{0}, {1}, {2}, {3}", (screenWidth - 650) / 2, screenHeight * 5 / 6 - 135, 650, 135)
+                },
+                {
+                    "BilingualWindow", string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                        "{0}, {1}, {2}, {3}", (screenWidth - 720) / 2, 40, 720, 240)
                 },
             };
 
@@ -287,6 +302,10 @@ namespace LiveCaptionsTranslator.models
                 else
                     setting.Configs[key] = [new TranslateAPIConfig()];
             }
+
+            // Settings files from before the bilingual window have no bounds for it.
+            if (!setting.WindowBounds.ContainsKey("BilingualWindow"))
+                setting.WindowBounds["BilingualWindow"] = new Setting().WindowBounds["BilingualWindow"];
 
             // Ensure ConfigIndices has all keys (for upgrades from older setting.json)
             foreach (string key in TranslateAPI.TRANSLATE_FUNCTIONS.Keys)

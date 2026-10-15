@@ -91,6 +91,35 @@ namespace LiveCaptionsTranslator.utils
             return lines;
         }
 
+        // The last `count` sentences after `afterId`, oldest first.
+        public static async Task<List<HistoryLine>> LoadLastHistory(long afterId, int count,
+            CancellationToken token = default)
+        {
+            var lines = new List<HistoryLine>();
+            await using var connection = Open();
+            await using var command = new SqliteCommand(@"
+                SELECT Id, SourceText, TranslatedText
+                FROM TranslationHistory
+                WHERE Id > @afterId
+                ORDER BY Id DESC
+                LIMIT @count", connection);
+            command.Parameters.AddWithValue("@afterId", afterId);
+            command.Parameters.AddWithValue("@count", Math.Max(count, 1));
+
+            await using var reader = await command.ExecuteReaderAsync(token);
+            while (await reader.ReadAsync(token))
+            {
+                lines.Add(new HistoryLine
+                {
+                    Id = reader.GetInt64(0),
+                    SourceText = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
+                    TranslatedText = reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
+                });
+            }
+            lines.Reverse();
+            return lines;
+        }
+
         public static async Task<SectionEntry> AddSection(DateTime start, DateTime end,
             long firstHistoryId, long lastHistoryId, string summary, int? pageNumber,
             CancellationToken token = default)

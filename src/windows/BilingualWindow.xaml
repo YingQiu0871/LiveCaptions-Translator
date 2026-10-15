@@ -1,0 +1,132 @@
+﻿<Window
+    x:Class="LiveCaptionsTranslator.BilingualWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    Title="双语浮窗"
+    Width="720"
+    MinWidth="360"
+    AllowsTransparency="True"
+    Background="Transparent"
+    MouseEnter="Window_MouseEnter"
+    MouseLeave="Window_MouseLeave"
+    ResizeMode="NoResize"
+    ShowInTaskbar="False"
+    SizeToContent="Height"
+    Topmost="True"
+    WindowStyle="None"
+    mc:Ignorable="d">
+
+    <Window.Resources>
+        <Style x:Key="TransparentThumbStyle" TargetType="Thumb">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Opacity" Value="0" />
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Border
+            x:Name="PanelBorder"
+            Margin="5"
+            Background="#99000000"
+            CornerRadius="10"
+            MouseLeftButtonDown="Panel_MouseLeftButtonDown">
+            <Grid>
+                <StackPanel Margin="16,12,16,12">
+                    <TextBlock
+                        x:Name="HintText"
+                        Foreground="#FFC8C8C8"
+                        TextWrapping="Wrap" />
+                    <StackPanel x:Name="PairPanel" />
+                </StackPanel>
+
+                <Border
+                    x:Name="ControlPanel"
+                    Margin="0,6,10,0"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Background="#E6202020"
+                    CornerRadius="6"
+                    Visibility="Collapsed">
+                    <StackPanel Margin="3" Orientation="Horizontal">
+                        <ui:Button
+                            x:Name="PinButton"
+                            Background="#FFAAAAAA"
+                            Click="PinButton_Click"
+                            Cursor="Hand"
+                            Icon="{ui:SymbolIcon Pin16,
+                                                 Filled=True}"
+                            ToolTip="置顶（点击切换）" />
+                        <ui:Button
+                            Margin="5,0,0,0"
+                            Background="#FFAAAAAA"
+                            Click="FontIncrease_Click"
+                            Cursor="Hand"
+                            Icon="{ui:SymbolIcon fontIncrease20,
+                                                 Filled=False}"
+                            ToolTip="字号加大" />
+                        <ui:Button
+                            Background="#FFAAAAAA"
+                            Click="FontDecrease_Click"
+                            Cursor="Hand"
+                            Icon="{ui:SymbolIcon fontDecrease20,
+                                                 Filled=False}"
+                            ToolTip="字号减小" />
+                        <ui:Button
+                            Margin="5,0,0,0"
+                            Background="#FFAAAAAA"
+                            Click="OpacityIncrease_Click"
+                            Cursor="Hand"
+                            Icon="{ui:SymbolIcon arrowAutofitUp20,
+                                                 Filled=False}"
+                            ToolTip="背景加深" />
+                        <ui:Button
+                            Background="#FFAAAAAA"
+                            Click="OpacityDecrease_Click"
+                            Cursor="Hand"
+                            Icon="{ui:SymbolIcon arrowAutofitDown20,
+                                                 Filled=False}"
+                            ToolTip="背景变浅" />
+                        <ui:Button
+                            x:Name="SentencesButton"
+                            Margin="5,0,0,0"
+                            Background="#FFAAAAAA"
+                            Click="SentencesButton_Click"
+                            Cursor="Hand"
+                            Foreground="Black"
+                            ToolTip="显示的句数（点击在 1–5 句之间切换）" />
+                        <ui:Button
+                            Margin="5,0,0,0"
+                            Background="#FFAAAAAA"
+                            Click="CloseButton_Click"
+                            Cursor="Hand"
+                            Icon="{ui:SymbolIcon Dismiss16,
+                                                 Filled=False}"
+                            ToolTip="关闭双语浮窗" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <Thumb
+            x:Name="LeftThumb"
+            Width="10"
+            HorizontalAlignment="Left"
+            VerticalAlignment="Stretch"
+            Cursor="SizeWE"
+            DragDelta="LeftThumb_OnDragDelta"
+            Style="{StaticResource TransparentThumbStyle}" />
+        <Thumb
+            x:Name="RightThumb"
+            Width="10"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Stretch"
+            Cursor="SizeWE"
+            DragDelta="RightThumb_OnDragDelta"
+            Style="{StaticResource TransparentThumbStyle}" />
+    </Grid>
+</Window>
