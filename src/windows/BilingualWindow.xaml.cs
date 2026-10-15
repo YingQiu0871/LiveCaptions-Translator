@@ -1,10 +1,13 @@
-﻿using System.Windows;
+﻿using System.Runtime.InteropServices;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 
+using LiveCaptionsTranslator.apis;
 using LiveCaptionsTranslator.models;
 using LiveCaptionsTranslator.utils;
 using Color = System.Windows.Media.Color;
@@ -41,6 +44,7 @@ namespace LiveCaptionsTranslator
                 Render();
             };
             Closed += (s, e) => feed.Dispose();
+            SourceInitialized += (s, e) => LimitHeight();
 
             RestorePlace();
             LimitHeight();
@@ -98,9 +102,23 @@ namespace LiveCaptionsTranslator
         // The window may grow down to the bottom of the work area; longer content scrolls to its newest line.
         private void LimitHeight()
         {
-            MaxHeight = Math.Max(120, SystemParameters.WorkArea.Bottom - Top);
+            MaxHeight = Math.Max(120, WorkAreaBottom() - Top);
             // Panel margin (2 x 5) and scroll area margin (2 x 12).
             PairScroll.MaxHeight = Math.Max(40, MaxHeight - 34);
+        }
+
+        // Bottom of the work area of the monitor the window is on, in WPF units.
+        private double WorkAreaBottom()
+        {
+            nint hwnd = new WindowInteropHelper(this).Handle;
+            var source = PresentationSource.FromVisual(this);
+            if (hwnd == 0 || source?.CompositionTarget == null)
+                return SystemParameters.WorkArea.Bottom;
+            var info = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
+            nint monitor = WindowsAPI.MonitorFromWindow(hwnd, WindowsAPI.MONITOR_DEFAULTTONEAREST);
+            if (!WindowsAPI.GetMonitorInfo(monitor, ref info))
+                return SystemParameters.WorkArea.Bottom;
+            return source.CompositionTarget.TransformFromDevice.Transform(new Point(0, info.rcWork.Bottom)).Y;
         }
 
         private void Render()

@@ -64,6 +64,23 @@ namespace LiveCaptionsTranslator.apis
 
         [DllImport("user32.dll", SetLastError = true)]
         public static extern bool GetWindowRect(nint hWnd, out RECT lpRect);
+
+        public const uint MONITOR_DEFAULTTONEAREST = 0x00000002;
+
+        [DllImport("user32.dll")]
+        public static extern nint MonitorFromWindow(nint hWnd, uint dwFlags);
+
+        [DllImport("user32.dll")]
+        public static extern bool GetMonitorInfo(nint hMonitor, ref MONITORINFO lpmi);
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MONITORINFO
+    {
+        public int cbSize;
+        public RECT rcMonitor;
+        public RECT rcWork;
+        public uint dwFlags;
     }
 
     [StructLayout(LayoutKind.Sequential)]

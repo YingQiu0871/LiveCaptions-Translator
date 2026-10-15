@@ -532,6 +532,11 @@ namespace LiveCaptionsTranslator
                         Caption.OverlayCurrentTranslation = match.Groups[2].Value.Trim();
                     }
                 }
+                else if (string.CompareOrdinal(Caption.TranslatedCaption, translatedText) == 0)
+                {
+                    // A new original can get the same translation, e.g. two short acknowledgements.
+                    Caption.OverlayTranslationSource = source;
+                }
 
                 // If the original sentence is a complete sentence, choke for better visual experience.
                 if (isChoke)
