@@ -6,7 +6,8 @@ using LiveCaptionsTranslator.models;
 namespace LiveCaptionsTranslator.utils
 {
     // A first draft of study notes for a whole class, written by the LLM from the section summaries, the transcript
-    // and the slides (if loaded), and saved next to the transcript as "<name> 笔记初稿.md".
+    // and the slides (if loaded), and saved next to the transcript as "<name> 笔记初稿.md". With translation on, the
+    // notes are bilingual: each line in the lecture's language with its translation right after it.
     public static class LectureNotes
     {
         private const int MAX_TRANSCRIPT_CHARS = 24000;
@@ -29,7 +30,8 @@ namespace LiveCaptionsTranslator.utils
 
             string language = LectureState.OutputLanguage();
             bool english = Translator.Setting.Lecture.EnglishOnly;
-            string system =
+            bool bilingual = !Translator.Setting.Lecture.SkipTranslation;
+            string system = bilingual ? BilingualPrompt(language) :
                 $"You are a diligent university student writing study notes in {language} for one lecture. " +
                 "You get the section summaries, the (speech-recognized, partly erroneous) transcript and, if available, " +
                 "the text of the lecture slides. Write well-organized notes in Markdown: " +
@@ -74,7 +76,7 @@ namespace LiveCaptionsTranslator.utils
                 text = Shorten(text, MAX_TRANSCRIPT_CHARS);
             user.AppendLine(text);
 
-            string notes = await Summarizer.Chat(system, user.ToString(), maxTokens: 4000, temperature: 0.3,
+            string notes = await Summarizer.Chat(system, user.ToString(), maxTokens: bilingual ? 8000 : 4000, temperature: 0.3,
                 longRequest: true);
 
             string path = DraftPath(lecture);
@@ -86,6 +88,35 @@ namespace LiveCaptionsTranslator.utils
             await File.WriteAllTextAsync(path, file.ToString(), new UTF8Encoding(false));
             return path;
         }
+
+        // Every heading, bullet, definition and question in the original language, with its translation right after.
+        private static string BilingualPrompt(string language) =>
+            "You are a diligent university student writing bilingual study notes for one lecture. " +
+            "You get the section summaries, the (speech-recognized, partly erroneous) transcript and, if available, " +
+            "the text of the lecture slides. Write well-organized notes in Markdown: " +
+            "follow the order of the lecture; use the slides for structure, headings and exact terminology, and " +
+            "the transcript for what the lecturer actually explained. For every topic give the key points, " +
+            "definitions, formulas, numbers and the examples the lecturer used. " +
+            $"The notes are bilingual: write every heading, bullet, definition and review question first in the " +
+            $"original language of the lecture (the language of the transcript and slides), and put its translation " +
+            $"into {language} right after it, never the other way round and never in a separate block. Layout: " +
+            "a heading is \"## Original heading / translated heading\" on one line; a bullet is \"- original text\" " +
+            "followed by the translation as a nested bullet on the next line, indented by two spaces " +
+            "(\"  - translated text\"); a paragraph is followed by its translation as a separate paragraph. " +
+            "Do not translate formulas, numbers, code and proper names a second time, and do not repeat a line that " +
+            "is the same in both languages. Example:\n" +
+            "## Gradient descent / 梯度下降\n" +
+            "- Update the weights against the gradient.\n" +
+            "  - 沿梯度的反方向更新权重。\n" +
+            "- Step size: w = w - lr * g\n" +
+            "  - 步长，lr 为学习率。\n" +
+            "(The example uses Chinese as the translation language.) " +
+            "Mark points that were said in class but are not on the slides with \"【课上补充】\" " +
+            "at the start of the original line. " +
+            "Never invent content; where the transcript is unclear, leave it out. " +
+            "Finish with a section of 3–5 review questions, each as a bullet with its translation nested below. " +
+            "Answer with the notes only." +
+            LectureState.SubjectHint();
 
         // The slides of the pages the class went through, or the whole deck when no page was recognized.
         private static string SlidesText(LectureRecord lecture)
