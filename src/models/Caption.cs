@@ -109,6 +109,9 @@ namespace LiveCaptionsTranslator.models
             }
         }
 
+        // The original text OverlayCurrentTranslation was made for.
+        public string OverlayTranslationSource { get; set; } = string.Empty;
+
         public string OverlayPreviousTranslation =>
             GetPreviousText(Translator.Setting.DisplaySentences, TextType.Translation);
 

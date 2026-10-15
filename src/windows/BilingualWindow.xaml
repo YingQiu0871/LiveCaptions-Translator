@@ -36,13 +36,18 @@
             CornerRadius="10"
             MouseLeftButtonDown="Panel_MouseLeftButtonDown">
             <Grid>
-                <StackPanel Margin="16,12,16,12">
-                    <TextBlock
-                        x:Name="HintText"
-                        Foreground="#FFC8C8C8"
-                        TextWrapping="Wrap" />
-                    <StackPanel x:Name="PairPanel" />
-                </StackPanel>
+                <ScrollViewer
+                    x:Name="PairScroll"
+                    Margin="16,12,16,12"
+                    VerticalScrollBarVisibility="Hidden">
+                    <StackPanel>
+                        <TextBlock
+                            x:Name="HintText"
+                            Foreground="#FFC8C8C8"
+                            TextWrapping="Wrap" />
+                        <StackPanel x:Name="PairPanel" />
+                    </StackPanel>
+                </ScrollViewer>
 
                 <Border
                     x:Name="ControlPanel"

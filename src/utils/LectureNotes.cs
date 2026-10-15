@@ -76,8 +76,18 @@ namespace LiveCaptionsTranslator.utils
                 text = Shorten(text, MAX_TRANSCRIPT_CHARS);
             user.AppendLine(text);
 
-            string notes = await Summarizer.Chat(system, user.ToString(), maxTokens: bilingual ? 8000 : 4000, temperature: 0.3,
-                longRequest: true);
+            string notes;
+            try
+            {
+                notes = await Summarizer.Chat(system, user.ToString(), maxTokens: bilingual ? 8000 : 4000,
+                    temperature: 0.3, longRequest: true);
+            }
+            catch (HttpRequestException ex) when (bilingual && (int?)ex.StatusCode is 400 or 422)
+            {
+                // Some models accept fewer output tokens than the bilingual notes ask for.
+                notes = await Summarizer.Chat(system, user.ToString(), maxTokens: 4000, temperature: 0.3,
+                    longRequest: true);
+            }
 
             string path = DraftPath(lecture);
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
@@ -109,7 +119,7 @@ namespace LiveCaptionsTranslator.utils
             "- Update the weights against the gradient.\n" +
             "  - 沿梯度的反方向更新权重。\n" +
             "- Step size: w = w - lr * g\n" +
-            "  - 步长，lr 为学习率。\n" +
+            "  - 步长：w = w - lr * g\n" +
             "(The example uses Chinese as the translation language.) " +
             "Mark points that were said in class but are not on the slides with \"【课上补充】\" " +
             "at the start of the original line. " +

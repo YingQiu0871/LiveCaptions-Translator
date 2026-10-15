@@ -30,7 +30,6 @@ namespace LiveCaptionsTranslator
         public BilingualWindow()
         {
             InitializeComponent();
-            MaxHeight = SystemParameters.WorkArea.Height;
             Topmost = Look.Topmost;
             Look.Sentences = Math.Clamp(Look.Sentences, BilingualFeed.MIN_SENTENCES, BilingualFeed.MAX_SENTENCES);
             feed = new BilingualFeed(Look.Sentences);
@@ -44,7 +43,12 @@ namespace LiveCaptionsTranslator
             Closed += (s, e) => feed.Dispose();
 
             RestorePlace();
-            LocationChanged += (s, e) => WindowHandler.SaveState(this, Translator.Setting);
+            LimitHeight();
+            LocationChanged += (s, e) =>
+            {
+                WindowHandler.SaveState(this, Translator.Setting);
+                LimitHeight();
+            };
             // The height follows the text, so only a change of the width is worth saving.
             SizeChanged += (s, e) =>
             {
@@ -91,6 +95,14 @@ namespace LiveCaptionsTranslator
             }
         }
 
+        // The window may grow down to the bottom of the work area; longer content scrolls to its newest line.
+        private void LimitHeight()
+        {
+            MaxHeight = Math.Max(120, SystemParameters.WorkArea.Bottom - Top);
+            // Panel margin (2 x 5) and scroll area margin (2 x 12).
+            PairScroll.MaxHeight = Math.Max(40, MaxHeight - 34);
+        }
+
         private void Render()
         {
             var items = new List<BilingualFeed.Pair>(feed.Finished);
@@ -104,6 +116,7 @@ namespace LiveCaptionsTranslator
                 HintText.FontSize = Look.FontSize * 0.8;
                 HintText.Text = feed.SessionStarted ? "正在听……" : "点击「开始」后这里显示原文和译文";
                 HintText.Visibility = Visibility.Visible;
+                PairScroll.ScrollToTop();
                 return;
             }
             HintText.Visibility = Visibility.Collapsed;
@@ -134,6 +147,7 @@ namespace LiveCaptionsTranslator
                     });
                 }
             }
+            PairScroll.ScrollToEnd();
         }
 
         private void ShowPinState()

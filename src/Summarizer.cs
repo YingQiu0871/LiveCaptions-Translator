@@ -36,7 +36,7 @@ namespace LiveCaptionsTranslator
         // For long answers such as the notes draft of a whole class.
         private static readonly HttpClient longClient = new HttpClient()
         {
-            Timeout = TimeSpan.FromMinutes(5)
+            Timeout = TimeSpan.FromMinutes(10)
         };
 
         private static long lastHistoryId = -1;
@@ -399,7 +399,8 @@ namespace LiveCaptionsTranslator
                 if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                     throw new HttpRequestException("API Key 无效（HTTP 401），请重新粘贴 API Key。");
                 if (!response.IsSuccessStatusCode)
-                    throw new HttpRequestException($"HTTP Error - {(int)response.StatusCode} {response.StatusCode}");
+                    throw new HttpRequestException($"HTTP Error - {(int)response.StatusCode} {response.StatusCode}",
+                        null, response.StatusCode);
 
                 var responseObj = JsonSerializer.Deserialize<OpenAIConfig.Response>(responseString);
                 string output = responseObj?.choices?.FirstOrDefault()?.message?.content ?? string.Empty;
