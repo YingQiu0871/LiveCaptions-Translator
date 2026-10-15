@@ -89,6 +89,14 @@
                                                  Filled=False}"
                             ToolTip="悬浮字幕窗" />
                         <ui:Button
+                            x:Name="BilingualModeButton"
+                            Margin="0,0,5,0"
+                            Appearance="Transparent"
+                            Click="BilingualModeButton_Click"
+                            Icon="{ui:SymbolIcon Translate24,
+                                                 Filled=False}"
+                            ToolTip="双语浮窗（原文 + 译文，半透明置顶）" />
+                        <ui:Button
                             x:Name="TopmostButton"
                             Margin="0,0,5,0"
                             Appearance="Transparent"
@@ -113,6 +121,9 @@
                     <ui:NavigationViewItem
                         Margin="0,6,0,3"
                         Content="字幕"
+                        ToolTip="字幕"
+                        ToolTipService.InitialShowDelay="300"
+                        ToolTipService.Placement="Right"
                         FontFamily="Bahnschrift"
                         Icon="{ui:SymbolIcon Home24}"
                         NavigationCacheMode="Enabled"
@@ -120,6 +131,9 @@
                     <ui:NavigationViewItem
                         Margin="0,3,0,0"
                         Content="设置"
+                        ToolTip="设置"
+                        ToolTipService.InitialShowDelay="300"
+                        ToolTipService.Placement="Right"
                         FontFamily="Bahnschrift"
                         Icon="{ui:SymbolIcon Settings24}"
                         NavigationCacheMode="Disabled"
@@ -127,6 +141,9 @@
                     <ui:NavigationViewItem
                         Margin="0,3,0,0"
                         Content="时间线"
+                        ToolTip="时间线"
+                        ToolTipService.InitialShowDelay="300"
+                        ToolTipService.Placement="Right"
                         FontFamily="Bahnschrift"
                         Icon="{ui:SymbolIcon Timeline24}"
                         NavigationCacheMode="Disabled"
@@ -134,6 +151,9 @@
                     <ui:NavigationViewItem
                         Margin="0,3,0,0"
                         Content="历史"
+                        ToolTip="历史"
+                        ToolTipService.InitialShowDelay="300"
+                        ToolTipService.Placement="Right"
                         FontFamily="Bahnschrift"
                         Icon="{ui:SymbolIcon History24}"
                         NavigationCacheMode="Disabled"
@@ -141,6 +161,9 @@
                     <ui:NavigationViewItem
                         Margin="0,3,0,0"
                         Content="关于"
+                        ToolTip="关于"
+                        ToolTipService.InitialShowDelay="300"
+                        ToolTipService.Placement="Right"
                         FontFamily="Bahnschrift"
                         Icon="{ui:SymbolIcon Info24}"
                         NavigationCacheMode="Required"

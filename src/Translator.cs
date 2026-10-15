@@ -496,7 +496,7 @@ namespace LiveCaptionsTranslator
         {
             while (true)
             {
-                var (translatedText, isChoke) = translationTaskQueue.Output;
+                var (translatedText, isChoke, source) = translationTaskQueue.Output;
 
                 if (Setting.Lecture.SkipTranslation)
                 {
@@ -522,6 +522,7 @@ namespace LiveCaptionsTranslator
                         TextUtil.ShortenDisplaySentence(Caption.TranslatedCaption, TextUtil.VERYLONG_THRESHOLD);
 
                     // Overlay window
+                    Caption.OverlayTranslationSource = source;
                     if (Caption.TranslatedCaption.Contains("[ERROR]") || Caption.TranslatedCaption.Contains("[WARNING]"))
                         Caption.OverlayCurrentTranslation = Caption.TranslatedCaption;
                     else
@@ -530,6 +531,11 @@ namespace LiveCaptionsTranslator
                         Caption.OverlayNoticePrefix = match.Groups[1].Value.Trim();
                         Caption.OverlayCurrentTranslation = match.Groups[2].Value.Trim();
                     }
+                }
+                else if (string.CompareOrdinal(Caption.TranslatedCaption, translatedText) == 0)
+                {
+                    // A new original can get the same translation, e.g. two short acknowledgements.
+                    Caption.OverlayTranslationSource = source;
                 }
 
                 // If the original sentence is a complete sentence, choke for better visual experience.
