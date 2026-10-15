@@ -28,10 +28,13 @@
     <Grid>
         <Border x:Name="PanelBorder" Margin="5" CornerRadius="10" Background="#99000000">
             <Grid>
-                <StackPanel Margin="16,12">
-                    <TextBlock x:Name="HintText" Foreground="#FFC8C8C8" TextWrapping="Wrap" />
-                    <StackPanel x:Name="PairPanel" />
-                </StackPanel>
+                <ScrollViewer x:Name="PairScroll" Margin="16,12" VerticalScrollBarVisibility="Hidden"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel>
+                        <TextBlock x:Name="HintText" Foreground="#FFC8C8C8" TextWrapping="Wrap" />
+                        <StackPanel x:Name="PairPanel" />
+                    </StackPanel>
+                </ScrollViewer>
 
                 <Border x:Name="ControlPanel" Margin="0,6,10,0" HorizontalAlignment="Right" VerticalAlignment="Top"
                         CornerRadius="6" Background="#E6202020" IsVisible="False">

@@ -11,8 +11,9 @@ namespace LiveCaptionsTranslator.models
         private long displayedSeq = -1;
         private long nextSeq = 0;
 
-        private (string translatedText, bool isChoke) output;
-        public (string translatedText, bool isChoke) Output => output;
+        private (string translatedText, bool isChoke, string source) output;
+        // The newest displayed result and the original text it was made for.
+        public (string translatedText, bool isChoke, string source) Output => output;
 
         // Translations are still running.
         public bool IsBusy
@@ -29,7 +30,7 @@ namespace LiveCaptionsTranslator.models
         public TranslationTaskQueue()
         {
             tasks = new List<TranslationTask>();
-            output = (string.Empty, false);
+            output = (string.Empty, false, string.Empty);
         }
 
         public void Enqueue(Func<CancellationToken, Task<(string, bool)>> worker, string originalText, bool isFinal)
@@ -68,7 +69,8 @@ namespace LiveCaptionsTranslator.models
                 if (translationTask.Seq > displayedSeq)
                 {
                     displayedSeq = translationTask.Seq;
-                    output = translationTask.Task.Result;
+                    var (translatedText, isChoke) = translationTask.Task.Result;
+                    output = (translatedText, isChoke, translationTask.OriginalText);
                 }
             }
         }

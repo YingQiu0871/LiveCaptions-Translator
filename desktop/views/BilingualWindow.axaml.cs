@@ -42,8 +42,10 @@ namespace LiveCaptionsTranslator
             Height = double.NaN;
             WindowBounds.Track(this, "BilingualWindow");
 
+            PositionChanged += (s, e) => LimitHeight();
             Opened += (s, e) =>
             {
+                LimitHeight();
                 feed.Start();
                 Render();
             };
@@ -73,6 +75,19 @@ namespace LiveCaptionsTranslator
             };
         }
 
+        // The window may grow down to the bottom of the work area; longer content scrolls to its newest line.
+        private void LimitHeight()
+        {
+            var screen = Screens.ScreenFromWindow(this);
+            if (screen == null)
+                return;
+            double scale = screen.Scaling > 0 ? screen.Scaling : 1;
+            double room = (screen.WorkingArea.Bottom - Position.Y) / scale;
+            MaxHeight = Math.Max(120, room);
+            // Panel margin (2 x 5) and scroll area margin (2 x 12).
+            PairScroll.MaxHeight = Math.Max(40, MaxHeight - 34);
+        }
+
         private void Render()
         {
             var items = new List<BilingualFeed.Pair>(feed.Finished);
@@ -86,6 +101,7 @@ namespace LiveCaptionsTranslator
                 HintText.FontSize = Look.FontSize * 0.8;
                 HintText.Text = feed.SessionStarted ? "正在听……" : "点击「开始」后这里显示原文和译文";
                 HintText.IsVisible = true;
+                PairScroll.ScrollToHome();
                 return;
             }
             HintText.IsVisible = false;
@@ -116,6 +132,7 @@ namespace LiveCaptionsTranslator
                     });
                 }
             }
+            PairScroll.ScrollToEnd();
         }
 
         private void ShowPinState()

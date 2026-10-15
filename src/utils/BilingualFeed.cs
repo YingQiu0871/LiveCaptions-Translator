@@ -51,13 +51,29 @@ namespace LiveCaptionsTranslator.utils
             get
             {
                 string original = (Translator.Caption.OverlayOriginalCaption ?? string.Empty).Trim();
+                if (Translator.Setting.Lecture.Engine != RecognitionEngine.Aliyun)
+                {
+                    // The system engine's caption holds several sentences; only the last one is in progress.
+                    int end = original.Length > 1 ? original[..^1].LastIndexOfAny(TextUtil.PUNC_EOS) : -1;
+                    original = original.Substring(end + 1).Trim();
+                }
                 if (original.Length == 0)
                     return null;
                 var last = finished.Count > 0 ? finished[^1] : null;
                 if (last != null && last.Original.Trim() == original)
                     return null;
-                return new Pair(original, (Translator.Caption.OverlayCurrentTranslation ?? string.Empty).Trim());
+                // The shown translation may still belong to the previous sentence.
+                string source = Normalize(Translator.Caption.OverlayTranslationSource);
+                string translation = source.Length > 0 && Normalize(original).StartsWith(source, StringComparison.Ordinal)
+                    ? LectureDocument.CleanTranslation(Translator.Caption.OverlayCurrentTranslation)
+                    : string.Empty;
+                return new Pair(original, translation);
             }
+        }
+
+        private static string Normalize(string text)
+        {
+            return string.Concat((text ?? string.Empty).Where(c => !char.IsWhiteSpace(c)));
         }
 
         public void Start()
@@ -101,7 +117,7 @@ namespace LiveCaptionsTranslator.utils
                 try
                 {
                     var lines = await SectionLogger.LoadLastHistory(ClassSession.FirstHistoryId, sentences);
-                    pairs.AddRange(lines.Select(line => new Pair(line.SourceText.Trim(), line.TranslatedText.Trim())));
+                    pairs.AddRange(lines.Select(line => new Pair(line.SourceText.Trim(), LectureDocument.CleanTranslation(line.TranslatedText))));
                 }
                 catch (Exception)
                 {

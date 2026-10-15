@@ -496,7 +496,7 @@ namespace LiveCaptionsTranslator
         {
             while (true)
             {
-                var (translatedText, isChoke) = translationTaskQueue.Output;
+                var (translatedText, isChoke, source) = translationTaskQueue.Output;
 
                 if (Setting.Lecture.SkipTranslation)
                 {
@@ -522,6 +522,7 @@ namespace LiveCaptionsTranslator
                         TextUtil.ShortenDisplaySentence(Caption.TranslatedCaption, TextUtil.VERYLONG_THRESHOLD);
 
                     // Overlay window
+                    Caption.OverlayTranslationSource = source;
                     if (Caption.TranslatedCaption.Contains("[ERROR]") || Caption.TranslatedCaption.Contains("[WARNING]"))
                         Caption.OverlayCurrentTranslation = Caption.TranslatedCaption;
                     else
