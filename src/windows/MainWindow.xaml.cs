@@ -12,6 +12,8 @@ namespace LiveCaptionsTranslator
     public partial class MainWindow : FluentWindow
     {
         public OverlayWindow? OverlayWindow { get; set; } = null;
+        public BilingualWindow? BilingualWindow { get; set; } = null;
+        private static bool bilingualHintShown = false;
         private const double DEFAULT_WIDTH = 900;
         private const double DEFAULT_HEIGHT = 560;
 
@@ -33,7 +35,11 @@ namespace LiveCaptionsTranslator
             ApplicationThemeManager.ApplySystemTheme();
 
             SourceInitialized += (s, e) => RegisterHotKeys();
-            Closed += (s, e) => UnregisterHotKeys();
+            Closed += (s, e) =>
+            {
+                UnregisterHotKeys();
+                BilingualWindow?.Close();
+            };
             Speaker.MutedChanged += muted => Dispatcher.InvokeAsync(() => ShowSpeakerState(muted));
             ClassSession.StateChanged += () => Dispatcher.InvokeAsync(ShowSessionState);
 
@@ -125,6 +131,33 @@ namespace LiveCaptionsTranslator
 
                 OverlayWindow.Close();
                 OverlayWindow = null;
+            }
+        }
+
+        private void BilingualModeButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (BilingualWindow != null)
+            {
+                BilingualWindow.Close();
+                return;
+            }
+
+            BilingualWindow = new BilingualWindow();
+            BilingualWindow.Closed += (s, args) =>
+            {
+                BilingualWindow = null;
+                if (BilingualModeButton.Icon is SymbolIcon icon)
+                    icon.Filled = false;
+            };
+            if (BilingualModeButton.Icon is SymbolIcon symbolIcon)
+                symbolIcon.Filled = true;
+            BilingualWindow.Show();
+
+            if (!bilingualHintShown && Translator.Setting.Lecture.Engine == models.RecognitionEngine.LiveCaptions)
+            {
+                bilingualHintShown = true;
+                SnackbarHost.Show("双语浮窗按阿里云百炼引擎设计",
+                    "系统字幕引擎下也能用，但原文更新可能较慢。", SnackbarType.Info, timeout: 3, closeButton: true);
             }
         }
 

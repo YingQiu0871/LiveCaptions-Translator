@@ -30,6 +30,8 @@
                               ToolTip.Tip="暂停翻译（只记录原文）" Click="LogOnlyButton_Click" />
                 <ToggleButton x:Name="OverlayModeButton" Content="悬浮字幕"
                               ToolTip.Tip="悬浮字幕窗" Click="OverlayModeButton_Click" />
+                <ToggleButton x:Name="BilingualModeButton" Content="双语浮窗"
+                              ToolTip.Tip="双语浮窗（原文 + 译文，半透明置顶）" Click="BilingualModeButton_Click" />
                 <ToggleButton x:Name="TopmostButton" Content="置顶"
                               ToolTip.Tip="窗口置顶" Click="TopmostButton_Click" />
             </StackPanel>
