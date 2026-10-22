@@ -121,6 +121,35 @@ namespace LiveCaptionsTranslator
                 return order;
             });
 
+            Check("update check (tags)", () =>
+            {
+                if (UpdateChecker.ParseTag("v1.7-lecture.12") != 12 || UpdateChecker.ParseTag("v1.7-lecture.x") != null ||
+                    UpdateChecker.ParseTag("v1.7.3") != null || UpdateChecker.ParseTag(null) != null)
+                    throw new InvalidOperationException("release tag parsing is wrong");
+                if (!UpdateChecker.IsNewer(12, 13) || UpdateChecker.IsNewer(13, 13) || UpdateChecker.IsNewer(14, 13) ||
+                    UpdateChecker.IsNewer(null, 13))
+                    throw new InvalidOperationException("build comparison is wrong");
+                var releases = System.Text.Json.JsonDocument.Parse(
+                    "[{\"tag_name\":\"v1.7-lecture.20\",\"draft\":true}," +
+                    "{\"tag_name\":\"v1.7-lecture.19\",\"prerelease\":true}," +
+                    "{\"tag_name\":\"nightly\"}," +
+                    "{\"tag_name\":\"v1.7-lecture.9\",\"html_url\":\"https://example.com/9\"}," +
+                    "{\"tag_name\":\"v1.7-lecture.12\",\"html_url\":\"https://example.com/12\"}," +
+                    "{\"tag_name\":\"v1.7-lecture.10\"}]").RootElement;
+                var picked = UpdateChecker.PickLatest(releases, 10);
+                if (picked == null || picked.LatestBuild != 12 || !picked.IsNewer || picked.Url != "https://example.com/12" ||
+                    UpdateChecker.PickLatest(System.Text.Json.JsonDocument.Parse("[]").RootElement, 10) != null)
+                    throw new InvalidOperationException("choosing the highest release is wrong");
+                var now = new DateTime(2026, 1, 10, 0, 0, 0, DateTimeKind.Utc);
+                if (UpdateChecker.IsCheckDue(now.AddHours(-1), now) || !UpdateChecker.IsCheckDue(now.AddHours(-25), now) ||
+                    !UpdateChecker.IsCheckDue(now.AddHours(1), now))
+                    throw new InvalidOperationException("check interval is wrong");
+                if (UpdateChecker.ShouldAnnounce(12, now.AddDays(-1), 12, now) || !UpdateChecker.ShouldAnnounce(11, now, 12, now) ||
+                    !UpdateChecker.ShouldAnnounce(12, now.AddDays(-4), 12, now))
+                    throw new InvalidOperationException("announcement rule is wrong");
+                return $"current build {(UpdateChecker.CurrentBuild?.ToString() ?? "none (development build)")}";
+            });
+
             Check("markdown folder", () => LectureDocument.DefaultSaveFolder);
 
             foreach (string tool in new[] { "parec", "pactl", "say", "spd-say", "espeak-ng", "pdftoppm", "tesseract" })

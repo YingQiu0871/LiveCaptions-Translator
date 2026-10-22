@@ -36,6 +36,23 @@
 		<ApplicationDefinition Remove="desktop/**" />
 	</ItemGroup>
 
+	<!-- The CI run number, passed in by the workflow (-p:LectureBuild=N); the update check compares it with the
+	     number in the tag of the latest release. Absent in a local build. GenerateAssemblyInfo is off here, so the
+	     attribute is written by a target instead. -->
+	<ItemGroup Condition="'$(LectureBuild)' != ''">
+		<LectureBuildAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>LectureBuild</_Parameter1>
+			<_Parameter2>$(LectureBuild)</_Parameter2>
+		</LectureBuildAttribute>
+	</ItemGroup>
+	<Target Name="WriteLectureBuild" BeforeTargets="CoreCompile" Condition="'$(LectureBuild)' != ''">
+		<WriteCodeFragment Language="C#" OutputFile="$(IntermediateOutputPath)LectureBuild.g.cs" AssemblyAttributes="@(LectureBuildAttribute)" />
+		<ItemGroup>
+			<Compile Include="$(IntermediateOutputPath)LectureBuild.g.cs" />
+			<FileWrites Include="$(IntermediateOutputPath)LectureBuild.g.cs" />
+		</ItemGroup>
+	</Target>
+
 	<ItemGroup>
 		<ApplicationDefinition Include="src\App.xaml">
 			<Generator>MSBuild:Compile</Generator>

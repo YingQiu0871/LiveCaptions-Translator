@@ -23,6 +23,18 @@
 		<Authors>SakiRinn</Authors>
 	</PropertyGroup>
 
+	<!-- The CI run number, passed in by the workflow (-p:LectureBuild=N); the update check compares it with the
+	     number in the tag of the latest release. Absent in a local build. -->
+	<PropertyGroup Condition="'$(LectureBuild)' != ''">
+		<Version>1.7.$(LectureBuild)</Version>
+	</PropertyGroup>
+	<ItemGroup Condition="'$(LectureBuild)' != ''">
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>LectureBuild</_Parameter1>
+			<_Parameter2>$(LectureBuild)</_Parameter2>
+		</AssemblyAttribute>
+	</ItemGroup>
+
 	<ItemGroup>
 		<PackageReference Include="Avalonia" Version="11.2.8" />
 		<PackageReference Include="Avalonia.Desktop" Version="11.2.8" />

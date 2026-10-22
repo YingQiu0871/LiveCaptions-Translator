@@ -22,6 +22,7 @@ namespace LiveCaptionsTranslator
             Task.Run(() => Summarizer.SummaryLoop());
             Task.Run(() => Refiner.RefineLoop());
             Speaker.Start();
+            UpdateChecker.StartAutoCheck();
         }
 
         private static void OnProcessExit(object sender, EventArgs e)
