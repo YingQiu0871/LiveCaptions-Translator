@@ -12,20 +12,32 @@
     <Grid Margin="10">
         <StackPanel>
             <TextBlock TextAlignment="Left" TextWrapping="Wrap">
-                <Run Text="本工具基于开源项目 LiveCaptions Translator 改造，增加了课堂分节总结、时间线和耳机播报。欢迎通过 GitHub Issue 反馈问题或提出建议，也可以直接提交 Pull Request。" />
-                <Run Text="&#x0A;如果觉得好用，欢迎给原项目点个 Star！" />
+                <Run Text="课堂同传助手由 @YingQiu0871 基于开源项目 LiveCaptions Translator 改造，增加了课堂分节总结、时间线、双语浮窗、笔记初稿和耳机播报。问题和建议欢迎在本项目的 GitHub Issue 反馈。" />
+                <Run Text="&#x0A;如果觉得好用，欢迎给本项目和原项目点个 Star！" />
             </TextBlock>
             <Separator Margin="0,5,0,5" />
+            <TextBlock Margin="0,0,0,3">
+                <Run FontWeight="SemiBold" Text="本项目仓库：" />
+                <Hyperlink NavigateUri="https://github.com/YingQiu0871/LiveCaptions-Translator" RequestNavigate="Hyperlink_RequestNavigate">
+                    <Run Text="https://github.com/YingQiu0871/LiveCaptions-Translator" />
+                </Hyperlink>
+            </TextBlock>
+            <TextBlock Margin="0,0,0,3">
+                <Run FontWeight="SemiBold" Text="作者：" />
+                <Hyperlink NavigateUri="https://github.com/YingQiu0871" RequestNavigate="Hyperlink_RequestNavigate">
+                    <Run Text="@YingQiu0871" />
+                </Hyperlink>
+            </TextBlock>
+            <TextBlock Margin="0,0,0,3">
+                <Run FontWeight="SemiBold" Text="使用说明：" />
+                <Hyperlink NavigateUri="https://github.com/YingQiu0871/LiveCaptions-Translator#readme" RequestNavigate="Hyperlink_RequestNavigate">
+                    <Run Text="https://github.com/YingQiu0871/LiveCaptions-Translator#readme" />
+                </Hyperlink>
+            </TextBlock>
             <TextBlock Margin="0,0,0,3">
                 <Run FontWeight="SemiBold" Text="原项目仓库：" />
                 <Hyperlink NavigateUri="https://github.com/SakiRinn/LiveCaptions-Translator" RequestNavigate="Hyperlink_RequestNavigate">
                     <Run Text="https://github.com/SakiRinn/LiveCaptions-Translator" />
-                </Hyperlink>
-            </TextBlock>
-            <TextBlock Margin="0,0,0,3">
-                <Run FontWeight="SemiBold" Text="使用文档：" />
-                <Hyperlink NavigateUri="https://github.com/SakiRinn/LiveCaptions-Translator/wiki" RequestNavigate="Hyperlink_RequestNavigate">
-                    <Run x:Name="Wiki" Text="https://github.com/SakiRinn/LiveCaptions-Translator/wiki" />
                 </Hyperlink>
             </TextBlock>
             <TextBlock Margin="0,0,0,3">
@@ -40,7 +52,7 @@
             </TextBlock>
             <TextBlock>
                 <Run FontWeight="SemiBold" Text="版本：" />
-                <Hyperlink NavigateUri="https://github.com/SakiRinn/LiveCaptions-Translator/releases" RequestNavigate="Hyperlink_RequestNavigate">
+                <Hyperlink NavigateUri="https://github.com/YingQiu0871/LiveCaptions-Translator/releases" RequestNavigate="Hyperlink_RequestNavigate">
                     <Run x:Name="Version" Text="1.1.1.1" />
                 </Hyperlink>
             </TextBlock>

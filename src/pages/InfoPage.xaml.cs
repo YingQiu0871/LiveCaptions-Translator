@@ -9,7 +9,7 @@ namespace LiveCaptionsTranslator
 {
     public partial class InfoPage : Page
     {
-        public const int MIN_HEIGHT = 210;
+        public const int MIN_HEIGHT = 260;
 
         public InfoPage()
         {
