@@ -7,6 +7,10 @@ namespace LiveCaptionsTranslator
         public static Snackbar? mainSnackbar;
         public static MainWindow? mainWindow => App.Current.MainWindow as MainWindow;
 
+        // Whether a toast would be drawn: the main window has to be there and loaded.
+        public static bool CanShow => System.Windows.Application.Current?.Dispatcher != null &&
+                                      System.Windows.Application.Current.Dispatcher.Invoke(() => mainWindow?.IsLoaded == true);
+
         // Safe to call from any thread: background loops (summaries, refinement) report errors here, and the
         // snackbar must only be touched on the UI thread, so off-thread calls are marshalled to the dispatcher.
         public static void Show(string title = "", string message = "", SnackbarType type = SnackbarType.Info,

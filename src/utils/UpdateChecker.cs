@@ -21,7 +21,9 @@ namespace LiveCaptionsTranslator.utils
     {
         public const string RELEASES_URL = "https://github.com/YingQiu0871/LiveCaptions-Translator/releases";
         private const string LATEST_URL =
-            "https://api.github.com/repos/YingQiu0871/LiveCaptions-Translator/releases/latest";
+            "https://api.github.com/repos/YingQiu0871/LiveCaptions-Translator/releases?per_page=10";
+        private static readonly TimeSpan CHECK_INTERVAL = TimeSpan.FromHours(24);
+        private static readonly TimeSpan RENOTIFY_INTERVAL = TimeSpan.FromDays(3);
 
         private static readonly Regex tagPattern = new(@"^v1\.7-lecture\.(\d+)$");
         private static readonly HttpClient client = CreateClient();
@@ -48,6 +50,63 @@ namespace LiveCaptionsTranslator.utils
 
         public static bool IsNewer(int? current, int latest) => current is int value && latest > value;
 
+        // The result of the last successful check in this run, for the About page to show again.
+        public static UpdateInfo? Latest { get; private set; }
+
+        // The highest build among the (non-draft, non-prerelease) lecture releases of a GitHub releases list;
+        // other tags are ignored. Returns null when there is none.
+        public static UpdateInfo? PickLatest(JsonElement releases, int? current)
+        {
+            if (releases.ValueKind != JsonValueKind.Array)
+                return null;
+            UpdateInfo? best = null;
+            foreach (var release in releases.EnumerateArray())
+            {
+                if (release.ValueKind != JsonValueKind.Object)
+                    continue;
+                if (IsTrue(release, "draft") || IsTrue(release, "prerelease"))
+                    continue;
+                string tag = release.TryGetProperty("tag_name", out var name) ? name.GetString() ?? "" : "";
+                if (ParseTag(tag) is not int build || (best != null && build <= best.LatestBuild))
+                    continue;
+                string url = release.TryGetProperty("html_url", out var htmlUrl) ? htmlUrl.GetString() ?? "" : "";
+                DateTime? published = null;
+                if (release.TryGetProperty("published_at", out var date) && date.ValueKind == JsonValueKind.String &&
+                    date.TryGetDateTime(out var parsed))
+                    published = parsed;
+                best = new UpdateInfo
+                {
+                    LatestBuild = build,
+                    Tag = tag.Trim(),
+                    Url = url.StartsWith("https://") ? url : RELEASES_URL,
+                    PublishedAt = published,
+                    IsNewer = IsNewer(current, build)
+                };
+            }
+            return best;
+        }
+
+        private static bool IsTrue(JsonElement element, string property) =>
+            element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.True;
+
+        // Whether the periodic check is due; a timestamp in the future (clock change) counts as due.
+        public static bool IsCheckDue(DateTime lastCheckUtc, DateTime nowUtc) =>
+            lastCheckUtc > nowUtc || nowUtc - lastCheckUtc >= CHECK_INTERVAL;
+
+        // Whether this build should be announced: not yet announced, or the last announcement is a few days old.
+        public static bool ShouldAnnounce(int notifiedBuild, DateTime noticeUtc, int latest, DateTime nowUtc) =>
+            notifiedBuild < latest || noticeUtc > nowUtc || nowUtc - noticeUtc >= RENOTIFY_INTERVAL;
+
+        // Called by the About page after its own check found a newer build: the startup toast need not repeat it.
+        public static void MarkNotified(UpdateInfo info)
+        {
+            var lecture = Translator.Setting?.Lecture;
+            if (lecture == null || !info.IsNewer)
+                return;
+            lecture.LastNotifiedUpdateBuild = info.LatestBuild;
+            lecture.LastUpdateNotice = DateTime.UtcNow;
+        }
+
         // Returns null when the check cannot be completed (offline, rate limited, unexpected reply):
         // an update check must never disturb the user, so the callers only report "failed" if they were asked.
         public static async Task<UpdateInfo?> CheckAsync()
@@ -58,24 +117,10 @@ namespace LiveCaptionsTranslator.utils
                 if (!response.IsSuccessStatusCode)
                     return null;
                 using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-                var root = document.RootElement;
-
-                string tag = root.GetProperty("tag_name").GetString() ?? string.Empty;
-                if (ParseTag(tag) is not int latest)
-                    return null;
-                string url = root.TryGetProperty("html_url", out var htmlUrl) ? htmlUrl.GetString() ?? "" : "";
-                DateTime? published = null;
-                if (root.TryGetProperty("published_at", out var date) && date.TryGetDateTime(out var parsed))
-                    published = parsed;
-
-                return new UpdateInfo
-                {
-                    LatestBuild = latest,
-                    Tag = tag,
-                    Url = url.StartsWith("https://") ? url : RELEASES_URL,
-                    PublishedAt = published,
-                    IsNewer = IsNewer(CurrentBuild, latest)
-                };
+                var info = PickLatest(document.RootElement, CurrentBuild);
+                if (info != null)
+                    Latest = info;
+                return info;
             }
             catch (Exception)
             {
@@ -83,24 +128,28 @@ namespace LiveCaptionsTranslator.utils
             }
         }
 
-        // At startup: check once a day, and tell about each new build only once. Does nothing in a development build.
+        // At startup: check once a day, and tell about each new build once (again after a few days). Does nothing in a development build.
         public static async Task AutoCheckAsync()
         {
             var lecture = Translator.Setting?.Lecture;
             if (lecture == null || CurrentBuild == null || !lecture.AutoCheckUpdate)
                 return;
-            if (DateTime.Now - lecture.LastUpdateCheck < TimeSpan.FromHours(24))
+            if (!IsCheckDue(lecture.LastUpdateCheck, DateTime.UtcNow))
                 return;
 
             var info = await CheckAsync();
             if (info == null)
                 return;
-            lecture.LastUpdateCheck = DateTime.Now;
-            if (!info.IsNewer || lecture.LastNotifiedUpdateBuild >= info.LatestBuild)
+            lecture.LastUpdateCheck = DateTime.UtcNow;
+            if (!info.IsNewer || !ShouldAnnounce(lecture.LastNotifiedUpdateBuild, lecture.LastUpdateNotice,
+                                                  info.LatestBuild, DateTime.UtcNow))
                 return;
-            lecture.LastNotifiedUpdateBuild = info.LatestBuild;
+            // Only a toast that was really shown counts as told (the main window may not be there yet).
+            if (!SnackbarHost.CanShow)
+                return;
             SnackbarHost.Show($"发现新版本 {info.Tag}", "到「关于」页查看并下载。", SnackbarType.Info,
                               timeout: 8, closeButton: true);
+            MarkNotified(info);
         }
 
         // Called once the app has started: waits a little so the check does not compete with the startup.

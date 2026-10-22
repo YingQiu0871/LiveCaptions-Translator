@@ -100,6 +100,7 @@ namespace LiveCaptionsTranslator.models
         private bool autoCheckUpdate = true;
         private DateTime lastUpdateCheck = DateTime.MinValue;
         private int lastNotifiedUpdateBuild = 0;
+        private DateTime lastUpdateNotice = DateTime.MinValue;
 
         public bool SummaryEnabled
         {
@@ -408,6 +409,17 @@ namespace LiveCaptionsTranslator.models
             {
                 lastNotifiedUpdateBuild = value;
                 OnPropertyChanged("LastNotifiedUpdateBuild");
+            }
+        }
+
+        // When (UTC) that build was announced; after a few days it is announced once more.
+        public DateTime LastUpdateNotice
+        {
+            get => lastUpdateNotice;
+            set
+            {
+                lastUpdateNotice = value;
+                OnPropertyChanged("LastUpdateNotice");
             }
         }
 

@@ -19,6 +19,8 @@ namespace LiveCaptionsTranslator
             AutoCheckBox.IsChecked = Translator.Setting?.Lecture.AutoCheckUpdate ?? true;
             UpdateStatus.Text = UpdateChecker.CurrentBuild == null ? "开发版本，不检查更新" : "尚未检查";
             CheckUpdateButton.IsEnabled = UpdateChecker.CurrentBuild != null;
+            if (UpdateChecker.Latest != null)
+                ShowUpdateResult(UpdateChecker.Latest);
 
             Loaded += (s, e) =>
             {
@@ -39,10 +41,17 @@ namespace LiveCaptionsTranslator
                 return;
             }
             if (Translator.Setting != null)
-                Translator.Setting.Lecture.LastUpdateCheck = DateTime.Now;
+                Translator.Setting.Lecture.LastUpdateCheck = DateTime.UtcNow;
+            UpdateChecker.MarkNotified(info);
+            ShowUpdateResult(info);
+        }
+
+        private void ShowUpdateResult(UpdateInfo info)
+        {
             if (!info.IsNewer)
             {
                 UpdateStatus.Text = "已是最新版本";
+                UpdateLinkBlock.Visibility = Visibility.Collapsed;
                 return;
             }
             UpdateStatus.Text = string.Empty;
