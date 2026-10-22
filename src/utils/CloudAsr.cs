@@ -40,18 +40,34 @@ namespace LiveCaptionsTranslator.utils
         private static double gain = 1;
 
         private static CancellationTokenSource? cts;
-        // The hot word list made from the glossary, if any.
-        private static string? vocabularyId;
 
-        // Realtime models with the same run-task protocol, in the order they are tried when the quota of one is gone.
-        // paraformer-realtime-v1 only knows Chinese and English.
+        // Realtime models with the same run-task protocol, in the order they are tried when one cannot be used.
+        // The snapshot is only offered for the three languages it supports.
+        private const string FUN_ASR_ALIAS = "fun-asr-realtime";
         private static readonly string[] FALLBACK_MODELS =
-            { "paraformer-realtime-v2", "fun-asr-realtime", "paraformer-realtime-v1" };
-        // Models whose free quota is gone, remembered until the app is closed.
-        private static readonly HashSet<string> exhaustedModels = new(StringComparer.OrdinalIgnoreCase);
-        // The model of the running class; differs from the setting after a fallback until the model has worked.
-        private static string sessionModel = string.Empty;
+            { "paraformer-realtime-v2", FUN_ASR_ALIAS, "fun-asr-realtime-2026-02-28" };
+        // Models that cannot be used (free quota gone, or refused), remembered until the app is closed.
+        // Guarded by `skipLock`: a cancelled old class and the new one may touch it at the same time.
+        private static readonly object skipLock = new();
+        private static readonly HashSet<string> skippedModels = new(StringComparer.OrdinalIgnoreCase);
+        // The subset whose free quota is gone, for the message.
+        private static readonly List<string> quotaModels = new();
         private static string lastQuotaCode = string.Empty;
+
+        // What one class (one SessionLoop) knows; passed around instead of statics, so that a cancelled old loop
+        // cannot apply the state of the new one.
+        private sealed class SessionState
+        {
+            // The model in the settings when the class started.
+            public string Configured = string.Empty;
+            public string Model = string.Empty;
+            // The hot word list made for `Model`, if any.
+            public string? VocabularyId;
+            // A fallback happened in this class and has not been announced yet.
+            public bool FellBack;
+            // The current task has been started by the server.
+            public volatile bool Started;
+        }
 
         // The task failed with an error code of the service (as opposed to a network or protocol problem).
         private sealed class AsrTaskException : InvalidOperationException
@@ -69,15 +85,25 @@ namespace LiveCaptionsTranslator.utils
         internal static bool IsArrears(string? code) =>
             !string.IsNullOrEmpty(code) && code.StartsWith("Arrearage", StringComparison.OrdinalIgnoreCase);
 
-        internal static string QuotaMessage(string? code) => IsArrears(code)
-            ? "阿里云账号欠费或没有可用余额，请到百炼控制台充值后再试。"
-            : "阿里云百炼的实时语音识别免费额度已用完。请在百炼控制台「费用用量 → 免费额度」里，点「额度用尽或过期模型」，" +
-              "找到 paraformer-realtime-v2，关掉「用完即停」；或给账号充值后改为按量付费。";
+        internal static string QuotaMessage(string? code, IEnumerable<string>? models = null)
+        {
+            if (IsArrears(code))
+                return "阿里云账号欠费或没有可用余额，请到百炼控制台充值后再试。";
+            var names = models?.Distinct(StringComparer.OrdinalIgnoreCase).ToList() ?? new List<string>();
+            if (names.Count == 0)
+                names.Add("paraformer-realtime-v2");
+            return "阿里云百炼的实时语音识别免费额度已用完。请在百炼控制台「费用用量 → 免费额度」里，点「额度用尽或过期模型」，" +
+                   $"找到 {string.Join("、", names)}，关掉「用完即停」；或给账号充值后改为按量付费。";
+        }
 
-        private static bool IsV1(string model) =>
-            model.StartsWith("paraformer-realtime-v1", StringComparison.OrdinalIgnoreCase);
+        internal static bool IsFunAsr(string model) =>
+            model.StartsWith("fun-asr", StringComparison.OrdinalIgnoreCase);
 
-        // The configured model first, then the fallback list; v1 only for Chinese and English lectures.
+        // A dated Fun-ASR version rather than the alias.
+        private static bool IsFunAsrSnapshot(string model) =>
+            IsFunAsr(model) && !string.Equals(model, FUN_ASR_ALIAS, StringComparison.OrdinalIgnoreCase);
+
+        // The configured model first, then the fallback list.
         internal static List<string> CandidateModels(string configured, string? language)
         {
             string lang = (language ?? string.Empty).Split('-')[0].ToLowerInvariant();
@@ -86,7 +112,7 @@ namespace LiveCaptionsTranslator.utils
                 result.Add(configured.Trim());
             foreach (string model in FALLBACK_MODELS)
             {
-                if (IsV1(model) && lang != "zh" && lang != "en")
+                if (IsFunAsrSnapshot(model) && lang != "zh" && lang != "en" && lang != "ja")
                     continue;
                 if (!result.Contains(model, StringComparer.OrdinalIgnoreCase))
                     result.Add(model);
@@ -94,8 +120,39 @@ namespace LiveCaptionsTranslator.utils
             return result;
         }
 
-        internal static string? NextModel(string configured, string? language, ISet<string> exhausted) =>
-            CandidateModels(configured, language).FirstOrDefault(model => !exhausted.Contains(model));
+        internal static string? NextModel(string configured, string? language, ISet<string> skipped) =>
+            CandidateModels(configured, language).FirstOrDefault(model => !skipped.Contains(model));
+
+        private static HashSet<string> SkippedSnapshot()
+        {
+            lock (skipLock)
+            {
+                return new HashSet<string>(skippedModels, StringComparer.OrdinalIgnoreCase);
+            }
+        }
+
+        private static void Skip(string model, string? quotaCode)
+        {
+            lock (skipLock)
+            {
+                skippedModels.Add(model);
+                if (quotaCode != null)
+                {
+                    lastQuotaCode = quotaCode;
+                    if (!quotaModels.Contains(model, StringComparer.OrdinalIgnoreCase))
+                        quotaModels.Add(model);
+                }
+            }
+        }
+
+        private static void Unskip(string model)
+        {
+            lock (skipLock)
+            {
+                skippedModels.Remove(model);
+                quotaModels.RemoveAll(m => string.Equals(m, model, StringComparison.OrdinalIgnoreCase));
+            }
+        }
 
         // (text, isSentenceEnd)
         public static event Action<string, bool>? Recognized;
@@ -129,8 +186,10 @@ namespace LiveCaptionsTranslator.utils
             var lecture = Translator.Setting.Lecture;
             string configured = lecture.AsrModel;
             string code = string.Empty;
+            var exhausted = new List<string>();
             foreach (string model in CandidateModels(configured, lecture.AsrLanguage))
             {
+                bool isConfigured = string.Equals(model, configured, StringComparison.OrdinalIgnoreCase);
                 try
                 {
                     await TestOnce(model);
@@ -139,21 +198,31 @@ namespace LiveCaptionsTranslator.utils
                 {
                     throw new TimeoutException("连接超时，请检查网络和接口地址。");
                 }
+                catch (AsrTaskException ex) when (IsArrears(ex.Code))
+                {
+                    // The whole account: no model would work.
+                    throw;
+                }
                 catch (AsrTaskException ex) when (IsQuotaError(ex.Code))
                 {
-                    exhaustedModels.Add(model);
+                    Skip(model, ex.Code);
                     code = ex.Code;
-                    if (IsArrears(code))
-                        throw;
+                    exhausted.Add(model);
                     continue;
                 }
-                exhaustedModels.Remove(model);
-                if (string.Equals(model, configured, StringComparison.OrdinalIgnoreCase))
+                catch (AsrTaskException) when (!isConfigured)
+                {
+                    // Not available to this account (or not for this language): try the next one.
+                    Skip(model, null);
+                    continue;
+                }
+                Unskip(model);
+                if (isConfigured)
                     return null;
                 lecture.AsrModel = model;
                 return $"{configured} 额度已用完，已改用 {model}";
             }
-            throw new InvalidOperationException(QuotaMessage(code));
+            throw new InvalidOperationException(QuotaMessage(code, exhausted));
         }
 
         private static async Task TestOnce(string model)
@@ -295,19 +364,24 @@ namespace LiveCaptionsTranslator.utils
         // Keeps one recognition task running for as long as the class runs, reconnecting when it drops.
         private static async Task SessionLoop(CancellationToken token)
         {
-            sessionModel = Translator.Setting.Lecture.AsrModel;
-            // A model found exhausted in an earlier class is skipped at once.
-            if (exhaustedModels.Contains(sessionModel))
+            var lecture = Translator.Setting.Lecture;
+            var state = new SessionState { Configured = lecture.AsrModel };
+            string? language = lecture.AsrLanguage;
+            lock (skipLock)
             {
-                string? next = NextModel(sessionModel, Translator.Setting.Lecture.AsrLanguage, exhaustedModels);
-                if (next == null)
+                // Everything was used up in an earlier class: the user may have fixed it in the console since, so
+                // try again instead of refusing for ever.
+                if (CandidateModels(state.Configured, language).All(skippedModels.Contains))
                 {
-                    ReportQuotaGone(lastQuotaCode);
-                    return;
+                    skippedModels.Clear();
+                    quotaModels.Clear();
+                    lastQuotaCode = string.Empty;
                 }
-                sessionModel = next;
             }
-            await SyncVocabulary(token);
+            // A model found unusable in an earlier class is skipped at once.
+            state.Model = NextModel(state.Configured, language, SkippedSnapshot()) ?? state.Configured;
+            state.FellBack = !string.Equals(state.Model, state.Configured, StringComparison.OrdinalIgnoreCase);
+            await SyncVocabulary(state, token);
             int failures = 0;
             bool firstSession = true;
             while (!token.IsCancellationRequested)
@@ -317,7 +391,8 @@ namespace LiveCaptionsTranslator.utils
                     StatusChanged?.Invoke("正在连接阿里云语音识别……");
                     bool keepBuffered = firstSession;
                     firstSession = false;
-                    await RunSession(token, keepBuffered);
+                    state.Started = false;
+                    await RunSession(state, token, keepBuffered);
                     failures = 0;
                 }
                 catch (OperationCanceledException) when (token.IsCancellationRequested)
@@ -326,32 +401,58 @@ namespace LiveCaptionsTranslator.utils
                 }
                 catch (Exception ex)
                 {
-                    if (ex is AsrTaskException { } failed && IsQuotaError(failed.Code))
+                    if (token.IsCancellationRequested)
+                        return;
+                    if (ex is AsrTaskException { } failed)
                     {
-                        lastQuotaCode = failed.Code;
-                        exhaustedModels.Add(sessionModel);
-                        string? next = IsArrears(failed.Code)
-                            ? null
-                            : NextModel(Translator.Setting.Lecture.AsrModel, Translator.Setting.Lecture.AsrLanguage,
-                                exhaustedModels);
-                        if (next == null)
+                        if (IsArrears(failed.Code))
                         {
-                            // Retrying cannot help: stop here instead of reconnecting forever.
+                            // The whole account: retrying or another model cannot help.
+                            lock (skipLock)
+                            {
+                                lastQuotaCode = failed.Code;
+                            }
                             ReportQuotaGone(failed.Code);
                             return;
                         }
-                        sessionModel = next;
-                        firstSession = true;
-                        failures = 0;
-                        StatusChanged?.Invoke($"免费额度已用完，正在改用 {next}……");
-                        await SyncVocabulary(token);
-                        continue;
+                        bool quota = IsQuotaError(failed.Code);
+                        bool unusable = !quota && !state.Started &&
+                                        !string.Equals(state.Model, state.Configured, StringComparison.OrdinalIgnoreCase);
+                        if (quota || unusable)
+                        {
+                            string failedModel = state.Model;
+                            Skip(failedModel, quota ? failed.Code : null);
+                            string? next = NextModel(state.Configured, language, SkippedSnapshot());
+                            if (next == null)
+                            {
+                                // Retrying cannot help: stop here instead of reconnecting forever.
+                                bool anyQuota;
+                                lock (skipLock)
+                                {
+                                    anyQuota = quotaModels.Count > 0;
+                                }
+                                if (anyQuota)
+                                    ReportQuotaGone(failed.Code);
+                                else
+                                    StatusChanged?.Invoke($"阿里云语音识别出错：{failed.Message}");
+                                return;
+                            }
+                            state.Model = next;
+                            state.FellBack = true;
+                            firstSession = true;
+                            failures = 0;
+                            StatusChanged?.Invoke(quota
+                                ? $"{failedModel} 免费额度已用完，正在改用 {next}……"
+                                : $"{failedModel} 无法使用，正在改用 {next}……");
+                            await SyncVocabulary(state, token);
+                            continue;
+                        }
                     }
                     failures++;
                     // A hot word list that was deleted or made for another model makes the task fail.
-                    if (vocabularyId != null && ex.Message.Contains("vocabulary", StringComparison.OrdinalIgnoreCase))
+                    if (state.VocabularyId != null && ex.Message.Contains("vocabulary", StringComparison.OrdinalIgnoreCase))
                     {
-                        vocabularyId = null;
+                        state.VocabularyId = null;
                         Glossary.RecheckAsrVocabulary();
                         SnackbarHost.Show("[WARNING] 术语表热词没有生效。", "这节课先不用热词继续识别，下次开始时会重新上传。",
                             SnackbarType.Warning, timeout: 5, closeButton: true);
@@ -372,32 +473,42 @@ namespace LiveCaptionsTranslator.utils
 
         private static void ReportQuotaGone(string code)
         {
-            string message = QuotaMessage(code);
+            string[] models;
+            lock (skipLock)
+            {
+                models = quotaModels.ToArray();
+            }
+            string message = QuotaMessage(code, models);
             StatusChanged?.Invoke(message);
             SnackbarHost.Show("[ERROR] 语音识别无法继续。", message, SnackbarType.Error, timeout: 15, closeButton: true);
         }
 
         // The model works after a fallback: keep it for the next class and say so once.
-        private static void KeepSessionModel()
+        private static void KeepSessionModel(SessionState state, CancellationToken token)
         {
-            var lecture = Translator.Setting.Lecture;
-            if (string.Equals(sessionModel, lecture.AsrModel, StringComparison.OrdinalIgnoreCase))
+            if (!state.FellBack)
                 return;
-            string from = lecture.AsrModel;
-            lecture.AsrModel = sessionModel;
-            SnackbarHost.Show($"{from} 的免费额度已用完，已自动改用 {sessionModel}。",
+            state.FellBack = false;
+            var lecture = Translator.Setting.Lecture;
+            // A cancelled class, or a model the user has changed in the meantime, is left alone.
+            if (token.IsCancellationRequested ||
+                !string.Equals(lecture.AsrModel, state.Configured, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(state.Model, state.Configured, StringComparison.OrdinalIgnoreCase))
+                return;
+            lecture.AsrModel = state.Model;
+            SnackbarHost.Show($"{state.Configured} 的免费额度已用完，已自动改用 {state.Model}。",
                 "下节课会直接使用它。", SnackbarType.Warning, timeout: 8, closeButton: true);
         }
 
-        private static async Task SyncVocabulary(CancellationToken token)
+        private static async Task SyncVocabulary(SessionState state, CancellationToken token)
         {
-            vocabularyId = null;
+            state.VocabularyId = null;
             try
             {
                 if (Glossary.Current.Count == 0)
                     return;
                 StatusChanged?.Invoke("正在上传术语表热词……");
-                vocabularyId = await Glossary.SyncAsrVocabulary(sessionModel, token);
+                state.VocabularyId = await Glossary.SyncAsrVocabulary(state.Model, token);
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)
             {
@@ -412,11 +523,11 @@ namespace LiveCaptionsTranslator.utils
 
         // keepBuffered: send what was said while the hot words were uploaded and the connection was made (first
         // connection of a class); after a reconnect the backlog is dropped instead.
-        private static async Task RunSession(CancellationToken token, bool keepBuffered)
+        private static async Task RunSession(SessionState state, CancellationToken token, bool keepBuffered)
         {
             using var ws = await Connect(token);
             string taskId = Guid.NewGuid().ToString("N");
-            await SendText(ws, RunTask(taskId, sessionModel, vocabularyId), token);
+            await SendText(ws, RunTask(taskId, state.Model, state.VocabularyId), token);
 
             var started = new TaskCompletionSource();
             var receiver = Task.Run(async () =>
@@ -428,8 +539,10 @@ namespace LiveCaptionsTranslator.utils
                     switch (evt)
                     {
                         case "task-started":
+                            state.Started = true;
                             started.TrySetResult();
-                            KeepSessionModel();
+                            Unskip(state.Model);
+                            KeepSessionModel(state, token);
                             StatusChanged?.Invoke(string.Empty);
                             break;
                         case "result-generated":
@@ -511,21 +624,28 @@ namespace LiveCaptionsTranslator.utils
                 ["format"] = "pcm",
                 ["sample_rate"] = SAMPLE_RATE,
                 ["heartbeat"] = true,
-                // Keep every word: disfluency removal also drops real words now and then.
-                ["disfluency_removal_enabled"] = false,
                 // Used when the model splits by pauses: wait longer before ending a sentence (default 800 ms).
                 ["max_sentence_silence"] = 1300,
                 ["punctuation_prediction_enabled"] = true,
             };
-            // Split sentences by meaning rather than by short pauses: a lecturer pauses mid-sentence a lot,
-            // and pause-based splitting turns one sentence into fragments like "I." and "And you, I'm.".
-            // paraformer-realtime-v1 has no such mode and no language hints.
-            if (!IsV1(model))
+            bool funAsr = IsFunAsr(model);
+            if (!funAsr)
+            {
+                // Keep every word: disfluency removal also drops real words now and then.
+                parameters["disfluency_removal_enabled"] = false;
+                // Split sentences by meaning rather than by short pauses: a lecturer pauses mid-sentence a lot,
+                // and pause-based splitting turns one sentence into fragments like "I." and "And you, I'm.".
+                // Fun-ASR does not document either parameter.
                 parameters["semantic_punctuation_enabled"] = true;
+            }
             string language = (lecture.AsrLanguage ?? string.Empty).Trim();
-            if (language.Length > 0 && !IsV1(model) &&
-                (!model.StartsWith("fun-asr", StringComparison.OrdinalIgnoreCase) ||
-                 language is "zh" or "en" or "ja"))
+            string baseLanguage = language.Split('-')[0].ToLowerInvariant();
+            bool detect = language.Length == 0 || baseLanguage == "auto";
+            // The Fun-ASR alias takes about thirty languages (not Cantonese), its dated snapshot only three.
+            bool hint = !detect && (!funAsr || (IsFunAsrSnapshot(model)
+                ? baseLanguage is "zh" or "en" or "ja"
+                : baseLanguage != "yue"));
+            if (hint)
                 parameters["language_hints"] = new[] { language };
             if (!string.IsNullOrEmpty(vocabulary))
                 parameters["vocabulary_id"] = vocabulary;

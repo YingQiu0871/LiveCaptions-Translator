@@ -18,7 +18,14 @@ namespace LiveCaptionsTranslator.utils
         private const int MAX_HOT_WORDS = 500;
         private const string VOCABULARY_PREFIX = "lctgloss";
         private static readonly char[] SEPARATORS = { '=', '＝', '\t' };
+        // Languages the hot word API accepts: Fun-ASR models only know these three, Paraformer more.
         private static readonly string[] HOT_WORD_LANGUAGES = { "zh", "en", "ja", "yue", "ko", "de", "fr", "ru" };
+        private static readonly string[] FUN_ASR_HOT_WORD_LANGUAGES = { "zh", "en", "ja" };
+
+        private static bool IsHotWordLanguage(string model, string language) =>
+            (model.StartsWith("fun-asr", StringComparison.OrdinalIgnoreCase)
+                ? FUN_ASR_HOT_WORD_LANGUAGES
+                : HOT_WORD_LANGUAGES).Contains(language);
 
         private static readonly HttpClient client = new HttpClient()
         {
@@ -143,7 +150,7 @@ namespace LiveCaptionsTranslator.utils
             var vocabulary = words.Select(word =>
             {
                 var item = new Dictionary<string, object> { ["text"] = word, ["weight"] = 4 };
-                if (HOT_WORD_LANGUAGES.Contains(language))
+                if (IsHotWordLanguage(model, language))
                     item["lang"] = language;
                 return item;
             }).ToList();

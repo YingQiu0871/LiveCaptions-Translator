@@ -13,8 +13,15 @@ namespace LiveCaptionsTranslator.utils
             "所选模型的免费额度已用完（HTTP 403）。请在阿里云百炼控制台「费用用量 → 免费额度」里关掉该模型的「用完即停」，" +
             "或给账号充值，或换一个模型。";
 
+        // Shown for an HTTP 400 with Arrearage: the account has no balance.
+        public const string ArrearageMessage =
+            "阿里云账号欠费或没有可用余额（Arrearage），请到百炼控制台充值后再试。";
+
         public static bool IsQuotaExhausted(string? body) =>
             body != null && body.Contains("AllocationQuota", StringComparison.OrdinalIgnoreCase);
+
+        public static bool IsArrears(string? body) =>
+            body != null && body.Contains("Arrearage", StringComparison.OrdinalIgnoreCase);
 
         public const int SHORT_THRESHOLD = 10;
         public const int MEDIUM_THRESHOLD = 40;

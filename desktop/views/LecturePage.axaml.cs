@@ -327,7 +327,7 @@ namespace LiveCaptionsTranslator
                 return;
             Dispatcher.UIThread.Post(() =>
             {
-                if (AsrModelBox.Text != Lecture.AsrModel && !AsrModelBox.IsKeyboardFocusWithin)
+                if (AsrModelBox.Text != Lecture.AsrModel)
                     AsrModelBox.Text = Lecture.AsrModel;
             });
         }
