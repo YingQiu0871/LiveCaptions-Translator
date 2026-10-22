@@ -325,8 +325,8 @@ namespace LiveCaptionsTranslator
             TestAsrResult.Text = "测试中……";
             try
             {
-                await CloudAsr.Test();
-                TestAsrResult.Text = "✓ 连接成功";
+                string? note = await CloudAsr.Test();
+                TestAsrResult.Text = note == null ? "✓ 连接成功" : $"✓ 连接成功（{note}）";
             }
             catch (Exception ex)
             {

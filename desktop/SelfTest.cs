@@ -89,6 +89,29 @@ namespace LiveCaptionsTranslator
                 return $"{SlideDeck.Pages.Count} page(s), first: \"{SlideDeck.Pages[0].Text[..Math.Min(40, SlideDeck.Pages[0].Text.Length)]}\"";
             });
 
+            Check("asr quota fallback", () =>
+            {
+                if (!CloudAsr.IsQuotaError("AllocationQuota.FreeTierOnly") || !CloudAsr.IsQuotaError("Arrearage") ||
+                    CloudAsr.IsQuotaError("InvalidApiKey") || CloudAsr.IsQuotaError("InvalidParameter") ||
+                    CloudAsr.IsQuotaError("") || CloudAsr.IsQuotaError(null))
+                    throw new InvalidOperationException("quota code classification is wrong");
+                string order = string.Join(",", CloudAsr.CandidateModels("paraformer-realtime-v2", "en"));
+                if (order != "paraformer-realtime-v2,fun-asr-realtime,paraformer-realtime-v1")
+                    throw new InvalidOperationException("order: " + order);
+                if (CloudAsr.CandidateModels("paraformer-realtime-v2", "ja").Contains("paraformer-realtime-v1"))
+                    throw new InvalidOperationException("v1 offered for Japanese");
+                var gone = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "paraformer-realtime-v2" };
+                if (CloudAsr.NextModel("paraformer-realtime-v2", "ja", gone) != "fun-asr-realtime")
+                    throw new InvalidOperationException("next model after v2 is wrong");
+                gone.Add("fun-asr-realtime");
+                if (CloudAsr.NextModel("paraformer-realtime-v2", "ja", gone) != null ||
+                    CloudAsr.NextModel("paraformer-realtime-v2", "zh", gone) != "paraformer-realtime-v1")
+                    throw new InvalidOperationException("end of the list is wrong");
+                if (CloudAsr.CandidateModels("my-model", "zh")[0] != "my-model")
+                    throw new InvalidOperationException("configured model not first");
+                return order;
+            });
+
             Check("markdown folder", () => LectureDocument.DefaultSaveFolder);
 
             foreach (string tool in new[] { "parec", "pactl", "say", "spd-say", "espeak-ng", "pdftoppm", "tesseract" })

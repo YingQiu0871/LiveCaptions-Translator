@@ -8,6 +8,14 @@ namespace LiveCaptionsTranslator.utils
         public static readonly char[] PUNC_COMMA = ",，、—\n".ToCharArray();
         private static readonly char[] PUNC_BREAK = PUNC_EOS.Concat(PUNC_COMMA).ToArray();
 
+        // Shown for an HTTP 403 with AllocationQuota.FreeTierOnly from Alibaba Cloud.
+        public const string QuotaExhaustedMessage =
+            "所选模型的免费额度已用完（HTTP 403）。请在阿里云百炼控制台「费用用量 → 免费额度」里关掉该模型的「用完即停」，" +
+            "或给账号充值，或换一个模型。";
+
+        public static bool IsQuotaExhausted(string? body) =>
+            body != null && body.Contains("AllocationQuota", StringComparison.OrdinalIgnoreCase);
+
         public const int SHORT_THRESHOLD = 10;
         public const int MEDIUM_THRESHOLD = 40;
         public const int VERYLONG_THRESHOLD = 220;

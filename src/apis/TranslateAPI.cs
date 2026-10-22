@@ -144,6 +144,9 @@ namespace LiveCaptionsTranslator.apis
             }
             else if (response.StatusCode == HttpStatusCode.Unauthorized)
                 return "[ERROR] 翻译失败：API Key 无效（HTTP 401），请在“设置”页里重新粘贴 API Key 并点“测试连接”。";
+            else if (response.StatusCode == HttpStatusCode.Forbidden &&
+                     TextUtil.IsQuotaExhausted(await response.Content.ReadAsStringAsync()))
+                return $"[ERROR] 翻译失败：{TextUtil.QuotaExhaustedMessage}";
             else
                 return HttpError(response);
         }

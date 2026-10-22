@@ -43,6 +43,60 @@ namespace LiveCaptionsTranslator.utils
         // The hot word list made from the glossary, if any.
         private static string? vocabularyId;
 
+        // Realtime models with the same run-task protocol, in the order they are tried when the quota of one is gone.
+        // paraformer-realtime-v1 only knows Chinese and English.
+        private static readonly string[] FALLBACK_MODELS =
+            { "paraformer-realtime-v2", "fun-asr-realtime", "paraformer-realtime-v1" };
+        // Models whose free quota is gone, remembered until the app is closed.
+        private static readonly HashSet<string> exhaustedModels = new(StringComparer.OrdinalIgnoreCase);
+        // The model of the running class; differs from the setting after a fallback until the model has worked.
+        private static string sessionModel = string.Empty;
+        private static string lastQuotaCode = string.Empty;
+
+        // The task failed with an error code of the service (as opposed to a network or protocol problem).
+        private sealed class AsrTaskException : InvalidOperationException
+        {
+            public string Code { get; }
+            public AsrTaskException(string code, string message) : base(message) => Code = code;
+        }
+
+        // The model's free quota is gone, or the account has no balance ("use free tier only" in the console).
+        internal static bool IsQuotaError(string? code) =>
+            !string.IsNullOrEmpty(code) &&
+            (code.StartsWith("AllocationQuota", StringComparison.OrdinalIgnoreCase) || IsArrears(code));
+
+        // Another model would not help: the whole account is out of balance.
+        internal static bool IsArrears(string? code) =>
+            !string.IsNullOrEmpty(code) && code.StartsWith("Arrearage", StringComparison.OrdinalIgnoreCase);
+
+        internal static string QuotaMessage(string? code) => IsArrears(code)
+            ? "阿里云账号欠费或没有可用余额，请到百炼控制台充值后再试。"
+            : "阿里云百炼的实时语音识别免费额度已用完。请在百炼控制台「费用用量 → 免费额度」里，点「额度用尽或过期模型」，" +
+              "找到 paraformer-realtime-v2，关掉「用完即停」；或给账号充值后改为按量付费。";
+
+        private static bool IsV1(string model) =>
+            model.StartsWith("paraformer-realtime-v1", StringComparison.OrdinalIgnoreCase);
+
+        // The configured model first, then the fallback list; v1 only for Chinese and English lectures.
+        internal static List<string> CandidateModels(string configured, string? language)
+        {
+            string lang = (language ?? string.Empty).Split('-')[0].ToLowerInvariant();
+            var result = new List<string>();
+            if (!string.IsNullOrWhiteSpace(configured))
+                result.Add(configured.Trim());
+            foreach (string model in FALLBACK_MODELS)
+            {
+                if (IsV1(model) && lang != "zh" && lang != "en")
+                    continue;
+                if (!result.Contains(model, StringComparer.OrdinalIgnoreCase))
+                    result.Add(model);
+            }
+            return result;
+        }
+
+        internal static string? NextModel(string configured, string? language, ISet<string> exhausted) =>
+            CandidateModels(configured, language).FirstOrDefault(model => !exhausted.Contains(model));
+
         // (text, isSentenceEnd)
         public static event Action<string, bool>? Recognized;
         public static event Action<string>? StatusChanged;
@@ -68,24 +122,46 @@ namespace LiveCaptionsTranslator.utils
         }
 
         // Connects, starts a task and closes it again: checks the key, the model and the network.
-        public static async Task Test()
+        // When the model's quota is gone, the other models are tried and the working one is saved; the returned
+        // text then says so (null when the configured model works).
+        public static async Task<string?> Test()
         {
-            try
+            var lecture = Translator.Setting.Lecture;
+            string configured = lecture.AsrModel;
+            string code = string.Empty;
+            foreach (string model in CandidateModels(configured, lecture.AsrLanguage))
             {
-                await TestOnce();
+                try
+                {
+                    await TestOnce(model);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw new TimeoutException("连接超时，请检查网络和接口地址。");
+                }
+                catch (AsrTaskException ex) when (IsQuotaError(ex.Code))
+                {
+                    exhaustedModels.Add(model);
+                    code = ex.Code;
+                    if (IsArrears(code))
+                        throw;
+                    continue;
+                }
+                exhaustedModels.Remove(model);
+                if (string.Equals(model, configured, StringComparison.OrdinalIgnoreCase))
+                    return null;
+                lecture.AsrModel = model;
+                return $"{configured} 额度已用完，已改用 {model}";
             }
-            catch (OperationCanceledException)
-            {
-                throw new TimeoutException("连接超时，请检查网络和接口地址。");
-            }
+            throw new InvalidOperationException(QuotaMessage(code));
         }
 
-        private static async Task TestOnce()
+        private static async Task TestOnce(string model)
         {
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             using var ws = await Connect(timeout.Token);
             string taskId = Guid.NewGuid().ToString("N");
-            await SendText(ws, RunTask(taskId), timeout.Token);
+            await SendText(ws, RunTask(taskId, model, null), timeout.Token);
             var buffer = new byte[8192];
             while (true)
             {
@@ -93,7 +169,7 @@ namespace LiveCaptionsTranslator.utils
                 if (evt == "task-started")
                     break;
                 if (evt == "task-failed")
-                    throw new InvalidOperationException(ErrorMessage(root));
+                    throw TaskFailed(root);
             }
             await SendText(ws, FinishTask(taskId), timeout.Token);
             try
@@ -219,6 +295,18 @@ namespace LiveCaptionsTranslator.utils
         // Keeps one recognition task running for as long as the class runs, reconnecting when it drops.
         private static async Task SessionLoop(CancellationToken token)
         {
+            sessionModel = Translator.Setting.Lecture.AsrModel;
+            // A model found exhausted in an earlier class is skipped at once.
+            if (exhaustedModels.Contains(sessionModel))
+            {
+                string? next = NextModel(sessionModel, Translator.Setting.Lecture.AsrLanguage, exhaustedModels);
+                if (next == null)
+                {
+                    ReportQuotaGone(lastQuotaCode);
+                    return;
+                }
+                sessionModel = next;
+            }
             await SyncVocabulary(token);
             int failures = 0;
             bool firstSession = true;
@@ -238,6 +326,27 @@ namespace LiveCaptionsTranslator.utils
                 }
                 catch (Exception ex)
                 {
+                    if (ex is AsrTaskException { } failed && IsQuotaError(failed.Code))
+                    {
+                        lastQuotaCode = failed.Code;
+                        exhaustedModels.Add(sessionModel);
+                        string? next = IsArrears(failed.Code)
+                            ? null
+                            : NextModel(Translator.Setting.Lecture.AsrModel, Translator.Setting.Lecture.AsrLanguage,
+                                exhaustedModels);
+                        if (next == null)
+                        {
+                            // Retrying cannot help: stop here instead of reconnecting forever.
+                            ReportQuotaGone(failed.Code);
+                            return;
+                        }
+                        sessionModel = next;
+                        firstSession = true;
+                        failures = 0;
+                        StatusChanged?.Invoke($"免费额度已用完，正在改用 {next}……");
+                        await SyncVocabulary(token);
+                        continue;
+                    }
                     failures++;
                     // A hot word list that was deleted or made for another model makes the task fail.
                     if (vocabularyId != null && ex.Message.Contains("vocabulary", StringComparison.OrdinalIgnoreCase))
@@ -261,6 +370,25 @@ namespace LiveCaptionsTranslator.utils
             }
         }
 
+        private static void ReportQuotaGone(string code)
+        {
+            string message = QuotaMessage(code);
+            StatusChanged?.Invoke(message);
+            SnackbarHost.Show("[ERROR] 语音识别无法继续。", message, SnackbarType.Error, timeout: 15, closeButton: true);
+        }
+
+        // The model works after a fallback: keep it for the next class and say so once.
+        private static void KeepSessionModel()
+        {
+            var lecture = Translator.Setting.Lecture;
+            if (string.Equals(sessionModel, lecture.AsrModel, StringComparison.OrdinalIgnoreCase))
+                return;
+            string from = lecture.AsrModel;
+            lecture.AsrModel = sessionModel;
+            SnackbarHost.Show($"{from} 的免费额度已用完，已自动改用 {sessionModel}。",
+                "下节课会直接使用它。", SnackbarType.Warning, timeout: 8, closeButton: true);
+        }
+
         private static async Task SyncVocabulary(CancellationToken token)
         {
             vocabularyId = null;
@@ -269,7 +397,7 @@ namespace LiveCaptionsTranslator.utils
                 if (Glossary.Current.Count == 0)
                     return;
                 StatusChanged?.Invoke("正在上传术语表热词……");
-                vocabularyId = await Glossary.SyncAsrVocabulary(token);
+                vocabularyId = await Glossary.SyncAsrVocabulary(sessionModel, token);
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)
             {
@@ -288,7 +416,7 @@ namespace LiveCaptionsTranslator.utils
         {
             using var ws = await Connect(token);
             string taskId = Guid.NewGuid().ToString("N");
-            await SendText(ws, RunTask(taskId), token);
+            await SendText(ws, RunTask(taskId, sessionModel, vocabularyId), token);
 
             var started = new TaskCompletionSource();
             var receiver = Task.Run(async () =>
@@ -301,13 +429,14 @@ namespace LiveCaptionsTranslator.utils
                     {
                         case "task-started":
                             started.TrySetResult();
+                            KeepSessionModel();
                             StatusChanged?.Invoke(string.Empty);
                             break;
                         case "result-generated":
                             OnResult(root);
                             break;
                         case "task-failed":
-                            throw new InvalidOperationException(ErrorMessage(root));
+                            throw TaskFailed(root);
                         case "task-finished":
                             return;
                     }
@@ -374,7 +503,7 @@ namespace LiveCaptionsTranslator.utils
             return ws;
         }
 
-        private static string RunTask(string taskId)
+        private static string RunTask(string taskId, string model, string? vocabulary)
         {
             var lecture = Translator.Setting.Lecture;
             var parameters = new Dictionary<string, object>
@@ -384,17 +513,22 @@ namespace LiveCaptionsTranslator.utils
                 ["heartbeat"] = true,
                 // Keep every word: disfluency removal also drops real words now and then.
                 ["disfluency_removal_enabled"] = false,
-                // Split sentences by meaning rather than by short pauses: a lecturer pauses mid-sentence a lot,
-                // and pause-based splitting turns one sentence into fragments like "I." and "And you, I'm.".
-                ["semantic_punctuation_enabled"] = true,
                 // Used when the model splits by pauses: wait longer before ending a sentence (default 800 ms).
                 ["max_sentence_silence"] = 1300,
                 ["punctuation_prediction_enabled"] = true,
             };
-            if (!string.IsNullOrWhiteSpace(lecture.AsrLanguage))
-                parameters["language_hints"] = new[] { lecture.AsrLanguage };
-            if (!string.IsNullOrEmpty(vocabularyId))
-                parameters["vocabulary_id"] = vocabularyId;
+            // Split sentences by meaning rather than by short pauses: a lecturer pauses mid-sentence a lot,
+            // and pause-based splitting turns one sentence into fragments like "I." and "And you, I'm.".
+            // paraformer-realtime-v1 has no such mode and no language hints.
+            if (!IsV1(model))
+                parameters["semantic_punctuation_enabled"] = true;
+            string language = (lecture.AsrLanguage ?? string.Empty).Trim();
+            if (language.Length > 0 && !IsV1(model) &&
+                (!model.StartsWith("fun-asr", StringComparison.OrdinalIgnoreCase) ||
+                 language is "zh" or "en" or "ja"))
+                parameters["language_hints"] = new[] { language };
+            if (!string.IsNullOrEmpty(vocabulary))
+                parameters["vocabulary_id"] = vocabulary;
 
             return JsonSerializer.Serialize(new
             {
@@ -404,7 +538,7 @@ namespace LiveCaptionsTranslator.utils
                     task_group = "audio",
                     task = "asr",
                     function = "recognition",
-                    model = lecture.AsrModel,
+                    model,
                     parameters,
                     input = new { },
                 },
@@ -448,13 +582,16 @@ namespace LiveCaptionsTranslator.utils
             }
         }
 
-        private static string ErrorMessage(JsonElement root)
+        private static InvalidOperationException TaskFailed(JsonElement root)
         {
             if (!root.TryGetProperty("header", out var header))
-                return "识别任务失败。";
+                return new InvalidOperationException("识别任务失败。");
             string code = header.TryGetProperty("error_code", out var c) ? c.GetString() ?? "" : "";
             string message = header.TryGetProperty("error_message", out var m) ? m.GetString() ?? "" : "";
-            return $"识别任务失败：{code} {message}".Trim();
+            // The service explains a used-up quota in English only.
+            if (IsQuotaError(code))
+                return new AsrTaskException(code, QuotaMessage(code));
+            return new AsrTaskException(code, $"识别任务失败：{code} {message}".Trim());
         }
     }
 }

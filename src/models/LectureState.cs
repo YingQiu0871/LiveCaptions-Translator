@@ -93,6 +93,7 @@ namespace LiveCaptionsTranslator.models
         private string glossary = "";
         private string asrVocabularyId = "";
         private string asrVocabularyHash = "";
+        private string asrVocabularyModel = "";
         private string saveFolder = "";
         private string currentCourse = "";
         private bool notesDraft = true;
@@ -405,6 +406,17 @@ namespace LiveCaptionsTranslator.models
             {
                 asrVocabularyId = value ?? string.Empty;
                 OnPropertyChanged("AsrVocabularyId");
+            }
+        }
+
+        // The model the hot word list was made for.
+        public string AsrVocabularyModel
+        {
+            get => asrVocabularyModel;
+            set
+            {
+                asrVocabularyModel = value ?? string.Empty;
+                OnPropertyChanged("AsrVocabularyModel");
             }
         }
 

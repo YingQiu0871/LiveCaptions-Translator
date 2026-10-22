@@ -398,6 +398,9 @@ namespace LiveCaptionsTranslator
                 string responseString = await response.Content.ReadAsStringAsync();
                 if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                     throw new HttpRequestException("API Key 无效（HTTP 401），请重新粘贴 API Key。");
+                if (response.StatusCode == System.Net.HttpStatusCode.Forbidden &&
+                    TextUtil.IsQuotaExhausted(responseString))
+                    throw new HttpRequestException(TextUtil.QuotaExhaustedMessage, null, response.StatusCode);
                 if (!response.IsSuccessStatusCode)
                     throw new HttpRequestException($"HTTP Error - {(int)response.StatusCode} {response.StatusCode}",
                         null, response.StatusCode);
