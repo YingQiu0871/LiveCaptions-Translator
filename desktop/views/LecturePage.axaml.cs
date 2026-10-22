@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Reflection;
 using Avalonia;
 using Avalonia.Controls;
@@ -78,6 +78,19 @@ namespace LiveCaptionsTranslator
             LatencySwitch.IsChecked = Translator.Setting.MainWindow.LatencyShow;
             LatencySwitch.IsCheckedChanged += (s, e) =>
                 Translator.Setting.MainWindow.LatencyShow = LatencySwitch.IsChecked == true;
+
+            if (OperatingSystem.IsLinux())
+            {
+                ScaleCard.IsVisible = true;
+                UiScaleBox.ItemsSource = LinuxScale.Choices.Select(c => new Choice(c, LinuxScale.Label(c))).ToList();
+                UiScaleBox.SelectedItem = ((IEnumerable<Choice>)UiScaleBox.ItemsSource).FirstOrDefault(c => c.Tag == DesktopSettings.UiScale)
+                    ?? ((IEnumerable<Choice>)UiScaleBox.ItemsSource).First();
+                UiScaleBox.SelectionChanged += (s, e) =>
+                {
+                    if (UiScaleBox.SelectedItem is Choice choice)
+                        DesktopSettings.UiScale = choice.Tag;
+                };
+            }
 
             AsrKeyBox.TextChanged += AsrKeyBox_TextChanged;
             ApiKeyBox.TextChanged += ApiKeyBox_TextChanged;
@@ -413,7 +426,7 @@ namespace LiveCaptionsTranslator
             string key = ApiConfig?.ApiKey ?? string.Empty;
             ApiKeyStatus.Text = key.Length == 0
                 ? "还没有保存 API Key。"
-                : $"✓ 已保存：{MaskKey(key)}，" +
+                : $"已保存：{MaskKey(key)}，" +
                   $"保存在 {AppPaths.SettingFile}";
         }
 
@@ -483,7 +496,7 @@ namespace LiveCaptionsTranslator
             string key = Lecture.AsrApiKey;
             AsrKeyStatus.Text = key.Length == 0
                 ? "还没有保存阿里云 API Key。"
-                : $"✓ 已保存：{MaskKey(key)}";
+                : $"已保存：{MaskKey(key)}";
         }
 
         private async void TestAsr_Click(object? sender, RoutedEventArgs e)
@@ -491,7 +504,7 @@ namespace LiveCaptionsTranslator
             await RunBusy(TestAsrButton, TestAsrResult, "测试中……", async () =>
             {
                 string? note = await CloudAsr.Test();
-                return note == null ? "✓ 连接成功" : $"✓ 连接成功（{note}）";
+                return note == null ? "连接成功" : $"连接成功（{note}）";
             });
         }
 
@@ -545,7 +558,7 @@ namespace LiveCaptionsTranslator
                 var (text, added) = await Glossary.ExtractFromSlides();
                 Lecture.Glossary = text;
                 GlossaryBox.Text = text;
-                return added > 0 ? $"✓ 新增 {added} 个术语，请检查一下译法" : "没有发现新的术语";
+                return added > 0 ? $"新增 {added} 个术语，请检查一下译法" : "没有发现新的术语";
             });
         }
 
@@ -558,7 +571,7 @@ namespace LiveCaptionsTranslator
             await RunBusy(TestApiButton, TestApiResult, "测试中……", async () =>
             {
                 await Summarizer.TestConnection();
-                return "✓ 连接成功";
+                return "连接成功";
             });
         }
 
@@ -573,7 +586,7 @@ namespace LiveCaptionsTranslator
             }
             catch (Exception ex)
             {
-                result.Text = $"✗ {ex.Message}";
+                result.Text = $"× {ex.Message}";
             }
             finally
             {
@@ -644,7 +657,7 @@ namespace LiveCaptionsTranslator
             Lecture.InputSource = source;
             MicBox.IsEnabled = source == InputSource.Microphone;
             ShowSpeechDeviceHint();
-            SourceStatus.Text = "✓ 已保存。阿里云识别会直接使用这里选的声音来源。";
+            SourceStatus.Text = "已保存。阿里云识别会直接使用这里选的声音来源。";
         }
 
         private void MicBox_SelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -655,7 +668,7 @@ namespace LiveCaptionsTranslator
             string source = device.IsDefault ? string.Empty : device.Id;
             DesktopSettings.MicrophoneId = source;
             CloudAsr.MicrophoneSource = source.Length == 0 ? null : source;
-            SourceStatus.Text = $"✓ 已改用：{device.Name}。点“停止”再点“开始”后生效。";
+            SourceStatus.Text = $"已改用：{device.Name}。点“停止”再点“开始”后生效。";
         }
 
         private void SpeechDeviceBox_SelectionChanged(object? sender, SelectionChangedEventArgs e)
