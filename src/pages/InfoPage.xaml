@@ -56,6 +56,26 @@
                     <Run x:Name="Version" Text="1.1.1.1" />
                 </Hyperlink>
             </TextBlock>
+            <StackPanel Margin="0,6,0,0" Orientation="Horizontal">
+                <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="更新：" />
+                <TextBlock x:Name="UpdateStatus" VerticalAlignment="Center" />
+                <TextBlock x:Name="UpdateLinkBlock" VerticalAlignment="Center" Visibility="Collapsed">
+                    <Hyperlink x:Name="UpdateLink" RequestNavigate="Hyperlink_RequestNavigate">
+                        <Run x:Name="UpdateLinkText" />
+                    </Hyperlink>
+                </TextBlock>
+                <ui:Button
+                    x:Name="CheckUpdateButton"
+                    Margin="12,0,0,0"
+                    Padding="10,3"
+                    Click="CheckUpdateButton_Click"
+                    Content="检查更新" />
+            </StackPanel>
+            <CheckBox
+                x:Name="AutoCheckBox"
+                Margin="0,4,0,0"
+                Click="AutoCheckBox_Click"
+                Content="启动时自动检查更新" />
         </StackPanel>
     </Grid>
 </Page>

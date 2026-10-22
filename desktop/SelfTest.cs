@@ -121,6 +121,17 @@ namespace LiveCaptionsTranslator
                 return order;
             });
 
+            Check("update check (tags)", () =>
+            {
+                if (UpdateChecker.ParseTag("v1.7-lecture.12") != 12 || UpdateChecker.ParseTag("v1.7-lecture.x") != null ||
+                    UpdateChecker.ParseTag("v1.7.3") != null || UpdateChecker.ParseTag(null) != null)
+                    throw new InvalidOperationException("release tag parsing is wrong");
+                if (!UpdateChecker.IsNewer(12, 13) || UpdateChecker.IsNewer(13, 13) || UpdateChecker.IsNewer(14, 13) ||
+                    UpdateChecker.IsNewer(null, 13))
+                    throw new InvalidOperationException("build comparison is wrong");
+                return $"current build {(UpdateChecker.CurrentBuild?.ToString() ?? "none (development build)")}";
+            });
+
             Check("markdown folder", () => LectureDocument.DefaultSaveFolder);
 
             foreach (string tool in new[] { "parec", "pactl", "say", "spd-say", "espeak-ng", "pdftoppm", "tesseract" })

@@ -97,6 +97,9 @@ namespace LiveCaptionsTranslator.models
         private string saveFolder = "";
         private string currentCourse = "";
         private bool notesDraft = true;
+        private bool autoCheckUpdate = true;
+        private DateTime lastUpdateCheck = DateTime.MinValue;
+        private int lastNotifiedUpdateBuild = 0;
 
         public bool SummaryEnabled
         {
@@ -373,6 +376,38 @@ namespace LiveCaptionsTranslator.models
             {
                 notesDraft = value;
                 OnPropertyChanged("NotesDraft");
+            }
+        }
+
+        // Look for a new release a little after startup (at most once a day).
+        public bool AutoCheckUpdate
+        {
+            get => autoCheckUpdate;
+            set
+            {
+                autoCheckUpdate = value;
+                OnPropertyChanged("AutoCheckUpdate");
+            }
+        }
+
+        public DateTime LastUpdateCheck
+        {
+            get => lastUpdateCheck;
+            set
+            {
+                lastUpdateCheck = value;
+                OnPropertyChanged("LastUpdateCheck");
+            }
+        }
+
+        // The newest build the user was already told about, so it is not announced at every start.
+        public int LastNotifiedUpdateBuild
+        {
+            get => lastNotifiedUpdateBuild;
+            set
+            {
+                lastNotifiedUpdateBuild = value;
+                OnPropertyChanged("LastNotifiedUpdateBuild");
             }
         }
 

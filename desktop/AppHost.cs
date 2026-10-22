@@ -28,6 +28,7 @@ namespace LiveCaptionsTranslator
             Task.Run(() => Summarizer.SummaryLoop());
             Task.Run(() => Refiner.RefineLoop());
             Speaker.Start();
+            UpdateChecker.StartAutoCheck();
         }
 
         // Stops capturing and speaking. Safe to call more than once.
