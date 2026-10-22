@@ -189,12 +189,16 @@ namespace LiveCaptionsTranslator
         {
             var card = BuildCard(course.Name, course.Info, course.Name, 200);
             card.Margin = new Thickness(0, 0, 10, 10);
-            ((StackPanel)card.Child!).Children.Insert(0, new TextBlock
+            ((StackPanel)card.Child!).Children.Insert(0, new Border
             {
-                Text = "▣",
-                FontSize = 28,
+                // Drawn, not a "▣" character: not every Linux font has that glyph.
+                Width = 24,
+                Height = 24,
+                Margin = new Thickness(2, 0),
+                CornerRadius = new CornerRadius(5),
+                BorderThickness = new Thickness(3),
                 VerticalAlignment = VerticalAlignment.Center,
-                Foreground = (IBrush?)this.FindResource("SystemControlHighlightAccentBrush") ?? Brushes.SteelBlue,
+                BorderBrush = (IBrush?)this.FindResource("SystemControlHighlightAccentBrush") ?? Brushes.SteelBlue,
             });
             ((StackPanel)((StackPanel)card.Child).Children[1]).Width = 140;
             AddCardActions(card, () => ShowLectures(course),
