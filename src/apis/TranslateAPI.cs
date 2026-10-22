@@ -113,6 +113,9 @@ namespace LiveCaptionsTranslator.apis
                     if (response.StatusCode != HttpStatusCode.BadRequest &&
                         response.StatusCode != HttpStatusCode.UnprocessableEntity)
                         break;
+                    // The account has no balance: another request format would fail the same way.
+                    if (TextUtil.IsArrears(await response.Content.ReadAsStringAsync()))
+                        break;
                     await Task.Delay(15);
 
                     openai_fallback_index++;
@@ -144,6 +147,12 @@ namespace LiveCaptionsTranslator.apis
             }
             else if (response.StatusCode == HttpStatusCode.Unauthorized)
                 return "[ERROR] 翻译失败：API Key 无效（HTTP 401），请在“设置”页里重新粘贴 API Key 并点“测试连接”。";
+            else if (response.StatusCode == HttpStatusCode.Forbidden &&
+                     TextUtil.IsQuotaExhausted(await response.Content.ReadAsStringAsync()))
+                return $"[ERROR] 翻译失败：{TextUtil.QuotaExhaustedMessage}";
+            else if (response.StatusCode == HttpStatusCode.BadRequest &&
+                     TextUtil.IsArrears(await response.Content.ReadAsStringAsync()))
+                return $"[ERROR] 翻译失败：{TextUtil.ArrearageMessage}";
             else
                 return HttpError(response);
         }

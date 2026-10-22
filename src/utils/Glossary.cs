@@ -18,7 +18,14 @@ namespace LiveCaptionsTranslator.utils
         private const int MAX_HOT_WORDS = 500;
         private const string VOCABULARY_PREFIX = "lctgloss";
         private static readonly char[] SEPARATORS = { '=', '＝', '\t' };
+        // Languages the hot word API accepts: Fun-ASR models only know these three, Paraformer more.
         private static readonly string[] HOT_WORD_LANGUAGES = { "zh", "en", "ja", "yue", "ko", "de", "fr", "ru" };
+        private static readonly string[] FUN_ASR_HOT_WORD_LANGUAGES = { "zh", "en", "ja" };
+
+        private static bool IsHotWordLanguage(string model, string language) =>
+            (model.StartsWith("fun-asr", StringComparison.OrdinalIgnoreCase)
+                ? FUN_ASR_HOT_WORD_LANGUAGES
+                : HOT_WORD_LANGUAGES).Contains(language);
 
         private static readonly HttpClient client = new HttpClient()
         {
@@ -132,7 +139,7 @@ namespace LiveCaptionsTranslator.utils
 
         // Creates or updates the hot word list on Alibaba Cloud when the glossary changed, and returns its id
         // (null when the glossary is empty). One list is reused, since an account may only have ten.
-        public static async Task<string?> SyncAsrVocabulary(CancellationToken token)
+        public static async Task<string?> SyncAsrVocabulary(string model, CancellationToken token)
         {
             var lecture = Translator.Setting.Lecture;
             var words = HotWords();
@@ -143,20 +150,24 @@ namespace LiveCaptionsTranslator.utils
             var vocabulary = words.Select(word =>
             {
                 var item = new Dictionary<string, object> { ["text"] = word, ["weight"] = 4 };
-                if (HOT_WORD_LANGUAGES.Contains(language))
+                if (IsHotWordLanguage(model, language))
                     item["lang"] = language;
                 return item;
             }).ToList();
 
             string hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
-                lecture.AsrModel + "\n" + language + "\n" + string.Join("\n", words))))[..16];
+                model + "\n" + language + "\n" + string.Join("\n", words))))[..16];
             if (!string.IsNullOrEmpty(lecture.AsrVocabularyId) && lecture.AsrVocabularyHash == hash)
                 return lecture.AsrVocabularyId;
 
+            // A list belongs to one model: for another model the old list is deleted and a new one made.
+            bool sameModel = string.Equals(lecture.AsrVocabularyModel, model, StringComparison.OrdinalIgnoreCase);
             if (!string.IsNullOrEmpty(lecture.AsrVocabularyId))
             {
                 try
                 {
+                    if (!sameModel)
+                        throw new InvalidOperationException("The hot word list was made for another model.");
                     await Call(new { action = "update_vocabulary", vocabulary_id = lecture.AsrVocabularyId, vocabulary },
                         token);
                     lecture.AsrVocabularyHash = hash;
@@ -183,7 +194,7 @@ namespace LiveCaptionsTranslator.utils
             var output = await Call(new
             {
                 action = "create_vocabulary",
-                target_model = lecture.AsrModel,
+                target_model = model,
                 prefix = VOCABULARY_PREFIX,
                 vocabulary,
             }, token);
@@ -193,6 +204,7 @@ namespace LiveCaptionsTranslator.utils
             if (id.Length == 0)
                 throw new InvalidOperationException("阿里云没有返回热词表 ID。");
             lecture.AsrVocabularyId = id;
+            lecture.AsrVocabularyModel = model;
             lecture.AsrVocabularyHash = hash;
             return id;
         }

@@ -89,6 +89,38 @@ namespace LiveCaptionsTranslator
                 return $"{SlideDeck.Pages.Count} page(s), first: \"{SlideDeck.Pages[0].Text[..Math.Min(40, SlideDeck.Pages[0].Text.Length)]}\"";
             });
 
+            Check("asr quota fallback", () =>
+            {
+                if (!CloudAsr.IsQuotaError("AllocationQuota.FreeTierOnly") || !CloudAsr.IsQuotaError("Arrearage") ||
+                    CloudAsr.IsQuotaError("InvalidApiKey") || CloudAsr.IsQuotaError("InvalidParameter") ||
+                    CloudAsr.IsQuotaError("") || CloudAsr.IsQuotaError(null))
+                    throw new InvalidOperationException("quota code classification is wrong");
+                string order = string.Join(",", CloudAsr.CandidateModels("paraformer-realtime-v2", "en"));
+                if (order != "paraformer-realtime-v2,fun-asr-realtime,fun-asr-realtime-2026-02-28")
+                    throw new InvalidOperationException("order: " + order);
+                var fr = CloudAsr.CandidateModels("paraformer-realtime-v2", "fr");
+                if (fr.Contains("fun-asr-realtime-2026-02-28") || fr.Contains("paraformer-realtime-v1") ||
+                    !fr.Contains("fun-asr-realtime"))
+                    throw new InvalidOperationException("candidates for French: " + string.Join(",", fr));
+                var gone = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "paraformer-realtime-v2" };
+                if (CloudAsr.NextModel("paraformer-realtime-v2", "fr", gone) != "fun-asr-realtime")
+                    throw new InvalidOperationException("next model after v2 is wrong");
+                gone.Add("fun-asr-realtime");
+                if (CloudAsr.NextModel("paraformer-realtime-v2", "fr", gone) != null ||
+                    CloudAsr.NextModel("paraformer-realtime-v2", "zh", gone) != "fun-asr-realtime-2026-02-28")
+                    throw new InvalidOperationException("end of the list is wrong");
+                if (CloudAsr.CandidateModels("my-model", "zh")[0] != "my-model")
+                    throw new InvalidOperationException("configured model not first");
+                string message = CloudAsr.QuotaMessage("AllocationQuota.FreeTierOnly",
+                    new[] { "paraformer-realtime-v2", "fun-asr-realtime" });
+                if (!message.Contains("paraformer-realtime-v2、fun-asr-realtime，") ||
+                    CloudAsr.QuotaMessage("Arrearage").Contains("用完即停"))
+                    throw new InvalidOperationException("quota message: " + message);
+                if (!TextUtil.IsArrears("{\"code\":\"Arrearage\"}") || TextUtil.IsArrears("{\"code\":\"x\"}"))
+                    throw new InvalidOperationException("arrearage body classification is wrong");
+                return order;
+            });
+
             Check("markdown folder", () => LectureDocument.DefaultSaveFolder);
 
             foreach (string tool in new[] { "parec", "pactl", "say", "spd-say", "espeak-ng", "pdftoppm", "tesseract" })

@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Reflection;
 using Avalonia;
 using Avalonia.Controls;
@@ -148,6 +148,7 @@ namespace LiveCaptionsTranslator
             base.OnAttachedToVisualTree(e);
             Shell.Main?.AutoHeightAdjust(minHeight: MIN_HEIGHT);
             Summarizer.CurrentPageChanged += OnCurrentPageChanged;
+            Lecture.PropertyChanged += OnLectureChanged;
             if (ApiConfig != null)
                 ApiConfig.PropertyChanged += OnApiConfigChanged;
             Load();
@@ -157,6 +158,7 @@ namespace LiveCaptionsTranslator
         {
             base.OnDetachedFromVisualTree(e);
             Summarizer.CurrentPageChanged -= OnCurrentPageChanged;
+            Lecture.PropertyChanged -= OnLectureChanged;
             if (ApiConfig != null)
                 ApiConfig.PropertyChanged -= OnApiConfigChanged;
             // Text still being edited is kept.
@@ -331,6 +333,18 @@ namespace LiveCaptionsTranslator
             ShowApiKeyStatus();
         }
 
+        // The recognition model was switched by the code (free quota used up).
+        private void OnLectureChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName != nameof(LectureState.AsrModel))
+                return;
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (AsrModelBox.Text != Lecture.AsrModel)
+                    AsrModelBox.Text = Lecture.AsrModel;
+            });
+        }
+
         private void OnApiConfigChanged(object? sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName != nameof(OpenAIConfig.ApiKey))
@@ -489,8 +503,8 @@ namespace LiveCaptionsTranslator
         {
             await RunBusy(TestAsrButton, TestAsrResult, "测试中……", async () =>
             {
-                await CloudAsr.Test();
-                return "连接成功";
+                string? note = await CloudAsr.Test();
+                return note == null ? "连接成功" : $"连接成功（{note}）";
             });
         }
 

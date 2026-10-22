@@ -386,7 +386,9 @@ namespace LiveCaptionsTranslator
 
             var response = await Post(config, requestData, longRequest);
             // Some OpenAI-compatible servers do not support `response_format`.
-            if (json && (int)response.StatusCode is 400 or 422)
+            // (not for Arrearage: that is the account, and the second request would fail the same way).
+            if (json && (int)response.StatusCode is 400 or 422 &&
+                !TextUtil.IsArrears(await response.Content.ReadAsStringAsync()))
             {
                 response.Dispose();
                 requestData.Remove("response_format");
@@ -398,6 +400,11 @@ namespace LiveCaptionsTranslator
                 string responseString = await response.Content.ReadAsStringAsync();
                 if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                     throw new HttpRequestException("API Key 无效（HTTP 401），请重新粘贴 API Key。");
+                if (response.StatusCode == System.Net.HttpStatusCode.Forbidden &&
+                    TextUtil.IsQuotaExhausted(responseString))
+                    throw new HttpRequestException(TextUtil.QuotaExhaustedMessage, null, response.StatusCode);
+                if (response.StatusCode == System.Net.HttpStatusCode.BadRequest && TextUtil.IsArrears(responseString))
+                    throw new HttpRequestException(TextUtil.ArrearageMessage, null, response.StatusCode);
                 if (!response.IsSuccessStatusCode)
                     throw new HttpRequestException($"HTTP Error - {(int)response.StatusCode} {response.StatusCode}",
                         null, response.StatusCode);
