@@ -9,9 +9,8 @@ namespace LiveCaptionsTranslator
     {
         App()
         {
-            // Settings and history are stored next to the program, so do not depend on how it was started.
-            // If that folder is read-only (e.g. installed under Program Files without write access),
-            // fall back to a per-user folder.
+            // Settings and history are kept in the user's data folder (see AppPaths), so do not depend on how the
+            // program was started.
             Directory.SetCurrentDirectory(AppPaths.DataDirectory);
             AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
             Translator.Setting?.Save();

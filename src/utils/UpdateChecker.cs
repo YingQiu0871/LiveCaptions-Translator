@@ -12,7 +12,6 @@ namespace LiveCaptionsTranslator.utils
         public int LatestBuild { get; init; }
         public string Tag { get; init; } = string.Empty;
         public string Url { get; init; } = string.Empty;
-        public DateTime? PublishedAt { get; init; }
         public bool IsNewer { get; init; }
     }
 
@@ -70,16 +69,11 @@ namespace LiveCaptionsTranslator.utils
                 if (ParseTag(tag) is not int build || (best != null && build <= best.LatestBuild))
                     continue;
                 string url = release.TryGetProperty("html_url", out var htmlUrl) ? htmlUrl.GetString() ?? "" : "";
-                DateTime? published = null;
-                if (release.TryGetProperty("published_at", out var date) && date.ValueKind == JsonValueKind.String &&
-                    date.TryGetDateTime(out var parsed))
-                    published = parsed;
                 best = new UpdateInfo
                 {
                     LatestBuild = build,
                     Tag = tag.Trim(),
                     Url = url.StartsWith("https://") ? url : RELEASES_URL,
-                    PublishedAt = published,
                     IsNewer = IsNewer(current, build)
                 };
             }
@@ -158,7 +152,14 @@ namespace LiveCaptionsTranslator.utils
             Task.Run(async () =>
             {
                 await Task.Delay(TimeSpan.FromSeconds(10));
-                await AutoCheckAsync();
+                try
+                {
+                    await AutoCheckAsync();
+                }
+                catch (Exception)
+                {
+                    // The check is a convenience: showing the toast can fail while the app is closing.
+                }
             });
         }
 

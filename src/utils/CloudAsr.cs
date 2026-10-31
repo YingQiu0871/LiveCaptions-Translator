@@ -24,6 +24,8 @@ namespace LiveCaptionsTranslator.utils
 
         private static readonly object audioLock = new();
         private static readonly List<byte> pending = new();
+        // Reused by OnAudio for the resampled 16-bit samples of one callback; only the capture thread touches it.
+        private static byte[] resampled = Array.Empty<byte>();
         private static bool isMicrophone = false;
 
         // Box-filter resampler state.
@@ -42,10 +44,29 @@ namespace LiveCaptionsTranslator.utils
         private static CancellationTokenSource? cts;
 
         // Realtime models with the same run-task protocol, in the order they are tried when one cannot be used.
-        // The snapshot is only offered for the three languages it supports.
+        // A model is only tried for a language it supports (see LANGUAGES); the ones not listed there are the user's
+        // own and are left alone.
+        private const string PARAFORMER = "paraformer-realtime-v2";
         private const string FUN_ASR_ALIAS = "fun-asr-realtime";
-        private static readonly string[] FALLBACK_MODELS =
-            { "paraformer-realtime-v2", FUN_ASR_ALIAS, "fun-asr-realtime-2026-02-28" };
+        private const string FUN_ASR_SNAPSHOT = "fun-asr-realtime-2026-02-28";
+        private static readonly string[] FALLBACK_MODELS = { PARAFORMER, FUN_ASR_ALIAS, FUN_ASR_SNAPSHOT };
+
+        // The language_hints codes each model takes (https://help.aliyun.com/zh/model-studio/asr-model/ and the
+        // client-events pages of Paraformer and Fun-ASR). Fun-ASR understands Cantonese as a Chinese dialect, but has
+        // no code for it: it is in LANGUAGES, not in the hints.
+        private static readonly string[] PARAFORMER_HINTS = { "zh", "en", "ja", "yue", "ko", "de", "fr", "ru" };
+        private static readonly string[] FUN_ASR_HINTS =
+        {
+            "zh", "en", "ja", "ko", "vi", "th", "id", "ms", "tl", "hi", "ar", "fr", "de", "es", "pt", "ru", "it", "nl",
+            "sv", "da", "fi", "no", "el", "pl", "cs", "hu", "ro", "bg", "hr", "sk",
+        };
+        private static readonly string[] FUN_ASR_SNAPSHOT_HINTS = { "zh", "en", "ja" };
+        private static readonly Dictionary<string, string[]> LANGUAGES = new(StringComparer.OrdinalIgnoreCase)
+        {
+            [PARAFORMER] = PARAFORMER_HINTS,
+            [FUN_ASR_ALIAS] = FUN_ASR_HINTS.Append("yue").ToArray(),
+            [FUN_ASR_SNAPSHOT] = FUN_ASR_SNAPSHOT_HINTS,
+        };
         // Models that cannot be used (free quota gone, or refused), remembered until the app is closed.
         // Guarded by `skipLock`: a cancelled old class and the new one may touch it at the same time.
         private static readonly object skipLock = new();
@@ -103,21 +124,51 @@ namespace LiveCaptionsTranslator.utils
         private static bool IsFunAsrSnapshot(string model) =>
             IsFunAsr(model) && !string.Equals(model, FUN_ASR_ALIAS, StringComparison.OrdinalIgnoreCase);
 
-        // The configured model first, then the fallback list.
+        // Whether the model can recognize the language (auto / unknown: yes). An unknown model is trusted.
+        internal static bool Supports(string model, string? language)
+        {
+            string code = LectureLanguages.Code(language);
+            return code.Length == 0 || !LANGUAGES.TryGetValue(model.Trim(), out var codes) || codes.Contains(code);
+        }
+
+        // The language_hints value for the model, or null when it has no code for the language.
+        private static string? Hint(string model, string? language)
+        {
+            string code = LectureLanguages.Code(language);
+            if (code.Length == 0)
+                return null;
+            string[] hints = IsFunAsrSnapshot(model) ? FUN_ASR_SNAPSHOT_HINTS
+                : IsFunAsr(model) ? FUN_ASR_HINTS
+                : PARAFORMER_HINTS;
+            return hints.Contains(code) ? code : null;
+        }
+
+        // The configured model first, then the fallback list; only the models that know the language.
         internal static List<string> CandidateModels(string configured, string? language)
         {
-            string lang = (language ?? string.Empty).Split('-')[0].ToLowerInvariant();
             var result = new List<string>();
-            if (!string.IsNullOrWhiteSpace(configured))
+            if (!string.IsNullOrWhiteSpace(configured) && Supports(configured, language))
                 result.Add(configured.Trim());
             foreach (string model in FALLBACK_MODELS)
             {
-                if (IsFunAsrSnapshot(model) && lang != "zh" && lang != "en" && lang != "ja")
-                    continue;
-                if (!result.Contains(model, StringComparer.OrdinalIgnoreCase))
+                if (Supports(model, language) && !result.Contains(model, StringComparer.OrdinalIgnoreCase))
                     result.Add(model);
             }
             return result;
+        }
+
+        // The configured model cannot recognize the language: the class runs on the first one that can, without
+        // changing the setting (the configured model is used again for another language).
+        private static string? UnsupportedNotice(ref string configured, string? language)
+        {
+            if (Supports(configured, language))
+                return null;
+            string? usable = CandidateModels(configured, language).FirstOrDefault();
+            if (usable == null)
+                return null;
+            string notice = $"{configured} 不支持{LectureLanguages.Name(language)}，改用 {usable}";
+            configured = usable;
+            return notice;
         }
 
         internal static string? NextModel(string configured, string? language, ISet<string> skipped) =>
@@ -169,8 +220,10 @@ namespace LiveCaptionsTranslator.utils
 
         public static void Stop()
         {
-            cts?.Cancel();
+            var running = cts;
             cts = null;
+            running?.Cancel();
+            running?.Dispose();
             EndCapture();
             lock (audioLock)
             {
@@ -185,6 +238,7 @@ namespace LiveCaptionsTranslator.utils
         {
             var lecture = Translator.Setting.Lecture;
             string configured = lecture.AsrModel;
+            string? unsupported = UnsupportedNotice(ref configured, lecture.AsrLanguage);
             string code = string.Empty;
             var exhausted = new List<string>();
             foreach (string model in CandidateModels(configured, lecture.AsrLanguage))
@@ -218,7 +272,10 @@ namespace LiveCaptionsTranslator.utils
                 }
                 Unskip(model);
                 if (isConfigured)
-                    return null;
+                    return unsupported;
+                // A substitute for an unsupported language is not saved: the setting stays for other languages.
+                if (unsupported != null)
+                    return $"{unsupported}；{configured} 额度已用完，本节课改用 {model}";
                 lecture.AsrModel = model;
                 return $"{configured} 额度已用完，已改用 {model}";
             }
@@ -275,7 +332,11 @@ namespace LiveCaptionsTranslator.utils
 
             // Our own speech on the computer's output would be recognized again as the lecture: send silence then.
             bool mute = !isMicrophone && Speaker.SuppressCaptions;
-            var output = new List<byte>(count / blockAlign / Math.Max((int)step, 1) * 2 + 4);
+            // At most one output sample per input frame, two bytes each.
+            int capacity = (count / blockAlign + 1) * 2;
+            if (resampled.Length < capacity)
+                resampled = new byte[capacity];
+            int written = 0;
             for (int offset = 0; offset + blockAlign <= count; offset += blockAlign)
             {
                 double sum = 0;
@@ -291,12 +352,14 @@ namespace LiveCaptionsTranslator.utils
                 accumulated = 0;
                 accumulatedCount = 0;
                 short pcm = (short)Math.Round(value * short.MaxValue);
-                output.Add((byte)(pcm & 0xFF));
-                output.Add((byte)((pcm >> 8) & 0xFF));
+                resampled[written++] = (byte)(pcm & 0xFF);
+                resampled[written++] = (byte)((pcm >> 8) & 0xFF);
             }
+            if (written == 0)
+                return;
             lock (audioLock)
             {
-                pending.AddRange(output);
+                pending.AddRange(new ArraySegment<byte>(resampled, 0, written));
                 // Never keep more than 10 s if the connection is down.
                 int max = SAMPLE_RATE * 2 * 10;
                 if (pending.Count > max)
@@ -365,8 +428,13 @@ namespace LiveCaptionsTranslator.utils
         private static async Task SessionLoop(CancellationToken token)
         {
             var lecture = Translator.Setting.Lecture;
-            var state = new SessionState { Configured = lecture.AsrModel };
             string? language = lecture.AsrLanguage;
+            string configured = lecture.AsrModel;
+            string? unsupported = UnsupportedNotice(ref configured, language);
+            if (unsupported != null)
+                SnackbarHost.Show($"[INFO] {unsupported}。", "识别模型按讲课语言自动选择，设置里的模型不变。",
+                    SnackbarType.Info, timeout: 6, closeButton: true);
+            var state = new SessionState { Configured = configured };
             lock (skipLock)
             {
                 // Everything was used up in an earlier class: the user may have fixed it in the console since, so
@@ -555,6 +623,9 @@ namespace LiveCaptionsTranslator.utils
                     }
                 }
             }, token);
+            // The socket is closed when this method returns; a receive still pending then fails on its own and nobody
+            // awaits it any more, so its exception is observed here rather than left to the finalizer.
+            _ = receiver.ContinueWith(t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted);
 
             var first = await Task.WhenAny(started.Task, receiver, Task.Delay(TimeSpan.FromSeconds(10), token));
             if (first == receiver)
@@ -638,15 +709,11 @@ namespace LiveCaptionsTranslator.utils
                 // Fun-ASR does not document either parameter.
                 parameters["semantic_punctuation_enabled"] = true;
             }
-            string language = (lecture.AsrLanguage ?? string.Empty).Trim();
-            string baseLanguage = language.Split('-')[0].ToLowerInvariant();
-            bool detect = language.Length == 0 || baseLanguage == "auto";
-            // The Fun-ASR alias takes about thirty languages (not Cantonese), its dated snapshot only three.
-            bool hint = !detect && (!funAsr || (IsFunAsrSnapshot(model)
-                ? baseLanguage is "zh" or "en" or "ja"
-                : baseLanguage != "yue"));
-            if (hint)
-                parameters["language_hints"] = new[] { language };
+            // The Fun-ASR alias takes about thirty languages (Cantonese only as a dialect, without a code), its
+            // dated snapshot only three, Paraformer eight; a code the model does not know fails the task.
+            string? hint = Hint(model, lecture.AsrLanguage);
+            if (hint != null)
+                parameters["language_hints"] = new[] { hint };
             if (!string.IsNullOrEmpty(vocabulary))
                 parameters["vocabulary_id"] = vocabulary;
 

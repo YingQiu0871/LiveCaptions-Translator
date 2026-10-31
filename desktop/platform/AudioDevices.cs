@@ -15,8 +15,11 @@ namespace LiveCaptionsTranslator.utils
     }
 
     // Linux: PulseAudio / PipeWire through `pactl`. macOS: the output devices known to `say`.
-    public static class AudioDevices
+    public static partial class AudioDevices
     {
+        [GeneratedRegex(@"^\s*(\d+)\s+(.+?)\s*$")]
+        private static partial Regex MacOutputLine();
+
         public static async Task<List<AudioDevice>> ListAsync(DataFlow flow)
         {
             try
@@ -74,7 +77,7 @@ namespace LiveCaptionsTranslator.utils
                 return result;
             foreach (string line in text.Split('\n', StringSplitOptions.RemoveEmptyEntries))
             {
-                var match = Regex.Match(line, @"^\s*(\d+)\s+(.+?)\s*$");
+                var match = MacOutputLine().Match(line);
                 if (match.Success)
                     result.Add(new AudioDevice(match.Groups[2].Value, match.Groups[2].Value, false));
             }

@@ -4,146 +4,17 @@ using System.Speech.Synthesis;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
 
-using LiveCaptionsTranslator.models;
-
 namespace LiveCaptionsTranslator.utils
 {
     // Reads summaries (and optionally translations) aloud through the default audio output device,
-    // e.g. the connected Bluetooth earphones.
-    public static class Speaker
+    // e.g. the connected Bluetooth earphones. The queue and the rules for what is read are in Speaker.Queue.cs.
+    public static partial class Speaker
     {
-        // Translations older than this backlog are dropped, so that speech never lags far behind the lecture.
-        private const int MAX_TRANSLATION_BACKLOG = 2;
-
-        private static readonly object queueLock = new();
-        private static readonly LinkedList<(string Text, bool IsSummary)> queue = new();
-        private static readonly AutoResetEvent signal = new(false);
-
-        // Keep ignoring captions a little after speech ends: LiveCaptions lags behind the audio.
-        private static readonly TimeSpan SUPPRESS_TAIL = TimeSpan.FromMilliseconds(1500);
-
         private static SpeechSynthesizer? synthesizer;
-        private static volatile bool stopRequested = false;
-        private static volatile bool speakingOnDefaultOutput = false;
-        private static DateTime suppressUntil = DateTime.MinValue;
-        private static string lastSpokenSource = string.Empty;
-        public static event Action<bool>? MutedChanged;
-
-        public static bool Muted
-        {
-            get => Lecture?.SpeechMuted ?? false;
-            set
-            {
-                if (Lecture != null)
-                    Lecture.SpeechMuted = value;
-                if (value)
-                    StopAll();
-                MutedChanged?.Invoke(value);
-            }
-        }
-
-        private static LectureState? Lecture => Translator.Setting?.Lecture;
-
-        // True while our speech plays on the default output device, which LiveCaptions listens to.
-        public static bool SuppressCaptions => speakingOnDefaultOutput || DateTime.Now < suppressUntil;
-
-        public static void Start()
-        {
-            var thread = new Thread(Worker) { IsBackground = true, Name = "Speaker" };
-            thread.Start();
-        }
-
-        public static void EnqueueSummary(string summary)
-        {
-            if (Muted || Lecture == null || Lecture.SpeakMode is SpeakMode.Off or SpeakMode.Interpretation)
-                return;
-            string text = CleanForSpeech(summary);
-            if (string.IsNullOrWhiteSpace(text))
-                return;
-
-            lock (queueLock)
-            {
-                // Summaries go before any pending translation.
-                var node = queue.First;
-                while (node != null && node.Value.IsSummary)
-                    node = node.Next;
-                if (node == null)
-                    queue.AddLast((text, true));
-                else
-                    queue.AddBefore(node, (text, true));
-            }
-            signal.Set();
-        }
-
-        // A refined paragraph, read as one piece.
-        public static void EnqueueParagraph(string translatedText)
-        {
-            if (Muted || Lecture == null || Lecture.SpeakMode != SpeakMode.SummaryAndTranslation)
-                return;
-            string text = CleanForSpeech(translatedText);
-            if (string.IsNullOrWhiteSpace(text))
-                return;
-            lock (queueLock)
-            {
-                queue.AddLast((text, false));
-            }
-            signal.Set();
-        }
-
-        public static void EnqueueTranslation(string sourceText, string translatedText)
-        {
-            if (Muted || Lecture == null)
-                return;
-            // Interpretation reads every sentence at once. Otherwise, with paragraph refinement on, the refined
-            // paragraph is read instead of each raw sentence (a few seconds later, but more accurate).
-            bool read = Lecture.SpeakMode == SpeakMode.Interpretation ||
-                        (Lecture.SpeakMode == SpeakMode.SummaryAndTranslation && !Refiner.Enabled);
-            if (!read)
-                return;
-            if (string.IsNullOrWhiteSpace(translatedText) ||
-                translatedText.Contains("[ERROR]") || translatedText.Contains("[WARNING]"))
-                return;
-
-            // LiveCaptions often revises a finished sentence; do not read the same sentence twice.
-            if (lastSpokenSource.Length > 0 &&
-                TextUtil.Similarity(sourceText, lastSpokenSource) > TextUtil.SIM_THRESHOLD)
-                return;
-            lastSpokenSource = sourceText;
-
-            string text = CleanForSpeech(RegexPatterns.NoticePrefix().Replace(translatedText, string.Empty));
-            if (string.IsNullOrWhiteSpace(text))
-                return;
-
-            lock (queueLock)
-            {
-                queue.AddLast((text, false));
-                int backlog = queue.Count(item => !item.IsSummary);
-                var node = queue.First;
-                while (backlog > MAX_TRANSLATION_BACKLOG && node != null)
-                {
-                    var next = node.Next;
-                    if (!node.Value.IsSummary)
-                    {
-                        queue.Remove(node);
-                        backlog--;
-                    }
-                    node = next;
-                }
-            }
-            signal.Set();
-        }
-
-        public static void Speak(string text)
-        {
-            lock (queueLock)
-                queue.AddFirst((CleanForSpeech(text), true));
-            signal.Set();
-        }
 
         public static void StopAll()
         {
-            lock (queueLock)
-                queue.Clear();
+            ClearQueue();
             stopRequested = true;
             try
             {
@@ -187,17 +58,8 @@ namespace LiveCaptionsTranslator.utils
             while (true)
             {
                 signal.WaitOne();
-                while (true)
+                while (TryDequeue(out string text))
                 {
-                    string text;
-                    lock (queueLock)
-                    {
-                        if (queue.First == null)
-                            break;
-                        text = queue.First.Value.Text;
-                        queue.RemoveFirst();
-                    }
-
                     stopRequested = false;
                     try
                     {
@@ -293,12 +155,10 @@ namespace LiveCaptionsTranslator.utils
                     return;
             }
 
-            // No voice chosen: pick one that speaks the target language.
+            // No voice chosen: pick one that speaks the target language (the lecture's own in 原语言模式).
             try
             {
-                var culture = new CultureInfo(Translator.Setting?.Lecture.EnglishOnly == true
-                    ? "en-US"
-                    : Translator.Setting?.TargetLanguage ?? "zh-CN");
+                var culture = new CultureInfo(SpeechLanguage());
                 if (!synth.Voice.Culture.Name.Equals(culture.Name, StringComparison.OrdinalIgnoreCase))
                     synth.SelectVoiceByHints(VoiceGender.NotSet, VoiceAge.NotSet, 0, culture);
             }
@@ -306,14 +166,6 @@ namespace LiveCaptionsTranslator.utils
             {
                 // Best effort: keep the current voice if none matches the language.
             }
-        }
-
-        private static string CleanForSpeech(string text)
-        {
-            var lines = text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Select(line => line.TrimStart('-', '*', '•', '#', ' '))
-                .Where(line => line.Length > 0);
-            return string.Join("。", lines).Replace("。。", "。");
         }
     }
 }

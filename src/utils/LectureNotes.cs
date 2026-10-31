@@ -30,7 +30,7 @@ namespace LiveCaptionsTranslator.utils
                 throw new InvalidOperationException("这节课没有识别到内容。");
 
             string language = LectureState.OutputLanguage();
-            bool english = Translator.Setting.Lecture.EnglishOnly;
+            bool originalOnly = Translator.Setting.Lecture.OriginalOnly;
             bool bilingual = !Translator.Setting.Lecture.SkipTranslation;
             string system = bilingual ? BilingualPrompt(language) :
                 $"You are a diligent university student writing study notes in {language} for one lecture. " +
@@ -39,9 +39,11 @@ namespace LiveCaptionsTranslator.utils
                 "follow the order of the lecture; use the slides for structure, headings and exact terminology, and " +
                 "the transcript for what the lecturer actually explained. For every topic give the key points, " +
                 "definitions, formulas, numbers and the examples the lecturer used. Mark points that were said in class " +
-                "but are not on the slides with " + (english ? "\"[Added in class]\". " : "\"【课上补充】\". ") +
-                (english ? string.Empty
-                    : "Keep important technical terms in the original language in parentheses the first time. ") +
+                "but are not on the slides with " + (originalOnly
+                    ? "a short bracketed note in the same language as the notes meaning \"added in class\" " +
+                      "(e.g. \"[Added in class]\"). "
+                    : "\"【课上补充】\". " +
+                      "Keep important technical terms in the original language in parentheses the first time. ") +
                 "Never invent content; where the transcript is unclear, leave it out. " +
                 "Finish with a section of 3–5 review questions. Answer with the notes only." +
                 LectureState.SubjectHint();

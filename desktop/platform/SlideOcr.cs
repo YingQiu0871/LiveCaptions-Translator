@@ -13,32 +13,29 @@ namespace LiveCaptionsTranslator.utils
             public override string ToString() => Name;
         }
 
-        // (Tesseract language code, language tag as in the Windows OCR list, name)
-        private static readonly (string Code, string Tag, string Name)[] Known =
-        {
-            ("eng", "en-US", "English"),
-            ("chi_sim", "zh-Hans-CN", "中文（简体）"),
-            ("chi_tra", "zh-Hant-TW", "中文（繁體）"),
-            ("jpn", "ja", "日本語"),
-            ("kor", "ko", "한국어"),
-            ("deu", "de-DE", "Deutsch"),
-            ("fra", "fr-FR", "Français"),
-            ("spa", "es-ES", "Español"),
-            ("ita", "it-IT", "Italiano"),
-            ("por", "pt-PT", "Português"),
-            ("rus", "ru-RU", "Русский"),
-        };
+        // The OCR list offers the lecture languages (LectureLanguages: Tesseract code, culture tag, name), plus
+        // traditional Chinese, which Tesseract keeps apart from simplified.
+        private static readonly (string Code, string Tag, string Name)[] Known = LectureLanguages.All
+            .Where(l => l.Code != "yue")
+            .Select(l => (l.Tesseract, l.Culture, l.Name))
+            .Append(("chi_tra", "zh-Hant-TW", "中文（繁体）"))
+            .ToArray();
 
         public static bool IsAvailable => Exec.Exists("pdftoppm") && Exec.Exists("tesseract");
 
-        public static List<OcrLanguage> AvailableLanguages()
+        private static HashSet<string> InstalledCodes()
         {
             if (!IsAvailable)
-                return new List<OcrLanguage>();
+                return new HashSet<string>();
             string? text = Exec.Run("tesseract", new[] { "--list-langs" }).GetAwaiter().GetResult();
-            var installed = (text ?? string.Empty).Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            return (text ?? string.Empty).Split('\n', StringSplitOptions.RemoveEmptyEntries)
                 .Select(line => line.Trim())
                 .ToHashSet();
+        }
+
+        public static List<OcrLanguage> AvailableLanguages()
+        {
+            var installed = InstalledCodes();
             return Known.Where(language => installed.Contains(language.Code))
                 .Select(language => new OcrLanguage(language.Tag, language.Name))
                 .ToList();
@@ -102,7 +99,8 @@ namespace LiveCaptionsTranslator.utils
             }
         }
 
-        // The slides of a foreign-language class are most likely not in Chinese: English when nothing is chosen.
+        // Nothing chosen: the lecture's language (with English added for the English terms on most slides) when its
+        // pack is installed, else English, as the slides of a foreign-language class are most likely not in Chinese.
         private static string CodeFor(string languageTag)
         {
             if (!string.IsNullOrEmpty(languageTag))
@@ -120,7 +118,13 @@ namespace LiveCaptionsTranslator.utils
                 if (match.Code != null)
                     return match.Code;
             }
-            return "eng";
+            string lecture = LectureLanguages.Current?.Tesseract ?? "eng";
+            if (lecture == "eng")
+                return "eng";
+            var installed = InstalledCodes();
+            if (!installed.Contains(lecture))
+                return "eng";
+            return installed.Contains("eng") ? lecture + "+eng" : lecture;
         }
     }
 }

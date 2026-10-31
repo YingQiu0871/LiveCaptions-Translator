@@ -149,7 +149,7 @@ namespace LiveCaptionsTranslator.utils
                 }
             }
 
-            sb.AppendLine(Translator.Setting?.Lecture.EnglishOnly == true ? "## 原文" : "## 原文与译文");
+            sb.AppendLine(Translator.Setting?.Lecture.OriginalOnly == true ? "## 原文" : "## 原文与译文");
             sb.AppendLine();
             foreach (var section in sections)
             {

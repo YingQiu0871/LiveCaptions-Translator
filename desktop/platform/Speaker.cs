@@ -2,155 +2,29 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Text.RegularExpressions;
 
-using LiveCaptionsTranslator.models;
-
 namespace LiveCaptionsTranslator.utils
 {
     // Reads summaries (and optionally translations) aloud. macOS: the `say` command, optionally to a chosen output
     // device. Linux: speech-dispatcher (`spd-say`), or `espeak-ng` if that is missing; they play on the default output.
-    // The public API and the queue rules match the Windows implementation in src/utils/Speaker.cs.
-    public static class Speaker
+    // The queue and the rules for what is read are shared with Windows in src/utils/Speaker.Queue.cs.
+    public static partial class Speaker
     {
-        // Translations older than this backlog are dropped, so that speech never lags far behind the lecture.
-        private const int MAX_TRANSLATION_BACKLOG = 2;
-
         private const string SPEECH_FAILED = "[ERROR] 语音播报失败。";
-
-        private static readonly object queueLock = new();
-        private static readonly LinkedList<(string Text, bool IsSummary)> queue = new();
-        private static readonly AutoResetEvent signal = new(false);
-
-        // Keep ignoring captions a little after speech ends: the recognizer lags behind the audio.
-        private static readonly TimeSpan SUPPRESS_TAIL = TimeSpan.FromMilliseconds(1500);
 
         private static readonly object processLock = new();
         private static Process? current;
-        private static volatile bool stopRequested = false;
         // The `spd-say -C` started by the last stop: the worker waits for it, or it would cancel the next speech.
         private static volatile Task? pendingCancel;
-        private static volatile bool speakingOnDefaultOutput = false;
-        private static DateTime suppressUntil = DateTime.MinValue;
-        private static string lastSpokenSource = string.Empty;
         private static string? missingToolReported;
         private static string? failureReported;
         private static List<(string Name, string Locale)> macVoices = new();
-        public static event Action<bool>? MutedChanged;
 
-        public static bool Muted
-        {
-            get => Lecture?.SpeechMuted ?? false;
-            set
-            {
-                if (Lecture != null)
-                    Lecture.SpeechMuted = value;
-                if (value)
-                    StopAll();
-                MutedChanged?.Invoke(value);
-            }
-        }
-
-        private static LectureState? Lecture => Translator.Setting?.Lecture;
-
-        // True while our speech plays on the default output device, which the system audio capture listens to.
-        public static bool SuppressCaptions => speakingOnDefaultOutput || DateTime.Now < suppressUntil;
-
-        public static void Start()
-        {
-            var thread = new Thread(Worker) { IsBackground = true, Name = "Speaker" };
-            thread.Start();
-        }
-
-        public static void EnqueueSummary(string summary)
-        {
-            if (Muted || Lecture == null || Lecture.SpeakMode is SpeakMode.Off or SpeakMode.Interpretation)
-                return;
-            string text = CleanForSpeech(summary);
-            if (string.IsNullOrWhiteSpace(text))
-                return;
-
-            lock (queueLock)
-            {
-                // Summaries go before any pending translation.
-                var node = queue.First;
-                while (node != null && node.Value.IsSummary)
-                    node = node.Next;
-                if (node == null)
-                    queue.AddLast((text, true));
-                else
-                    queue.AddBefore(node, (text, true));
-            }
-            signal.Set();
-        }
-
-        // A refined paragraph, read as one piece.
-        public static void EnqueueParagraph(string translatedText)
-        {
-            if (Muted || Lecture == null || Lecture.SpeakMode != SpeakMode.SummaryAndTranslation)
-                return;
-            string text = CleanForSpeech(translatedText);
-            if (string.IsNullOrWhiteSpace(text))
-                return;
-            lock (queueLock)
-            {
-                queue.AddLast((text, false));
-            }
-            signal.Set();
-        }
-
-        public static void EnqueueTranslation(string sourceText, string translatedText)
-        {
-            if (Muted || Lecture == null)
-                return;
-            // Interpretation reads every sentence at once. Otherwise, with paragraph refinement on, the refined
-            // paragraph is read instead of each raw sentence (a few seconds later, but more accurate).
-            bool read = Lecture.SpeakMode == SpeakMode.Interpretation ||
-                        (Lecture.SpeakMode == SpeakMode.SummaryAndTranslation && !Refiner.Enabled);
-            if (!read)
-                return;
-            if (string.IsNullOrWhiteSpace(translatedText) ||
-                translatedText.Contains("[ERROR]") || translatedText.Contains("[WARNING]"))
-                return;
-
-            // The recognizer often revises a finished sentence; do not read the same sentence twice.
-            if (lastSpokenSource.Length > 0 &&
-                TextUtil.Similarity(sourceText, lastSpokenSource) > TextUtil.SIM_THRESHOLD)
-                return;
-            lastSpokenSource = sourceText;
-
-            string text = CleanForSpeech(RegexPatterns.NoticePrefix().Replace(translatedText, string.Empty));
-            if (string.IsNullOrWhiteSpace(text))
-                return;
-
-            lock (queueLock)
-            {
-                queue.AddLast((text, false));
-                int backlog = queue.Count(item => !item.IsSummary);
-                var node = queue.First;
-                while (backlog > MAX_TRANSLATION_BACKLOG && node != null)
-                {
-                    var next = node.Next;
-                    if (!node.Value.IsSummary)
-                    {
-                        queue.Remove(node);
-                        backlog--;
-                    }
-                    node = next;
-                }
-            }
-            signal.Set();
-        }
-
-        public static void Speak(string text)
-        {
-            lock (queueLock)
-                queue.AddFirst((CleanForSpeech(text), true));
-            signal.Set();
-        }
+        [GeneratedRegex(@"^(.+?)\s+([A-Za-z]{2,3}[_-][A-Za-z0-9]+)\s+#")]
+        private static partial Regex MacVoiceLine();
 
         public static void StopAll()
         {
-            lock (queueLock)
-                queue.Clear();
+            ClearQueue();
             stopRequested = true;
             bool wasSpeaking = speakingOnDefaultOutput;
             bool dispatcher = false;
@@ -193,7 +67,7 @@ namespace LiveCaptionsTranslator.utils
             var voices = new List<(string, string)>();
             foreach (string line in (text ?? string.Empty).Split('\n', StringSplitOptions.RemoveEmptyEntries))
             {
-                var match = Regex.Match(line, @"^(.+?)\s+([A-Za-z]{2,3}[_-][A-Za-z0-9]+)\s+#");
+                var match = MacVoiceLine().Match(line);
                 if (match.Success)
                     voices.Add((match.Groups[1].Value.Trim(), match.Groups[2].Value));
             }
@@ -217,17 +91,8 @@ namespace LiveCaptionsTranslator.utils
             while (true)
             {
                 signal.WaitOne();
-                while (true)
+                while (TryDequeue(out string text))
                 {
-                    string text;
-                    lock (queueLock)
-                    {
-                        if (queue.First == null)
-                            break;
-                        text = queue.First.Value.Text;
-                        queue.RemoveFirst();
-                    }
-
                     try
                     {
                         pendingCancel?.Wait(2000);
@@ -267,9 +132,7 @@ namespace LiveCaptionsTranslator.utils
             int rate = lecture?.SpeechRate ?? 0;
             int volume = lecture?.SpeechVolume ?? 100;
             string voice = lecture?.VoiceName ?? string.Empty;
-            string language = Translator.Setting?.Lecture.EnglishOnly == true
-                ? "en-US"
-                : Translator.Setting?.TargetLanguage ?? "zh-CN";
+            string language = SpeechLanguage();
 
             ProcessStartInfo? info;
             if (OperatingSystem.IsMacOS())
@@ -385,14 +248,6 @@ namespace LiveCaptionsTranslator.utils
                 SnackbarHost.Show("[ERROR] 语音播报不可用。", hint, SnackbarType.Error, timeout: 5, closeButton: true);
             }
             return null;
-        }
-
-        private static string CleanForSpeech(string text)
-        {
-            var lines = text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Select(line => line.TrimStart('-', '*', '•', '#', ' '))
-                .Where(line => line.Length > 0);
-            return string.Join("。", lines).Replace("。。", "。");
         }
     }
 }

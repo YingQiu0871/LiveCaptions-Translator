@@ -18,14 +18,14 @@ namespace LiveCaptionsTranslator.utils
         private const int MAX_HOT_WORDS = 500;
         private const string VOCABULARY_PREFIX = "lctgloss";
         private static readonly char[] SEPARATORS = { '=', '＝', '\t' };
-        // Languages the hot word API accepts: Fun-ASR models only know these three, Paraformer more.
+        // Languages the hot word API accepts as "lang": Fun-ASR models only know these three, Paraformer more
+        // (https://help.aliyun.com/zh/model-studio/vocabulary-http-api). Any other language: no "lang", the model
+        // detects it.
         private static readonly string[] HOT_WORD_LANGUAGES = { "zh", "en", "ja", "yue", "ko", "de", "fr", "ru" };
         private static readonly string[] FUN_ASR_HOT_WORD_LANGUAGES = { "zh", "en", "ja" };
 
         private static bool IsHotWordLanguage(string model, string language) =>
-            (model.StartsWith("fun-asr", StringComparison.OrdinalIgnoreCase)
-                ? FUN_ASR_HOT_WORD_LANGUAGES
-                : HOT_WORD_LANGUAGES).Contains(language);
+            (CloudAsr.IsFunAsr(model) ? FUN_ASR_HOT_WORD_LANGUAGES : HOT_WORD_LANGUAGES).Contains(language);
 
         private static readonly HttpClient client = new HttpClient()
         {
@@ -66,8 +66,8 @@ namespace LiveCaptionsTranslator.utils
             if (entries.Count == 0)
                 return string.Empty;
             var sb = new StringBuilder();
-            sb.Append(" Glossary of this course (the recognizer may mishear these terms; restore them, and translate " +
-                      "them exactly as given after \"=\"): ");
+            sb.Append(" Glossary of this course (the recognizer may mishear these terms; restore them with their " +
+                      "exact spelling, and translate them exactly as given after \"=\"): ");
             foreach (var entry in entries)
             {
                 string item = entry.Translation.Length > 0 ? $"{entry.Term} = {entry.Translation}; " : $"{entry.Term}; ";
@@ -97,18 +97,24 @@ namespace LiveCaptionsTranslator.utils
                 throw new InvalidOperationException("课件里没有识别到文字。");
 
             string language = LectureState.OutputLanguage();
-            // 纯英文模式: the terms only help the recognizer and keep the spelling consistent.
-            string system = Translator.Setting.Lecture.EnglishOnly
+            // The terms are spelled as on the slides (accents, compounds, capitals): they are matched against the
+            // recognizer's output and sent to it as hot words.
+            const string spelling = "Write each term exactly as it is spelled on the slides, in the language of the " +
+                                    "slides, with its accents and capitalization; do not translate or anglicize it. ";
+            // 原语言模式: the terms only help the recognizer and keep the spelling consistent.
+            string system = Translator.Setting.Lecture.OriginalOnly
                 ? "You build a glossary for a student who follows this lecture with live speech recognition. " +
                   "From the slides, pick the technical terms, names, abbreviations and formulas' names that a speech " +
                   "recognizer is likely to get wrong (at most 80, most important first; skip everyday words). " +
-                  "Answer with one term per line, no translation, no numbering, no other text." + SubjectOnlyHint()
+                  spelling + "Answer with one term per line, no translation, no numbering, no other text." +
+                  SubjectOnlyHint()
                 : "You build a glossary for a student who follows this lecture with live speech recognition and " +
                   $"translation into {language}. From the slides, pick the technical terms, names, abbreviations and " +
                   "formulas' names that a speech recognizer is likely to get wrong or a translator to translate " +
-                  "inconsistently (at most 80, most important first; skip everyday words). Answer with one term per " +
-                  $"line in the form \"term = standard {language} translation\" (for names and abbreviations that are " +
-                  "not translated, just the term). No numbering, no other text." + SubjectOnlyHint();
+                  "inconsistently (at most 80, most important first; skip everyday words). " + spelling +
+                  $"Answer with one term per line in the form \"term = standard {language} translation\" (for names " +
+                  "and abbreviations that are not translated, just the term). No numbering, no other text." +
+                  SubjectOnlyHint();
             string answer = await Summarizer.Chat(system, slides.ToString(), maxTokens: 2000, temperature: 0,
                 longRequest: true);
 
@@ -124,7 +130,7 @@ namespace LiveCaptionsTranslator.utils
         private static string SubjectOnlyHint()
         {
             string subject = Translator.Setting?.Lecture.Subject?.Trim() ?? string.Empty;
-            return subject.Length == 0 ? string.Empty : $" The course is about {subject}.";
+            return LectureState.LanguageHint() + (subject.Length == 0 ? string.Empty : $" The course is about {subject}.");
         }
 
         // Hot words for the cloud recognizer: only the terms, within DashScope's limits (up to 7 words for Latin
@@ -146,7 +152,7 @@ namespace LiveCaptionsTranslator.utils
             if (words.Count == 0)
                 return null;
 
-            string language = (lecture.AsrLanguage ?? string.Empty).Split('-')[0].ToLowerInvariant();
+            string language = LectureLanguages.Code(lecture.AsrLanguage);
             var vocabulary = words.Select(word =>
             {
                 var item = new Dictionary<string, object> { ["text"] = word, ["weight"] = 4 };
@@ -229,7 +235,7 @@ namespace LiveCaptionsTranslator.utils
             if (string.IsNullOrWhiteSpace(lecture.AsrApiKey))
                 throw new InvalidOperationException("还没有填阿里云 API Key。");
             string json = JsonSerializer.Serialize(new { model = "speech-biasing", input });
-            var request = new HttpRequestMessage(HttpMethod.Post, CustomizationUrl())
+            using var request = new HttpRequestMessage(HttpMethod.Post, CustomizationUrl())
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json"),
             };
@@ -237,21 +243,25 @@ namespace LiveCaptionsTranslator.utils
 
             using var response = await client.SendAsync(request, token);
             string body = await response.Content.ReadAsStringAsync(token);
-            JsonElement root;
+            JsonDocument document;
             try
             {
-                root = JsonDocument.Parse(body).RootElement;
+                document = JsonDocument.Parse(body);
             }
             catch (JsonException)
             {
                 throw new InvalidOperationException($"热词接口返回了无法识别的内容（HTTP {(int)response.StatusCode}）。");
             }
-            if (!response.IsSuccessStatusCode)
+            using (document)
             {
-                string message = root.TryGetProperty("message", out var m) ? m.GetString() ?? string.Empty : string.Empty;
-                throw new InvalidOperationException($"热词接口出错（HTTP {(int)response.StatusCode}）：{message}");
+                var root = document.RootElement;
+                if (!response.IsSuccessStatusCode)
+                {
+                    string message = root.TryGetProperty("message", out var m) ? m.GetString() ?? string.Empty : string.Empty;
+                    throw new InvalidOperationException($"热词接口出错（HTTP {(int)response.StatusCode}）：{message}");
+                }
+                return root.TryGetProperty("output", out var output) ? output.Clone() : default;
             }
-            return root.TryGetProperty("output", out var output) ? output.Clone() : default;
         }
     }
 }

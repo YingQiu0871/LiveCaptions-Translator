@@ -1044,6 +1044,11 @@
                                                     <ComboBoxItem Content="fr" />
                                                     <ComboBoxItem Content="ko" />
                                                     <ComboBoxItem Content="de" />
+                                                    <ComboBoxItem Content="es" />
+                                                    <ComboBoxItem Content="it" />
+                                                    <ComboBoxItem Content="pt" />
+                                                    <ComboBoxItem Content="ru" />
+                                                    <ComboBoxItem Content="zh" />
                                                 </ComboBox>
                                             </StackPanel>
                                             <StackPanel

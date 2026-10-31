@@ -111,6 +111,17 @@ namespace LiveCaptionsTranslator
                     throw new InvalidOperationException("end of the list is wrong");
                 if (CloudAsr.CandidateModels("my-model", "zh")[0] != "my-model")
                     throw new InvalidOperationException("configured model not first");
+                // Spanish: Paraformer cannot, only the Fun-ASR alias can; a model we do not know is trusted.
+                var es = CloudAsr.CandidateModels("paraformer-realtime-v2", "es");
+                if (es.Count != 1 || es[0] != "fun-asr-realtime" || CloudAsr.CandidateModels("my-model", "es")[0] != "my-model")
+                    throw new InvalidOperationException("candidates for Spanish: " + string.Join(",", es));
+                if (CloudAsr.CandidateModels("paraformer-realtime-v2", "yue").Count != 2 ||
+                    CloudAsr.CandidateModels("paraformer-realtime-v2", "").Count != 3 ||
+                    CloudAsr.CandidateModels("paraformer-realtime-v2", "de-DE")[0] != "paraformer-realtime-v2")
+                    throw new InvalidOperationException("language filtering is wrong");
+                if (LectureLanguages.Find("de-DE")?.Tesseract != "deu" || LectureLanguages.Find("zh-Hant-TW")?.Code != "zh" ||
+                    LectureLanguages.Find("") != null || LectureLanguages.EnglishName("xx") != "the original language of the lecture")
+                    throw new InvalidOperationException("language table lookup is wrong");
                 string message = CloudAsr.QuotaMessage("AllocationQuota.FreeTierOnly",
                     new[] { "paraformer-realtime-v2", "fun-asr-realtime" });
                 if (!message.Contains("paraformer-realtime-v2、fun-asr-realtime，") ||

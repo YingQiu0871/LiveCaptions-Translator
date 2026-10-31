@@ -83,10 +83,13 @@ namespace LiveCaptionsTranslator
             };
         }
 
-        // The captions change on the translation threads: draw them on the UI thread.
+        // The captions change on the translation threads: draw them on the UI thread. Only the overlay's own
+        // texts matter here; the main window's caption changes many times a second as well.
         private void OnCaptionChanged(object? sender, PropertyChangedEventArgs e)
         {
-            Dispatcher.UIThread.Post(ShowCaption);
+            if (e.PropertyName is "OverlayOriginalCaption" or "OverlayNoticePrefix" or "OverlayCurrentTranslation"
+                or "OverlayPreviousTranslation")
+                Dispatcher.UIThread.Post(ShowCaption);
         }
 
         private void ShowCaption()

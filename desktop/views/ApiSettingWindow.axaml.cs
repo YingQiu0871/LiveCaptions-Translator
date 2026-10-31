@@ -62,7 +62,7 @@ namespace LiveCaptionsTranslator
             }),
             new("MTranServer", "MTranServer", "MTranServer", new[]
             {
-                new Field("源语言", "SourceLanguage", Kind.Combo, Options: new[] { "en", "ja", "fr", "ko", "de" }),
+                new Field("源语言", "SourceLanguage", Kind.Combo, Options: new[] { "en", "ja", "fr", "ko", "de", "es", "it", "pt", "ru", "zh" }),
                 new Field("接口地址", "ApiUrl"),
                 new Field("API Key", "ApiKey"),
             }),

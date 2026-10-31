@@ -345,7 +345,7 @@ namespace LiveCaptionsTranslator
         private static async Task<string> Summarize(List<HistoryLine> lines, int? page, LectureState lecture)
         {
             string language = LectureState.OutputLanguage();
-            string system = string.Format(lecture.SummaryPrompt, language) + LectureState.EnglishOnlyHint() +
+            string system = string.Format(lecture.SummaryPrompt, language) + LectureState.OriginalOnlyHint() +
                             LectureState.SubjectHint();
             var slide = SlideDeck.GetPage(page);
             if (slide != null)

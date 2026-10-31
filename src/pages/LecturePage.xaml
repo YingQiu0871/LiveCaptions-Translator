@@ -66,19 +66,6 @@
                             <TextBlock x:Name="AsrKeyStatus" Style="{StaticResource Hint}" />
                             <TextBlock Style="{StaticResource Hint}" Text="在阿里云百炼控制台（bailian.console.aliyun.com）开通后创建 API Key。如果 ① 里用的是通义千问，可以填同一个 Key。" />
 
-                            <TextBlock Style="{StaticResource Label}" Text="老师讲课的语言" />
-                            <ComboBox SelectedValue="{Binding AsrLanguage, Mode=TwoWay}" SelectedValuePath="Tag">
-                                <ComboBoxItem Content="英语" Tag="en" />
-                                <ComboBoxItem Content="中文" Tag="zh" />
-                                <ComboBoxItem Content="日语" Tag="ja" />
-                                <ComboBoxItem Content="韩语" Tag="ko" />
-                                <ComboBoxItem Content="德语" Tag="de" />
-                                <ComboBoxItem Content="法语" Tag="fr" />
-                                <ComboBoxItem Content="俄语" Tag="ru" />
-                                <ComboBoxItem Content="粤语" Tag="yue" />
-                                <ComboBoxItem Content="自动判断" Tag="" />
-                            </ComboBox>
-
                             <Expander Margin="0,8,0,0" Header="高级：模型和接口地址">
                                 <StackPanel Margin="0,6,0,0">
                                     <TextBlock Style="{StaticResource Label}" Text="识别模型" />
@@ -86,6 +73,7 @@
                                         <ComboBoxItem Content="paraformer-realtime-v2" />
                                         <ComboBoxItem Content="fun-asr-realtime" />
                                     </ComboBox>
+                                    <TextBlock Style="{StaticResource Hint}" Text="paraformer-realtime-v2 只认中、英、日、韩、德、法、俄语和粤语；其他语言（西班牙语、意大利语、葡萄牙语等）会自动改用 fun-asr-realtime，这里的设置不变。" />
                                     <TextBlock Style="{StaticResource Label}" Text="接口地址" />
                                     <ui:TextBox Text="{Binding AsrEndpoint, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
                                     <TextBlock Style="{StaticResource Hint}" Text="国内账号保持默认；国际站账号改成 wss://dashscope-intl.aliyuncs.com/api-ws/v1/inference。" />
@@ -104,6 +92,10 @@
                                     TextWrapping="Wrap" />
                             </StackPanel>
                         </StackPanel>
+
+                        <TextBlock Style="{StaticResource Label}" Text="老师讲课的语言" />
+                        <ComboBox x:Name="AsrLanguageBox" SelectionChanged="AsrLanguageBox_SelectionChanged" />
+                        <TextBlock x:Name="AsrLanguageHint" Style="{StaticResource Hint}" />
 
                         <TextBlock Style="{StaticResource Label}" Text="听哪里的声音" />
                         <ComboBox x:Name="SourceBox" SelectionChanged="SourceBox_SelectionChanged">
@@ -402,9 +394,9 @@
                     <StackPanel Grid.Column="2">
                         <ui:ToggleSwitch
                             Margin="0,34,0,0"
-                            Content="纯英文模式"
-                            IsChecked="{Binding EnglishOnly, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                        <TextBlock Style="{StaticResource Hint}" Text="不翻译，只显示英文原文；小节总结、段落精修（只纠错不翻译）、笔记初稿和语音播报都用英文。适合想直接练英文听课的时候。" />
+                            Content="只用课程原语言（不翻译）"
+                            IsChecked="{Binding OriginalOnly, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock Style="{StaticResource Hint}" Text="不翻译，只显示原文；小节总结、段落精修（只纠错不翻译）、笔记初稿、术语表和语音播报都用“老师讲课的语言”（⓪ 里选的）。适合想直接用外语听课的时候。" />
 
                         <ui:ToggleSwitch
                             Margin="0,12,0,0"

@@ -43,9 +43,12 @@ namespace LiveCaptionsTranslator.utils
             }
             if (engine == null)
             {
-                // The slides of a foreign-language class are most likely not in Chinese.
+                // Nothing chosen (or the chosen pack is gone): the lecture's language if its pack is installed, else
+                // any installed one; the slides of a foreign-language class are most likely not in Chinese.
                 var languages = OcrEngine.AvailableRecognizerLanguages;
-                var language = languages.FirstOrDefault(l => !l.LanguageTag.StartsWith("zh", StringComparison.OrdinalIgnoreCase))
+                string lecture = LectureLanguages.Current?.Culture.Split('-')[0] ?? string.Empty;
+                var language = languages.FirstOrDefault(l => lecture.Length > 0 && SameLanguage(l.LanguageTag, lecture))
+                               ?? languages.FirstOrDefault(l => !l.LanguageTag.StartsWith("zh", StringComparison.OrdinalIgnoreCase))
                                ?? languages.FirstOrDefault();
                 engine = language != null
                     ? OcrEngine.TryCreateFromLanguage(language)
@@ -54,6 +57,11 @@ namespace LiveCaptionsTranslator.utils
             return engine ?? throw new InvalidOperationException(
                 "Windows 里没有可用的 OCR 语言。请在 设置 → 时间和语言 → 语言和区域 中添加课程语言（含\"光学字符识别\"）。");
         }
+
+        // "de-DE" or "de" is the language "de".
+        private static bool SameLanguage(string tag, string code) =>
+            tag.Equals(code, StringComparison.OrdinalIgnoreCase) ||
+            tag.StartsWith(code + "-", StringComparison.OrdinalIgnoreCase);
 
         public static async Task<int> PageCount(string path)
         {

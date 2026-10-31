@@ -63,6 +63,21 @@ namespace LiveCaptionsTranslator
             }
         }
 
+        private const double REVISION_SIMILARITY = 0.75;
+
+        // Same as TextUtil.Similarity(...) > REVISION_SIMILARITY, but the length difference alone rules most pairs
+        // out before the O(n*m) edit distance, which otherwise runs for every sentence on every read of the captions.
+        private static bool IsRevision(string committed, string sentence)
+        {
+            // The same prefix rule as TextUtil.Similarity.
+            if (committed.StartsWith(sentence) || sentence.StartsWith(committed))
+                return true;
+            int longer = Math.Max(committed.Length, sentence.Length);
+            if (Math.Abs(committed.Length - sentence.Length) > longer * (1 - REVISION_SIMILARITY))
+                return false;
+            return TextUtil.Similarity(committed, sentence) > REVISION_SIMILARITY;
+        }
+
         private static bool IsCommitted(string sentence)
         {
             foreach (var committed in committedSentences)
@@ -76,10 +91,10 @@ namespace LiveCaptionsTranslator
             for (var node = committedSentences.Last; node != null && checkedCount < 10; node = node.Previous, checkedCount++)
             {
                 string committed = node.Value;
-                if (TextUtil.Similarity(committed, sentence) > 0.75)
+                if (IsRevision(committed, sentence))
                     return true;
                 if (sentence.Length >= 12 && committed.Length > sentence.Length &&
-                    TextUtil.Similarity(committed[^sentence.Length..], sentence) > 0.75)
+                    IsRevision(committed[^sentence.Length..], sentence))
                     return true;
             }
             return false;
@@ -95,7 +110,8 @@ namespace LiveCaptionsTranslator
         // original and loses sentences, so tell the user when the target is Chinese and so is everything we read.
         private static void CheckAlreadyTranslated(string sentence)
         {
-            if (Setting?.Lecture.EnglishOnly == true ||
+            if (Setting?.Lecture.OriginalOnly == true ||
+                LectureLanguages.Code(Setting?.Lecture.AsrLanguage) is "zh" or "yue" ||
                 !(Setting?.TargetLanguage ?? string.Empty).StartsWith("zh", StringComparison.OrdinalIgnoreCase))
             {
                 recentChinese.Clear();

@@ -31,9 +31,9 @@ namespace LiveCaptionsTranslator
             get
             {
                 var lecture = Translator.Setting?.Lecture;
-                // 纯英文模式 only cleans up the recognized text, so it does not depend on the translation API.
+                // 原语言模式 only cleans up the recognized text, so it does not depend on the translation API.
                 return lecture != null && lecture.RefineParagraphs &&
-                       (lecture.EnglishOnly ||
+                       (lecture.OriginalOnly ||
                         (!lecture.CaptionsOnly && Translator.Setting?.ApiName == Summarizer.SUMMARY_API));
             }
         }
@@ -108,7 +108,7 @@ namespace LiveCaptionsTranslator
 
         private static async Task<(string Source, string Translation)> Refine(List<HistoryLine> batch)
         {
-            bool englishOnly = Translator.Setting.Lecture.EnglishOnly;
+            bool originalOnly = Translator.Setting.Lecture.OriginalOnly;
             string language = LectureState.OutputLanguage();
 
             var system = new StringBuilder();
@@ -117,9 +117,10 @@ namespace LiveCaptionsTranslator
                 "The user message holds consecutive sentences produced by automatic speech recognition. " +
                 "Recognition makes mistakes: wrong words that sound alike, split or merged sentences, " +
                 "letters spelled out one by one (e.g. \"D N A\" means DNA). " +
-                "1) Rewrite them as one clean paragraph in the original language. Fix a word only when the context, " +
+                "1) Rewrite them as one clean paragraph in the original language of the lecture (keep its spelling, " +
+                "accents and punctuation; never translate it). Fix a word only when the context, " +
                 "the subject or the slide makes the intended word clear; never add content that was not said. ");
-            if (englishOnly)
+            if (originalOnly)
                 system.Append("Answer only with JSON: {\"source\": \"...\"}.");
             else
                 system.Append(
@@ -146,10 +147,10 @@ namespace LiveCaptionsTranslator
                 throw new FormatException("模型没有按格式回答。");
             using var doc = JsonDocument.Parse(output[start..(end + 1)]);
             string source = doc.RootElement.GetProperty("source").GetString() ?? string.Empty;
-            // 纯英文模式 has no translation.
-            string translation = englishOnly ? string.Empty
+            // 原语言模式 has no translation.
+            string translation = originalOnly ? string.Empty
                 : doc.RootElement.TryGetProperty("translation", out var t) ? t.GetString() ?? string.Empty : string.Empty;
-            if (string.IsNullOrWhiteSpace(source) || (!englishOnly && string.IsNullOrWhiteSpace(translation)))
+            if (string.IsNullOrWhiteSpace(source) || (!originalOnly && string.IsNullOrWhiteSpace(translation)))
                 throw new FormatException("模型返回了空内容。");
             return (source.Trim(), translation.Trim());
         }

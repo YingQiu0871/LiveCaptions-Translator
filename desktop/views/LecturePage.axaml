@@ -57,11 +57,14 @@
 
                         <TextBlock Classes="label" Text="老师讲课的语言" />
                         <ComboBox x:Name="AsrLanguageBox" />
+                        <TextBlock Classes="hint" Text="识别按这个语言进行（“自动判断”交给模型）；“只用课程原语言”时，小结、笔记、OCR 和播报也用它。" />
 
                         <Expander Margin="0,8,0,0" Header="高级：模型和接口地址">
                             <StackPanel Margin="0,6,0,0">
                                 <TextBlock Classes="label" Text="识别模型" />
                                 <local:EditableCombo x:Name="AsrModelBox" />
+                                <TextBlock Classes="hint"
+                                           Text="paraformer-realtime-v2 只认中、英、日、韩、德、法、俄语和粤语；其他语言（西班牙语、意大利语、葡萄牙语等）会自动改用 fun-asr-realtime，这里的设置不变。" />
                                 <TextBlock Classes="label" Text="接口地址" />
                                 <TextBox x:Name="AsrEndpointBox" />
                                 <TextBlock Classes="hint"
@@ -239,9 +242,9 @@
                     </StackPanel>
 
                     <StackPanel Grid.Column="2">
-                        <ToggleSwitch Margin="0,34,0,0" Content="纯英文模式" IsChecked="{Binding EnglishOnly, Mode=TwoWay}" />
+                        <ToggleSwitch Margin="0,34,0,0" Content="只用课程原语言（不翻译）" IsChecked="{Binding OriginalOnly, Mode=TwoWay}" />
                         <TextBlock Classes="hint"
-                                   Text="不翻译，只显示英文原文；小节总结、段落精修（只纠错不翻译）、笔记初稿和语音播报都用英文。适合想直接练英文听课的时候。" />
+                                   Text="不翻译，只显示原文；小节总结、段落精修（只纠错不翻译）、笔记初稿、术语表和语音播报都用“老师讲课的语言”（〇 里选的）。适合想直接用外语听课的时候。" />
 
                         <ToggleSwitch Margin="0,12,0,0" Content="只转录，不翻译" IsChecked="{Binding CaptionsOnly, Mode=TwoWay}" />
                         <TextBlock Classes="hint" Text="只显示听写出来的原文，不调用翻译接口（小节总结仍然会做）。" />

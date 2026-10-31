@@ -55,7 +55,8 @@ namespace LiveCaptionsTranslator.models
             "Output plain text only, no Markdown headings, no preamble. " +
             "If the section has no substantive content (small talk, silence, noise), output only the title line.";
 
-        // Added to the translation and summary prompts: the subject of the class and the glossary, if given.
+        // Added to the translation and summary prompts: the language of the lecture, the subject of the class and
+        // the glossary, if given.
         public static string SubjectHint()
         {
             string subject = Translator.Setting?.Lecture.Subject?.Trim() ?? string.Empty;
@@ -63,7 +64,14 @@ namespace LiveCaptionsTranslator.models
                 ? string.Empty
                 : $" This is a university lecture on {subject}; use the standard terminology of that field, " +
                   "and prefer its technical reading of a word over the everyday one.";
-            return hint + LiveCaptionsTranslator.utils.Glossary.PromptHint();
+            return LanguageHint() + hint + LiveCaptionsTranslator.utils.Glossary.PromptHint();
+        }
+
+        // " The lecture is given in German." when the language is known, so the model does not assume English.
+        public static string LanguageHint()
+        {
+            var language = LiveCaptionsTranslator.utils.LectureLanguages.Current;
+            return language == null ? string.Empty : $" The lecture is given in {language.EnglishName}.";
         }
 
         private bool summaryEnabled = true;
@@ -82,7 +90,7 @@ namespace LiveCaptionsTranslator.models
         private bool speechMuted = false;
         private bool showOriginal = true;
         private bool captionsOnly = false;
-        private bool englishOnly = false;
+        private bool originalOnly = false;
         private RecognitionEngine engine = RecognitionEngine.LiveCaptions;
         private string asrApiKey = "";
         private string asrModel = DEFAULT_ASR_MODEL;
@@ -291,7 +299,8 @@ namespace LiveCaptionsTranslator.models
             }
         }
 
-        // Language of the lecture as a hint for recognition ("en", "zh", ...); empty = detect.
+        // Language of the lecture ("en", "de", ...; see LectureLanguages): a hint for the cloud recognizer, and the
+        // language of summaries, notes, OCR and speech in 原语言模式. Empty = detect / unknown.
         public string AsrLanguage
         {
             get => asrLanguage;
@@ -325,36 +334,40 @@ namespace LiveCaptionsTranslator.models
             }
         }
 
-        // 纯英文模式: nothing is translated; summaries, refined paragraphs and notes are written in English.
-        public bool EnglishOnly
+        // 原语言模式 (formerly 纯英文模式, hence the JSON name): nothing is translated; summaries, refined paragraphs
+        // and notes are written in the language of the lecture (AsrLanguage).
+        [System.Text.Json.Serialization.JsonPropertyName("EnglishOnly")]
+        public bool OriginalOnly
         {
-            get => englishOnly;
+            get => originalOnly;
             set
             {
-                englishOnly = value;
-                OnPropertyChanged("EnglishOnly");
+                originalOnly = value;
+                OnPropertyChanged("OriginalOnly");
                 Translator.Caption?.OnPropertyChanged("OriginalVisibility");
                 Translator.Caption?.OnPropertyChanged("IsOriginalVisible");
             }
         }
 
         [System.Text.Json.Serialization.JsonIgnore]
-        public bool SkipTranslation => captionsOnly || englishOnly;
+        public bool SkipTranslation => captionsOnly || originalOnly;
 
         // The language summaries, refined paragraphs and notes are written in (a name the LLM understands).
         public static string OutputLanguage()
         {
             var setting = Translator.Setting;
-            if (setting == null || setting.Lecture.EnglishOnly)
+            if (setting == null)
                 return "English";
+            if (setting.Lecture.OriginalOnly)
+                return LiveCaptionsTranslator.utils.LectureLanguages.EnglishName(setting.Lecture.AsrLanguage);
             return OpenAIConfig.SupportedLanguages.TryGetValue(setting.TargetLanguage, out var name)
                 ? name : setting.TargetLanguage;
         }
 
-        // Added to the summary prompt in 纯英文模式, whose default asks for terms "after the translation".
-        public static string EnglishOnlyHint() => Translator.Setting?.Lecture.EnglishOnly == true
-            ? " The student follows the lecture in English: write in English, do not translate anything, and do " +
-              "not add terms in parentheses."
+        // Added to the summary prompt in 原语言模式, whose default asks for terms "after the translation".
+        public static string OriginalOnlyHint() => Translator.Setting?.Lecture.OriginalOnly == true
+            ? $" The student follows the lecture in its own language: write in {OutputLanguage()}, do not " +
+              "translate anything, and do not add terms in parentheses."
             : string.Empty;
 
         // The subject of the class, e.g. "基因治疗 / 分子生物学". Used so the model keeps the field's terms.
